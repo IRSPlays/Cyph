@@ -10,6 +10,7 @@ The key comes from GEMINI_API_KEY / cyph/.env (voice.load_api_key); it is never 
 from __future__ import annotations
 
 import base64
+import asyncio
 import json
 import re
 import threading
@@ -238,12 +239,22 @@ class GeminiClient:
                  budget: Budget | None = None):
         self.model, self.max_tokens, self.budget = model, max_tokens, budget
         self._key, self._client = key, client
+        self._own, self._loop = False, None     # _own: we built the client (an injected one is never replaced)
         self.sigs: dict = {}                    # tool call id -> thought signature
 
     def _cl(self):
+        try:                                    # the async client is tied to the event loop it first ran on; the
+            loop = asyncio.get_running_loop()   # phone service runs every reply in a new loop, so rebuild per loop
+        except RuntimeError:
+            loop = None
+        if self._own and loop is not None and loop is not self._loop:
+            self._client = None
+        if loop is not None:
+            self._loop = loop
         if self._client is None:
+            self._own = True
             from google import genai
-            from .voice import load_api_key
+            from .keys import load_gemini_key as load_api_key
             key = self._key or load_api_key()
             if not key:
                 raise RuntimeError("no GEMINI_API_KEY (environment or cyph/.env)")

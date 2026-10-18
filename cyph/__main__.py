@@ -87,11 +87,24 @@ def build_local(body, a, camera=None):
         from .router import Budget, GeminiClient, Router
         big, router = GeminiClient(budget=Budget()), Router()
     from .router import MODE_FILE, BrainMode
+    sync = tunnel = None
+    if not a.no_server:
+        from .sync import SshRunner, Sync, Tunnel, load_config
+        scfg = load_config()
+        if scfg:
+            runner = SshRunner(scfg)
+            sync = Sync(runner)
+            if not a.no_bridge:
+                tunnel = Tunnel(runner, int(scfg.get("tunnel_port", 47800)), None)
     sess = LocalSession(body, cfg, mic=audio.Mic(a.mic), speaker=audio.Speaker(a.speaker),
                         barge_in=not a.no_barge_in, camera=camera, debug=a.debug,
                         memory=memory, curator=curator,
                         bridge=not a.no_bridge, shared=SharedChat() if not a.no_bridge else None,
-                        big=big, router=router, brain_mode=BrainMode(MODE_FILE))
+                        big=big, router=router, brain_mode=BrainMode(MODE_FILE), sync=sync, tunnel=tunnel)
+    if sync:
+        sync.log = sess._log
+        if tunnel:
+            tunnel.log = sess._log
     if curator is not None:
         curator.log = sess._log
     sess.ambient = not a.no_ambient
@@ -479,6 +492,8 @@ def main():
                     help="--brain local: never hand a hard request to Gemini")
     ap.add_argument("--no-bridge", action="store_true",
                     help="--brain local: do not accept Telegram messages / share the chat with the phone bot")
+    ap.add_argument("--no-server", action="store_true",
+                    help="--brain local: do not sync with the 24/7 server (data/server.json) or open the link to it")
     ap.add_argument("--no-ambient", action="store_true",
                     help="--brain local: do not react to the camera on its own (presence, pats, waving)")
     ap.add_argument("--stt", choices=["cartesia", "base", "small"], default="cartesia",

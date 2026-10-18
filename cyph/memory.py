@@ -288,7 +288,7 @@ def gemini_generate(model: str = CURATOR_MODEL):
     """Returns generate(prompt) -> JSON text, using the key from GEMINI_API_KEY or cyph/.env only."""
     from google import genai
     from google.genai import types
-    from .voice import load_api_key
+    from .keys import load_gemini_key as load_api_key
     key = load_api_key()
     if not key:
         raise RuntimeError("no Gemini key (set GEMINI_API_KEY or cyph/.env)")

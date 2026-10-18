@@ -86,6 +86,7 @@ class FakeBrain:
     def __init__(self):
         from cyph.router import BrainMode
         self.said, self.ready, self.mode = [], False, BrainMode()
+        self.light_label = "Qwen (local)"
 
     def reply(self, text, atts=()):
         self.said.append(text)
@@ -162,7 +163,7 @@ api.sent.clear()
 svc.handle(upd("/gemini"))
 check(brain.mode.get() == "gemini" and "Always Gemini 3.8 Flash" in api.sent[-1][1], "/gemini forces Gemini")
 svc.handle(upd("/local"))
-check(brain.mode.get() == "local" and "local Qwen" in api.sent[-1][1], "/local forces Qwen")
+check(brain.mode.get() == "local" and "Always Qwen (local)" in api.sent[-1][1], "/local forces Qwen")
 svc.handle(upd("/auto"))
 check(brain.mode.get() == "auto" and "Automatic" in api.sent[-1][1], "/auto goes back to automatic")
 svc.handle(upd("/brain gemini"))
@@ -326,6 +327,29 @@ mm.set("local")
 b5.reply("what did you just say?")
 seen = " ".join(str(m["content"]) for m in llm5.calls[-1][1:])
 check("It is a red square" in seen, "the local model sees what Gemini said earlier in the conversation")
+
+# ---- server mode: a reply must work with no numpy / audio / local-model code installed ----------------------
+import subprocess
+probe = r"""
+import sys, tempfile
+from pathlib import Path
+for m in ("numpy", "sounddevice", "cv2", "torch", "textual"):
+    sys.modules[m] = None
+sys.path.insert(0, ".")
+from cyph import bridge as B, telegram as T
+from cyph.memory import MemoryStore
+class L:
+    async def stream(self, messages, tools):
+        yield "text", "hello there"
+        yield "tools", []
+tmp = Path(tempfile.mkdtemp())
+b = T.Brain(store=MemoryStore(tmp / "m"), curator=None, shared=B.SharedChat(tmp / "c.json"), server=None, llm=L(),
+            alive=lambda: False, light_label="Gemini 3.5 Flash")
+assert b.reply("hi") == "hello there", "reply"
+print("SERVER MODE OK")
+"""
+r = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, cwd=str(Path(__file__).resolve().parents[1]))
+check("SERVER MODE OK" in r.stdout, f"server-mode reply works without numpy/audio/local ({r.stderr[-400:]})")
 
 print("\nALL TELEGRAM TESTS PASSED" if not fails else f"\n{fails} FAILURES")
 sys.exit(1 if fails else 0)

@@ -48,7 +48,7 @@ $ni.add_DoubleClick({ Start-Process wscript.exe -ArgumentList ('"' + (Join-Path 
 $openLog.add_Click({ if (Test-Path $log) { Start-Process notepad.exe -ArgumentList ('"' + $log + '"') } })
 $restart.add_Click({
     $ni.ShowBalloonTip(2000, "Cyph", "Restarting the Telegram service...", "Info")
-    Stop-Service-Gently; Start-Service-Hidden
+    Stop-Service-Gently; if (-not $onServer) { Start-Service-Hidden }
 })
 $off.add_Click({
     $ni.ShowBalloonTip(3000, "Cyph", "Saving memory and turning off...", "Info")
@@ -57,13 +57,15 @@ $off.add_Click({
     [Windows.Forms.Application]::Exit()
 })
 
-if (-not (Test-Alive)) { Start-Service-Hidden }
+$cfg = Join-Path $root "data\server.json"
+$onServer = (Test-Path $cfg) -and ((Get-Content $cfg -Raw) -match '"telegram"\s*:\s*"server"')
+if (-not $onServer -and -not (Test-Alive)) { Start-Service-Hidden }
 $timer = New-Object Windows.Forms.Timer
 $timer.Interval = 3000
 $timer.add_Tick({
     $alive = Test-Alive
-    $status.Text = if ($alive) { "Cyph: Telegram service running" } else { "Cyph: service stopped" }
-    $ni.Text = if ($alive) { "Cyph background mode: on" } else { "Cyph background mode: service stopped" }
+    $status.Text = if ($onServer) { "Cyph: Telegram runs on the server" } elseif ($alive) { "Cyph: Telegram service running" } else { "Cyph: service stopped" }
+    $ni.Text = if ($onServer) { "Cyph background mode (Telegram on server)" } elseif ($alive) { "Cyph background mode: on" } else { "Cyph background mode: service stopped" }
 })
 $timer.Start()
 $ni.ShowBalloonTip(2500, "Cyph", "Background mode is on. Message me on Telegram.", "Info")

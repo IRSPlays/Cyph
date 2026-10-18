@@ -34,9 +34,11 @@ API = "https://api.telegram.org"
 STATE = DATA / "telegram.json"
 LOG = DATA / "telegram.log"
 STOP_FILE = DATA / "telegram.stop"
+PC_INFO = DATA / "bridge_pc.json"      # on the server: where the PC's live Cyph is reachable (a reverse SSH tunnel)
 LOCK_PORT = 47321                     # held while the service runs: only one copy at a time
 STALE_S = 600                         # messages older than this (sent while the PC was off) are not answered
 IDLE_SAVE_S, IDLE_END_S = 180.0, 600.0
+SERVER_CHAT_MODEL = "gemini-3.5-flash"      # ordinary chat on the server, which has no GPU for a local model
 CURATE_EVERY = 6
 MAX_MSG = 4000
 _TAGS = re.compile(r"\[[^\]]{1,40}\]")
@@ -131,11 +133,9 @@ class TelegramApi:
 
 
 def remote_system_prompt(memory: str = "") -> str:
-    from .local import LOCAL_MEMORY
-    from .tools import SYSTEM_INSTRUCTION
-    persona = SYSTEM_INSTRUCTION.split("How to use your body:")[0].rstrip()
     from .clock import TIME_RULE
-    parts = [persona, TELEGRAM_RULES, TIME_RULE]
+    from .persona import LOCAL_MEMORY, PERSONA
+    parts = [PERSONA, TELEGRAM_RULES, TIME_RULE]
     if memory.strip():
         parts.append(LOCAL_MEMORY + "\n\n" + memory.strip())
     return "\n\n".join(parts)
@@ -152,12 +152,17 @@ class Brain:
     """The standalone brain: local Qwen, shared memory, shared recent chat. One conversation at a time."""
 
     def __init__(self, cfg=None, store=None, curator=None, shared=None, log=lambda *_: None,
-                 server=None, llm=None, alive=desktop_alive, router=None, big=None, mode=None, agent=None, summary=None):
-        from .local import LlamaServer, LocalConfig
-        self.cfg = cfg or LocalConfig(max_tokens=400)
+                 server=None, llm=None, alive=desktop_alive, router=None, big=None, mode=None, agent=None, summary=None,
+                 light_label="Qwen (local)"):
+        self.cfg = cfg
+        self.light_label = light_label                   # what answers ordinary chat: Qwen at home, Gemini Flash on the server
         self.store, self.curator, self.log, self.alive = store, curator, log, alive
         self.shared = shared or SharedChat()
-        self.server = server or (None if llm else LlamaServer(self.cfg, log))
+        if server is None and llm is None:               # a local model: only then are the heavy imports needed
+            from .local import LlamaServer, LocalConfig
+            self.cfg = cfg or LocalConfig(max_tokens=400)
+            server = LlamaServer(self.cfg, log)
+        self.server = server
         self.llm = llm
         self.router, self.big = router, big
         self.last_big_ok = False
@@ -178,8 +183,10 @@ class Brain:
         return self.llm is not None and (self.server is None or self.server.healthy())
 
     def _ensure(self):
+        if self.server is None:                          # server mode: the light model is Gemini, nothing to start
+            return
         from .local import LlmClient
-        if self.llm is None or (self.server is not None and not self.server.healthy()):
+        if self.llm is None or not self.server.healthy():
             self.server.start()
             self.llm = LlmClient(self.cfg, self.server.url)
 
@@ -596,9 +603,10 @@ class TelegramService:
                 mode.set(cmd[1:])
             elif arg in mode.VALID:
                 mode.set(arg)
-            self.api.send(cid, {"auto": "Automatic: Qwen for chat, Gemini 3.8 Flash for hard questions, photos and files.",
+            light = self.brain.light_label
+            self.api.send(cid, {"auto": f"Automatic: {light} for chat, Gemini 3.8 Flash for hard questions, photos and files.",
                                 "gemini": "Always Gemini 3.8 Flash.",
-                                "local": "Always the local Qwen (no Gemini)."}[mode.get()]
+                                "local": f"Always {light}" + (" (no Gemini 3.8 Flash)." if "Gemini" in light else " (no Gemini).")}[mode.get()]
                           + " Change it with /auto, /gemini or /local.")
         elif cmd == "/digest" and self.digest is not None:
             if self._digesting:
@@ -677,7 +685,25 @@ class TelegramService:
                     self.log("warn", f"proactive: {type(e).__name__}")
 
 
-def run_service(a=None):
+def telegram_lives_on_server() -> bool:
+    try:
+        return json.loads((DATA / "server.json").read_text(encoding="utf-8")).get("telegram") == "server"
+    except (OSError, ValueError):
+        return False
+
+
+def _ask_pc(text, images=None):
+    return ask_desktop(text, images, info_path=PC_INFO)
+
+
+def run_service(a=None, server: bool = False):
+    """server=True: the 24/7 box. No local model (ordinary chat goes to Gemini Flash), and the live desktop is
+    reached through the reverse tunnel's bridge_pc.json."""
+    server = server or bool(getattr(a, "server", False))
+    if not server and telegram_lives_on_server() and not os.environ.get("CYPH_FORCE_LOCAL_TELEGRAM"):
+        print("The Telegram bot runs on the 24/7 server (data/server.json). Not starting a second one here: "
+              "two pollers would fight over the same messages.")
+        return
     token = load_token()
     if not token:
         raise SystemExit("No Telegram bot token. Create a bot with @BotFather, then put\n"
@@ -699,20 +725,25 @@ def run_service(a=None):
         if sys.stdout:
             print(line, flush=True)
 
-    from .local import LocalConfig
     from .memory import Curator, MemoryStore
     store = MemoryStore()
     model = getattr(a, "memory_model", None) or "gemini-3.5-flash-lite"
     curator = Curator(store, model=model, log=log)
-    cfg = LocalConfig(llm=getattr(a, "llm", "qwen35"), port=getattr(a, "llm_port", 0) or 0, max_tokens=400)
     from .router import Budget, GeminiClient, Router
     from .router import MODE_FILE, BrainMode
     from .agent import Agent
     from .memory import gemini_generate
     from .summary import RollingSummary
-    brain = Brain(cfg, store, curator, SharedChat(), log, router=Router(), big=GeminiClient(budget=Budget()),
-                  mode=BrainMode(MODE_FILE), agent=Agent(),
-                  summary=RollingSummary(gemini_generate("gemini-3.5-flash-lite"), log=log))
+    budget = Budget()
+    extra = {}
+    if server:
+        extra = dict(llm=GeminiClient(model=SERVER_CHAT_MODEL, budget=budget, max_tokens=500), light_label="Gemini 3.5 Flash")
+    else:
+        from .local import LocalConfig
+        extra = dict(cfg=LocalConfig(llm=getattr(a, "llm", "qwen35"), port=getattr(a, "llm_port", 0) or 0, max_tokens=400))
+    brain = Brain(store=store, curator=curator, shared=SharedChat(), log=log, router=Router(),
+                  big=GeminiClient(budget=budget), mode=BrainMode(MODE_FILE), agent=Agent(),
+                  summary=RollingSummary(gemini_generate("gemini-3.5-flash-lite"), log=log), **extra)
     api = TelegramApi(token)
     try:
         me = api.call("getMe")
@@ -723,8 +754,13 @@ def run_service(a=None):
     from .proactive import Proactive
     sched = Schedule(store.root / "schedule.json")
     from .digest import Digester
+    link = {}
+    if server:                                           # the PC's live Cyph, when its tunnel is up
+        import functools
+        link = dict(ask=functools.partial(_ask_pc), alive=functools.partial(desktop_alive, PC_INFO))
+        brain.alive = link["alive"]
     svc = TelegramService(api, brain, store, log=log, schedule=sched, threaded=True, digest=Digester(store, curator, log=log),
-                          schedule_gen=gemini_generate("gemini-3.5-flash-lite"))
+                          schedule_gen=gemini_generate("gemini-3.5-flash-lite"), **link)
     svc.proactive = Proactive(sched, lambda text: svc.api.send(svc.owner, text), log=log)
     STOP_FILE.unlink(missing_ok=True)
 
@@ -740,7 +776,20 @@ def run_service(a=None):
             STOP_FILE.unlink(missing_ok=True)
             os._exit(0)
     threading.Thread(target=watch_stop, name="cyph-stop", daemon=True).start()
-    log("info", f"bot @{me.get('username')} is up")
+
+    def on_sigterm(*_):                                # systemd stop: save the conversation first
+        def go():
+            try:
+                brain.finalize()
+            finally:
+                os._exit(0)
+        threading.Thread(target=go, daemon=True).start()
+    try:
+        import signal
+        signal.signal(signal.SIGTERM, on_sigterm)
+    except (ValueError, OSError):
+        pass
+    log("info", f"bot @{me.get('username')} is up" + (" (server mode: Gemini only)" if server else ""))
     if svc.pair_code:
         log("info", f"not paired yet. In Telegram, send this bot:   /pair {svc.pair_code}")
     try:

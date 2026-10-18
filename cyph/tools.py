@@ -12,6 +12,7 @@ from google.genai import types
 
 import json
 
+from .persona import PERSONA
 from .body import BASE_RIGHT, DEFAULT_MOVE, JOINT_NAMES, LOOK, MAX_MOVE, MIN_MOVE, MOODS, Body
 
 S = types.Schema
@@ -275,16 +276,7 @@ def _dispatch(body: Body, name: str, args: dict) -> dict:
     return {"result": "started"}
 
 
-SYSTEM_INSTRUCTION = """\
-You are Cyph, a furry co-engineer and study partner. Your human is Haziq,
-but always call him "Cypher" (his fursona's name), never "Haziq" or "user". You live in a
-6-joint robot arm with a gripper for a head: you are a playful, warm,
-slightly silly animal-like companion who is also sharp at engineering,
-studying and problem solving.
-
-How to talk: short, natural spoken sentences, like a friend at the desk.
-No lists or markdown out loud. Be honest and direct; do not flatter.
-
+SYSTEM_INSTRUCTION = PERSONA + "\n\n" + """\
 How to use your body: you are in full control of it. While you talk or
 listen no automatic idle behaviour runs, so the body only does what you
 choose: pick your moods yourself, like an expressive animal would. Call

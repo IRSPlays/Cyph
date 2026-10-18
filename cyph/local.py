@@ -334,10 +334,8 @@ tag.
 """
 
 
-LOCAL_MEMORY = """What you remember about him from past chats is below. Use it naturally, the way a friend
-would: bring it up when it fits, never recite it as a list, and never announce that you have a memory file.
-If he asks about something that is not below, say you do not remember it; never make up a memory. If he
-tells you something about himself or asks you to remember something, just say okay; it is saved for you."""
+from .persona import LOCAL_MEMORY  # noqa: E402  (kept here so existing imports still work)
+
 
 
 LOCAL_BIG = """For this message you are the stronger model: answer properly, with as much detail as the question
@@ -735,7 +733,7 @@ class LocalSession(VoiceSession):
                  barge_in: bool = True, camera=None, debug: bool = False,
                  llm=None, stt=None, tts=None, vad=None, server=None, greet: bool = True,
                  memory=None, curator=None, bridge: bool = False, shared=None, bridge_info=None,
-                 big=None, router=None, brain_mode=None):
+                 big=None, router=None, brain_mode=None, sync=None, tunnel=None):
         # deliberately not calling VoiceSession.__init__ (it builds a Gemini client)
         self.body = body
         self.cfg = cfg or LocalConfig()
@@ -767,6 +765,8 @@ class LocalSession(VoiceSession):
         self.mode = brain_mode or BrainMode()    # auto | gemini | local (shared with the phone bot when file-backed)
         self.brain_now = (self.cfg.label + " (local)", "local", "")   # what answered last: label, kind, why
         self._bridge_on, self._bridge, self._bridge_info = bridge, None, bridge_info
+        self.sync, self.tunnel = sync, tunnel      # the 24/7 server (sync.Sync / sync.Tunnel) or None
+        self._sync_at = 0.0
         self.remote_speaks = False               # phone messages are answered in text, not out loud
         self._last_user_at = 0.0                 # when he last wrote or said something real
         self._last_reply, self._last_acted = "", False
@@ -800,6 +800,8 @@ class LocalSession(VoiceSession):
     def stop(self):
         self._stop.set()
         self._stop_bridge()
+        if self.tunnel:
+            self.tunnel.stop()
         if self._loop and self._task:
             self._loop.call_soon_threadsafe(self._task.cancel)
         if self._thread:
@@ -807,6 +809,7 @@ class LocalSession(VoiceSession):
         if self.worker:
             self.worker.close()
         self._finalize_memory()
+        self._sync_now()                                   # leave the server with everything from this session
         self.server.stop()
         self.state = "off"
 
@@ -816,7 +819,9 @@ class LocalSession(VoiceSession):
         from .bridge import BridgeServer
         try:
             self._bridge = BridgeServer(self.ask_remote, info_path=self._bridge_info, log=self._log)
-            self._bridge.start()
+            port = self._bridge.start()
+            if self.tunnel:
+                self.tunnel.start(port, self._bridge.token)
         except OSError as e:
             self._bridge = None
             self._log("warn", f"phone bridge: could not start ({e})")
@@ -928,6 +933,9 @@ class LocalSession(VoiceSession):
         self._turns = asyncio.Queue()
         self._actions = asyncio.Queue()
         self._mic_q = asyncio.Queue(maxsize=100)
+        self._sync_now()                                   # start from what the server knows
+        if self.memory:
+            self.system = local_system_prompt(self.memory.snapshot())
         self._seed_history()
         self.state = "live"
         self._log("info", f"local brain live: {self.model}")
@@ -1105,9 +1113,25 @@ class LocalSession(VoiceSession):
         if self.REMEMBER.search(text) or self._unsaved_user_turns() >= self.CURATE_EVERY:
             self._curate_async()
 
+    SYNC_EVERY_S = 300.0
+
+    def _sync_now(self):
+        """Push what happened here, take the server's newer memory / schedule / chat. Never raises."""
+        if not self.sync:
+            return
+        self._sync_at = time.monotonic()
+        try:
+            if self.sync.cycle() and self.memory:
+                self.system = local_system_prompt(self.memory.snapshot())
+        except Exception as e:                             # the app must run without the server
+            self._log("warn", f"sync: {type(e).__name__}: {e}")
+
     async def _memory_idle(self):
         while True:
             await asyncio.sleep(5.0)
+            if self.sync and time.monotonic() - self._sync_at > self.SYNC_EVERY_S:
+                self._sync_at = time.monotonic()
+                threading.Thread(target=self._sync_now, name="cyph-sync", daemon=True).start()
             if (self.memory and self.curator and self._unsaved_user_turns()
                     and time.monotonic() - self._turn_at > self.CURATE_IDLE_S):
                 self._curate_async()

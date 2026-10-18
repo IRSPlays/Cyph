@@ -119,9 +119,21 @@ for t in tests/test_*.py; do python $t; done
 Hardware, the real network and the real model are faked in the tests, so passing them says nothing about the
 arm or Cartesia/Telegram themselves.
 
+## The 24/7 server
+
+The Telegram bot runs on a small home server (systemd user service `cyph-telegram`, Gemini only, no GPU needed) so
+it answers even when the PC is off. The server owns long-term memory, the schedule and the shared chat.
+
+- **PC <-> server sync** (`cyph/sync.py`): at launch, every 5 minutes and at quit the app pushes its memory edits,
+  chat and finished transcripts, then pulls the server's copy. If the server is unreachable it keeps working and
+  catches up later. `--no-server` turns it off.
+- **Live link**: while the app runs, a reverse SSH tunnel lets the server reach this Cyph (arm, camera), listening
+  only on the server's localhost behind a per-run token. With the app closed, the bot says so and chats without it.
+- **Transport**: SSH key only, never a password. Secrets live in an untracked `.env` (mode 600 on the server).
+- **Deploy**: `python deploy/deploy_server.py code|venv|check|service|migrate|status|logs|stop` with `data/server.json`
+  (`host`, `user`, `key`, `remote`, `tunnel_port`, `telegram: "server"`). With `telegram: "server"` the PC refuses
+  to start a second bot, because two pollers would fight over the same messages.
+
 ## Roadmap
 
-Planned, not built yet: a 24/7 server as the single owner of memory, the schedule and uploads (so the PC and the
-phone always agree); file and task tools for the stronger model, with approval buttons before anything is written
-or run; proactive morning briefs, deadline nudges and study check-ins; a study mode that explains your code in its
-own window.
+Planned, not built yet: a study mode that explains your code in its own window.

@@ -105,5 +105,37 @@ check(out[-1][0] == "tools" and out[-1][1][0]["name"] == "see" and g.sigs.get(ou
 check(models.args[0] == "gemini-3.8-flash" and bud.used() == 1, "uses Gemini 3.8 Flash and counts the call")
 check(not R.GeminiClient(client=NS(), budget=R.Budget(p, 0)).available(), "over the cap: not available")
 
+# ---- the async client is tied to one event loop: a new loop (each phone reply) needs a fresh client -------------
+import types as _types
+made = []
+_g = _types.ModuleType("google.genai")
+_g.Client = lambda api_key: made.append(api_key) or object()
+sys.modules["google"] = sys.modules.get("google") or _types.ModuleType("google")
+_saved = sys.modules.get("google.genai")
+_gpkg = sys.modules["google"]
+_gold = getattr(_gpkg, "genai", None)
+_gpkg.genai = _g
+sys.modules["google.genai"] = _g
+try:
+    gc = R.GeminiClient(key="k")
+    async def _use():
+        return gc._cl(), gc._cl()
+    a1, a2 = asyncio.run(_use())
+    b1, _ = asyncio.run(_use())
+    check(a1 is a2, "same event loop -> same client")
+    check(b1 is not a1 and len(made) == 2, "new event loop -> fresh client")
+    inj = object()
+    gi = R.GeminiClient(client=inj)
+    async def _inj():
+        return gi._cl()
+    check(asyncio.run(_inj()) is inj and asyncio.run(_inj()) is inj, "an injected client is never replaced")
+finally:
+    if _gold is not None:
+        _gpkg.genai = _gold
+    if _saved is not None:
+        sys.modules["google.genai"] = _saved
+    else:
+        sys.modules.pop("google.genai", None)
+
 print("\nALL ROUTER TESTS PASSED" if not fails else f"\n{fails} FAILURES")
 sys.exit(1 if fails else 0)
