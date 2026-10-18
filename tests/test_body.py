@@ -173,7 +173,26 @@ fails += check(abs(b.frame[5] - GRIP.open) < 2.0 and b.pose()["gripper"] == "ope
                f"gripper opens ({b.frame[5]:.0f}) and pose() reports it")
 b.release_task()
 run_frames(b, 400)
-fails += check(abs(b.frame[0] - CENTER[0]) < 15 and not b.status()["held"], "release gives the joints back to the moods")
+fails += check(abs(b.frame[0] - (CENTER[0] + 60.0)) < 20 and not b.status()["held"],
+               f"release gives the joints back to the moods, which play where the arm was left ({b.frame[0]:.0f}, not 135)")
+b.recenter()
+run_frames(b, 500)
+fails += check(abs(b.frame[0] - CENTER[0]) < 15, f"recenter brings the moods (and the arm) back to the middle ({b.frame[0]:.0f})")
+
+# moods and idle motion play at the pose the arm was left in
+b = Body(SimBackend(), wild=1.5, seed=12)
+b.set_idle(False)
+r = b.move_joints({"base": 50.0})
+run_frames(b, int((r["eta_seconds"] + 1.0) * 50))
+b.release_task()
+b.express("excited")
+lo = hi = b.frame[0]
+for f in run_frames(b, 600):
+    lo, hi = min(lo, f[0]), max(hi, f[0])
+fails += check(lo > CENTER[0] + 20, f"an excited mood after turning never swings back through the middle (base stayed above {lo:.0f})")
+b.recenter()
+fails += check(b._home == list(CENTER), "recenter resets the remembered pose")
+
 
 # speed guard still applies to direct moves
 b = Body(SimBackend(), seed=11)

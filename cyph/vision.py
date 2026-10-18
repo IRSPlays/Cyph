@@ -57,6 +57,58 @@ def list_cameras(max_index=6):
     return found
 
 
+CAMERA_CACHE = Path(__file__).resolve().parents[1] / "data" / "camera.json"
+
+
+def _is_stereo(index) -> bool:
+    cap = _open(index, None, STEREO_MODE)
+    try:
+        if not cap.isOpened():
+            return False
+        for _ in range(20):
+            ok, frame = cap.read()
+            if ok and frame is not None:
+                return frame.shape[1] >= 2.5 * frame.shape[0]
+            time.sleep(0.05)
+        return False
+    finally:
+        cap.release()
+
+
+def find_stereo_camera(max_index=6, cache=None, probe=None):
+    """Index of the arm's stereo camera (a frame at least 2.5x wider than tall), or None.
+
+    Windows renumbers cameras whenever a phone-camera app or a virtual camera comes and goes, so a fixed
+    index silently opens the wrong device (and the arm camera's light never comes on). The last good
+    index is remembered and tried first; a full scan only happens when it stops working."""
+    import json
+    cache = Path(cache) if cache else CAMERA_CACHE
+    probe = probe or _is_stereo
+    try:
+        last = int(json.loads(cache.read_text(encoding="utf-8"))["index"])
+    except (OSError, ValueError, KeyError, TypeError):
+        last = None
+    order = ([last] if last is not None else []) + [i for i in range(max_index) if i != last]
+    for i in order:
+        if probe(i):
+            if i != last:
+                try:
+                    cache.parent.mkdir(parents=True, exist_ok=True)
+                    cache.write_text(json.dumps({"index": i}), encoding="utf-8")
+                except OSError:
+                    pass
+            return i
+    return None
+
+
+def resolve_camera(value, fallback=1, **kw):
+    """--camera N uses that index; --camera auto (the default) finds the stereo camera, else the fallback."""
+    if value is None or str(value).lower() != "auto":
+        return None if value is None else int(value)
+    found = find_stereo_camera(**kw)
+    return fallback if found is None else found
+
+
 def focal_px(eye_width, hfov_deg):
     """Focal length in pixels for a pinhole camera with this horizontal field of view."""
     return (eye_width / 2.0) / math.tan(math.radians(hfov_deg / 2.0))

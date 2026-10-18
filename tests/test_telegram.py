@@ -12,6 +12,11 @@ from cyph import bridge as B
 from cyph import telegram as T
 from cyph.memory import Curator, MemoryStore
 
+import io
+from PIL import Image
+_b = io.BytesIO()
+Image.new("RGB", (40, 30), (200, 30, 30)).save(_b, "PNG")
+PNG = _b.getvalue()
 fails = 0
 
 
@@ -45,9 +50,13 @@ r = httpx.post(f"http://127.0.0.1:{port}/say", json={"text": "x"})
 check(r.status_code == 401, "no token: refused")
 r = httpx.post(f"http://127.0.0.1:{port}/say", json={"text": "x"}, headers={"Authorization": "Bearer nope"})
 check(r.status_code == 401, "wrong token: refused")
-r = httpx.post(f"http://127.0.0.1:{port}/say", content=b"x" * 20000,
-               headers={"Authorization": "Bearer " + srv.token})
-check(r.status_code == 413, "oversized body refused")
+try:
+    r = httpx.post(f"http://127.0.0.1:{port}/say", content=b"x" * (15 * 1024 * 1024),
+                   headers={"Authorization": "Bearer " + srv.token})
+    refused = r.status_code == 413
+except httpx.TransportError:
+    refused = True                                   # the server hung up on an oversized upload
+check(refused, "oversized body refused")
 srv.stop()
 check(not info.exists() and B.ask_desktop("hi", info_path=info) is None, "stopped: no file, desktop reads as absent")
 srv2 = B.BridgeServer(lambda t: (_ for _ in ()).throw(RuntimeError("brain off")), info_path=info)
@@ -63,19 +72,24 @@ class FakeApi:
     def __init__(self):
         self.sent, self.typed = [], 0
 
-    def send(self, cid, text):
+    def send(self, cid, text, buttons=None):
         self.sent.append((cid, text))
 
     def typing(self, cid):
         self.typed += 1
 
+    def download(self, file_id, limit=0):
+        return PNG if file_id.startswith("img") else b"hello notes" if file_id == "txt" else b"PK\x03\x04"
+
 
 class FakeBrain:
     def __init__(self):
-        self.said, self.ready = [], False
+        from cyph.router import BrainMode
+        self.said, self.ready, self.mode = [], False, BrainMode()
 
-    def reply(self, text):
+    def reply(self, text, atts=()):
         self.said.append(text)
+        self.atts = list(atts)
         return "brain:" + text
 
     def tick(self):
@@ -114,8 +128,8 @@ svc.handle(upd("old news", age=3600))
 check("too old" in api.sent[0][1] and brain.said == ["hi there"], "messages from while the PC was off are not answered")
 api.sent.clear()
 svc.handle({"update_id": 9, "message": {"date": time.time(), "from": {"id": 111}, "chat": {"id": 111, "type": "private"},
-                                        "photo": [{}]}})
-check("Text only" in api.sent[0][1], "non-text gets a polite no")
+                                        "sticker": {}}})
+check("Text, photos and files only" in api.sent[0][1], "unsupported message types get a polite no")
 
 svc.ask = lambda t: "desktop:" + t
 api.sent.clear()
@@ -142,6 +156,46 @@ api.sent.clear()
 svc.handle(upd("x"))
 check("broke" in api.sent[0][1] and "secret internals" not in api.sent[0][1], "errors are logged, not sent to the chat")
 check(not any("hi there" in m or "SECRET" in m for m in logs), "message text and the token never reach the log")
+
+# choosing the model
+api.sent.clear()
+svc.handle(upd("/gemini"))
+check(brain.mode.get() == "gemini" and "Always Gemini 3.8 Flash" in api.sent[-1][1], "/gemini forces Gemini")
+svc.handle(upd("/local"))
+check(brain.mode.get() == "local" and "local Qwen" in api.sent[-1][1], "/local forces Qwen")
+svc.handle(upd("/auto"))
+check(brain.mode.get() == "auto" and "Automatic" in api.sent[-1][1], "/auto goes back to automatic")
+svc.handle(upd("/brain gemini"))
+check(brain.mode.get() == "gemini", "/brain <mode> works too")
+svc.handle(upd("/brain"))
+check("Always Gemini" in api.sent[-1][1], "/brain alone shows the mode")
+svc.handle(upd("/auto"))
+
+# photos and files
+inbox = tmp / "inbox"
+svc.inbox = inbox
+svc.ask = lambda t, imgs=None: None
+api.sent.clear(); brain.said.clear()
+photo = {"update_id": 20, "message": {"date": time.time(), "from": {"id": 111}, "chat": {"id": 111, "type": "private"},
+                                       "photo": [{"file_id": "img-small", "width": 10}, {"file_id": "img-big", "width": 90, "file_size": 5}],
+                                       "caption": "what is this?"}}
+svc.handle(photo)
+check(brain.said == ["what is this?"] and brain.atts[0]["mime"] == "image/jpeg", "a photo and its caption reach the brain")
+check(len(list(inbox.iterdir())) == 1, "the photo is kept in the inbox")
+got = []
+svc.ask = lambda t, imgs=None: got.append((t, imgs)) or "desktop saw it"
+api.sent.clear()
+svc.handle(photo)
+check(got and got[0][0] == "what is this?" and got[0][1][0]["mime"] == "image/jpeg" and api.sent[-1][1] == "desktop saw it",
+      "desktop open: the photo goes to the live session")
+doc = lambda name, mime, fid, i: {"update_id": i, "message": {"date": time.time(), "from": {"id": 111}, "chat": {"id": 111, "type": "private"},
+                                                          "document": {"file_id": fid, "file_name": name, "mime_type": mime, "file_size": 11}}}
+brain.said.clear(); api.sent.clear(); got.clear()
+svc.handle(doc("notes.md", "text/markdown", "txt", 21))
+check(brain.said == ["Have a look at this."] and brain.atts[0]["name"] == "notes.md" and not got, "a text file skips the desktop and goes to the standalone brain")
+api.sent.clear()
+svc.handle(doc("evil.zip", "application/zip", "zip", 22))
+check("can read photos" in api.sent[0][1], "a type it cannot read is refused politely")
 
 # commands and memory
 store = MemoryStore(tmp / "mem")
@@ -218,6 +272,60 @@ brain.turn_at = time.monotonic() - 700
 alive["v"] = False
 brain.tick()
 check(server.stopped == 1 and brain.llm is None, "with nothing running, the idle model is freed")
+
+# a photo makes the standalone brain use Gemini, and the model sees the image
+from cyph.router import Router
+
+
+class FakeBig:
+    def __init__(self):
+        self.calls = []
+
+    def available(self):
+        return True
+
+    async def stream(self, messages, tools):
+        self.calls.append(messages)
+        yield "text", "It is a red square.\n\nSecond paragraph."
+        yield "tools", []
+
+
+big, llm3 = FakeBig(), FakeLlm()
+b3 = T.Brain(store=None, curator=None, shared=B.SharedChat(tmp / "chat3.json"), server=FakeServer(), llm=llm3,
+             router=Router(), big=big)
+out = b3.reply("what colour is this?", [{"mime": "image/png", "name": "p.png", "data": PNG}])
+check(out.startswith("It is a red square.\n\nSecond paragraph.") and len(big.calls) == 1 and not llm3.calls, "a photo is answered by Gemini, paragraphs kept")
+last = big.calls[0][-1]["content"]
+check(isinstance(last, list) and any(p.get("type") == "image_url" for p in last), "the model receives the image")
+check("stronger model" in big.calls[0][0]["content"], "Gemini is told it is the stronger model")
+check(b3.shared.load()[0]["content"].endswith("[sent a photo]"), "the shared chat notes that a photo was sent")
+out = b3.reply("hi there")
+check(len(big.calls) == 1 and llm3.calls, "plain chat stays on the local model")
+pdf = [{"mime": "application/pdf", "name": "w.pdf", "data": b"%PDF-1.4 fake"}]
+b4 = T.Brain(store=None, curator=None, shared=B.SharedChat(tmp / "chat4.json"), server=FakeServer(), llm=FakeLlm(),
+             router=Router(), big=None)
+check("PDF" in b4.reply("read this", pdf), "without Gemini a PDF is declined, not mangled")
+
+# forced modes decide for the standalone brain, and Gemini answers say so
+from cyph.router import BrainMode
+mm = BrainMode()
+big5, llm5 = FakeBig(), FakeLlm()
+b5 = T.Brain(store=None, curator=None, shared=B.SharedChat(tmp / "chat5.json"), server=FakeServer(), llm=llm5,
+             router=Router(), big=big5, mode=mm)
+mm.set("gemini")
+out = b5.reply("hi")
+check(len(big5.calls) == 1 and not llm5.calls and out.endswith("(answered by Gemini 3.8 Flash)"), "forced Gemini: even 'hi' goes there, and the reply says so")
+mm.set("local")
+out = b5.reply("explain how a servo works in detail")
+check(len(big5.calls) == 1 and llm5.calls and "answered by" not in out, "forced local: a hard question stays on Qwen")
+mm.set("auto")
+check(b5.reply("explain how a servo works in detail").endswith("(answered by Gemini 3.8 Flash)"), "auto: the router decides again")
+check(len(b5.shared.load(20)) >= 6, "all three turns, from both models, are in one shared conversation")
+msgs_local = llm5.calls[-1] if llm5.calls else []
+mm.set("local")
+b5.reply("what did you just say?")
+seen = " ".join(str(m["content"]) for m in llm5.calls[-1][1:])
+check("It is a red square" in seen, "the local model sees what Gemini said earlier in the conversation")
 
 print("\nALL TELEGRAM TESTS PASSED" if not fails else f"\n{fails} FAILURES")
 sys.exit(1 if fails else 0)

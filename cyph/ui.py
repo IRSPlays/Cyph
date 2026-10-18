@@ -23,6 +23,7 @@ HELP = (
     "joint <base|shoulder|elbow|wrist|pivot|grabber> <deg> [abs] | grip open|close|<deg>\n"
     "chomp | flap | wag | nod | shake | track on/off | center (release joints) | pose\n"
     "sfx on|off | sfx vol <0-1> | sfx play <name>   (sound effects; python -m cyph sfx-test to audition)\n"
+    "gemini | local | auto (--brain local: which model answers; auto picks per message)\n"
     "ambient on|off (--brain local: react to the camera on its own: arrivals, pats, waving, quiet spells)\n"
     "memory | forget <words> (--brain local: show what Cyph remembers about you / remove an entry)\n"
     "gazeflip (eyes follow you the wrong way? flip it)\n"
@@ -229,9 +230,15 @@ class CyphApp(App):
         if self.voice is not None:
             vs = self.voice.state
             vcol = {"live": C.NEON, "connecting": C.AMBER, "error": C.RED}.get(vs, C.DIM)
-            st.append("  gemini    ", style=C.DIM)
+            st.append("  brain     ", style=C.DIM)
             st.append(f"{vs}", style=f"bold {vcol}")
             st.append(f"  {self.voice.model}  tools {self.voice.tool_calls}\n", style=C.DIM)
+            if hasattr(self.voice, "brain_now"):
+                label, kind, why = self.voice.brain_now
+                mode = self.voice.mode.get()
+                st.append("  answers   ", style=C.DIM)
+                st.append(label, style=f"bold {C.CORAL if kind == 'gemini' else C.MINT}")
+                st.append(f"  [{mode}]" + (f" {why}" if why else "") + "\n", style=C.DIM)
         if self.camera is not None:
             cs = self.camera.state
             ccol = {"live": C.NEON, "opening": C.AMBER, "error": C.RED}.get(cs, C.DIM)
@@ -434,6 +441,18 @@ class CyphApp(App):
                 self.log_line("info", f"tracking mode: {self.body.track_mode} "
                                       "(centre = camera on the arm keeps your face in the middle; "
                                       "aim = fixed camera, the arm points at you)")
+            elif cmd in ("brain", "gemini", "local", "auto"):
+                if not hasattr(self.voice, "mode"):
+                    self.log_line("warn", "choosing the model needs --brain local")
+                else:
+                    new = cmd if cmd != "brain" else (arg if arg in ("auto", "gemini", "local") else "")
+                    if new:
+                        self.voice.mode.set(new)
+                    mode = self.voice.mode.get()
+                    self.log_line("info", {"auto": "answers: automatic (Qwen for chat and arm commands, Gemini 3.8 Flash "
+                                                   "for hard questions, photos and files)",
+                                           "gemini": "answers: always Gemini 3.8 Flash",
+                                           "local": "answers: always the local Qwen"}[mode])
             elif cmd == "ambient":
                 if not hasattr(self.voice, "ambient"):
                     self.log_line("warn", "ambient reactions need --brain local")
@@ -464,7 +483,9 @@ class CyphApp(App):
                 from . import face as _face
                 _face.GAZE_SIGN = -_face.GAZE_SIGN
                 self.log_line("info", "eyes now look the other way when you move")
-            elif cmd in ("center", "centre", "free"):
+            elif cmd in ("center", "centre"):
+                self.body.recenter()
+            elif cmd == "free":
                 self.body.release_task()
             elif cmd == "pose":
                 self.log_line("info", str(self.body.pose()))

@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import base64
 import hmac
 import json
 import os
@@ -21,7 +22,7 @@ from pathlib import Path
 DATA = Path(__file__).resolve().parents[1] / "data"
 INFO = DATA / "bridge.json"
 SHARED = DATA / "user" / "recent_chat.json"
-MAX_BODY = 8192
+MAX_BODY = 14 * 1024 * 1024        # a few phone photos, base64
 
 
 class SharedChat:
@@ -105,13 +106,16 @@ class BridgeServer:
                     n = int(self.headers.get("Content-Length", "0"))
                     if not 0 < n <= MAX_BODY:
                         return self._send(413, {"error": "bad size"})
-                    text = str(json.loads(self.rfile.read(n)).get("text", "")).strip()
-                except (ValueError, TypeError):
+                    body = json.loads(self.rfile.read(n))
+                    text = str(body.get("text", "")).strip()
+                    images = [{"mime": str(i["mime"]), "data": base64.b64decode(i["b64"])}
+                              for i in body.get("images") or []][:4]
+                except (ValueError, TypeError, KeyError):
                     return self._send(400, {"error": "bad request"})
                 if not text:
                     return self._send(400, {"error": "empty"})
                 try:
-                    self._send(200, {"reply": outer.ask(text)})
+                    self._send(200, {"reply": outer.ask(text, images) if images else outer.ask(text)})
                 except Exception as e:
                     self._send(503, {"error": f"{type(e).__name__}: {e}"})
 
@@ -161,13 +165,17 @@ def desktop_alive(info_path=None) -> bool:
         return False
 
 
-def ask_desktop(text: str, info_path=None, timeout: float = 130.0) -> str | None:
-    """The desktop session's reply, or None if the desktop app is not running / not live."""
+def ask_desktop(text: str, images=None, info_path=None, timeout: float = 130.0) -> str | None:
+    """The desktop session's reply, or None if the desktop app is not running / not live.
+    images: [{"mime", "data": bytes}] to show it along with the message."""
     info = desktop_info(info_path)
     if not info:
         return None
     try:
-        r = _call(info, "POST", "/say", timeout, json={"text": text})
+        payload = {"text": text}
+        if images:
+            payload["images"] = [{"mime": i["mime"], "b64": base64.b64encode(i["data"]).decode()} for i in images]
+        r = _call(info, "POST", "/say", timeout, json=payload)
     except Exception as e:
         import httpx
         if isinstance(e, httpx.ReadTimeout):

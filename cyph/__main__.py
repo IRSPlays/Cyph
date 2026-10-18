@@ -43,9 +43,9 @@ def cameras():
 
 def cam_test(a):
     import time
-    from .vision import Camera
+    from .vision import Camera, resolve_camera
     body = Body(SimBackend())
-    cam = Camera(a.camera or 0, body, mirror=a.mirror)
+    cam = Camera(resolve_camera(a.camera, 0), body, mirror=a.mirror)
     cam.start()
     t0, seen = time.time(), 0
     while time.time() - t0 < 8:
@@ -82,10 +82,16 @@ def build_local(body, a, camera=None):
         from .memory import Curator, MemoryStore
         memory = MemoryStore()
         curator = Curator(memory, model=a.memory_model)
+    big = router = None
+    if not a.no_escalate:
+        from .router import Budget, GeminiClient, Router
+        big, router = GeminiClient(budget=Budget()), Router()
+    from .router import MODE_FILE, BrainMode
     sess = LocalSession(body, cfg, mic=audio.Mic(a.mic), speaker=audio.Speaker(a.speaker),
                         barge_in=not a.no_barge_in, camera=camera, debug=a.debug,
                         memory=memory, curator=curator,
-                        bridge=not a.no_bridge, shared=SharedChat() if not a.no_bridge else None)
+                        bridge=not a.no_bridge, shared=SharedChat() if not a.no_bridge else None,
+                        big=big, router=router, brain_mode=BrainMode(MODE_FILE))
     if curator is not None:
         curator.log = sess._log
     sess.ambient = not a.no_ambient
@@ -324,8 +330,8 @@ def video_test(a):
     real = None
     if not a.no_camera:
         try:
-            from .vision import Camera
-            real = Camera(a.camera, None, track=False)
+            from .vision import Camera, resolve_camera
+            real = Camera(resolve_camera(a.camera, DEFAULT_CAMERA), None, track=False)
             real.start()
             import time
             for _ in range(40):
@@ -432,8 +438,9 @@ def main():
     ap.add_argument("command", nargs="?",
                     choices=["devices", "mic-test", "voice-test", "video-test", "key-check", "sfx-test",
                              "cameras", "cam-test", "local-test", "memory", "memory-import", "telegram"])
-    ap.add_argument("--camera", type=int, default=DEFAULT_CAMERA,
-                    help=f"webcam index (default {DEFAULT_CAMERA}; see `python -m cyph cameras`)")
+    ap.add_argument("--camera", default="auto",
+                    help="webcam index, or auto (default): find the arm's stereo camera, since Windows "
+                         f"renumbers cameras (falls back to {DEFAULT_CAMERA}; see `python -m cyph cameras`)")
     ap.add_argument("--no-camera", action="store_true", help="run without the camera")
     ap.add_argument("--no-video", action="store_true",
                     help="keep the camera for tracking but do not stream frames to Gemini")
@@ -468,6 +475,8 @@ def main():
                     help="Gemini model that curates memory (reads the conversation after it ends)")
     ap.add_argument("--path", default="", help="memory-import: the Gemini export (file or folder)")
     ap.add_argument("--apply", action="store_true", help="memory-import: write the result into live memory")
+    ap.add_argument("--no-escalate", action="store_true",
+                    help="--brain local: never hand a hard request to Gemini")
     ap.add_argument("--no-bridge", action="store_true",
                     help="--brain local: do not accept Telegram messages / share the chat with the phone bot")
     ap.add_argument("--no-ambient", action="store_true",
@@ -557,8 +566,10 @@ def main():
         body.track_sign = -body.track_sign
     camera = None
     if not a.no_camera and a.camera is not None:
-        from .vision import Camera
-        camera = Camera(a.camera, body, mirror=a.mirror)
+        from .vision import Camera, resolve_camera
+        idx = resolve_camera(a.camera, DEFAULT_CAMERA)
+        body.events.put(("info", f"camera: using device {idx}"))
+        camera = Camera(idx, body, mirror=a.mirror)
     voice = None
     if not a.no_voice and a.brain == "local":
         voice = build_local(body, a, camera)

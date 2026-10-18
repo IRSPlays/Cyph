@@ -65,5 +65,25 @@ b.arm_offset = (0.30, 0.0)       # arm base 30 cm to the right of the camera
 near, _ = b.aim_targets(0.0, 0.0, dist=1.0)
 check(abs(near - 135) > 10, f"parallax: a person straight ahead of the camera needs a turn ({near - 135:+.1f} deg)")
 
+# camera auto-detect: the arm's stereo camera is found whatever index Windows gave it, and remembered
+import json, tempfile
+from pathlib import Path
+from cyph.vision import find_stereo_camera, resolve_camera
+
+cache = Path(tempfile.mkdtemp()) / "camera.json"
+tried = []
+def probe_a(i):
+    tried.append(i)
+    return i == 2
+check(find_stereo_camera(cache=cache, probe=probe_a) == 2 and tried == [0, 1, 2], f"scan finds the stereo camera ({tried})")
+check(json.loads(cache.read_text())["index"] == 2, "the index is remembered")
+tried.clear()
+check(find_stereo_camera(cache=cache, probe=probe_a) == 2 and tried == [2], "next time the remembered index is tried first")
+check(find_stereo_camera(cache=cache, probe=lambda i: i == 4) == 4 and json.loads(cache.read_text())["index"] == 4,
+      "if it moved, it is found again")
+check(find_stereo_camera(cache=cache, probe=lambda i: False) is None, "no stereo camera: None")
+check(resolve_camera("3") == 3 and resolve_camera(0) == 0 and resolve_camera(None) is None, "an explicit index is used as given")
+check(resolve_camera("auto", fallback=7, cache=cache, probe=lambda i: False) == 7, "auto falls back when nothing is stereo")
+
 print("\nALL VISION TESTS PASSED" if not fails else f"\n{fails} FAILURES")
 sys.exit(1 if fails else 0)

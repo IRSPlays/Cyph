@@ -203,6 +203,13 @@ class MemoryStore:
             ents = self.entries(key)
             if ents:
                 parts.append(heading + ":\n" + "\n".join("- " + e for e in ents))
+        try:
+            from .schedule import Schedule
+            up = Schedule(self.root / "schedule.json").upcoming_text()
+            if up:
+                parts.append(up)
+        except Exception:
+            pass                                      # a broken schedule file must never break the prompt
         today = today or date.today()
         for d in (today - timedelta(days=1), today):
             p = self.root / "daily" / f"{d:%Y-%m-%d}.md"

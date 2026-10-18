@@ -31,6 +31,7 @@ import numpy as np
 from . import audio
 from .body import JOINT_NAMES, LOOK, MOODS
 from .clock import TIME_RULE, stamp
+from .router import BIG_LABEL, Decision, decide_with_mode
 from .tools import MOOD_GUIDE, SYSTEM_INSTRUCTION, declarations, dispatch
 from .voice import VoiceSession
 
@@ -338,6 +339,10 @@ would: bring it up when it fits, never recite it as a list, and never announce t
 If he asks about something that is not below, say you do not remember it; never make up a memory. If he
 tells you something about himself or asks you to remember something, just say okay; it is saved for you."""
 
+
+LOCAL_BIG = """For this message you are the stronger model: answer properly, with as much detail as the question
+needs (still plain sentences, no markdown, and when spoken at most about six short ones). If the full answer
+is longer, say the key point and offer to put the rest on his phone."""
 
 LOCAL_REMOTE = """This message came from his phone over Telegram: he is away from the desk and reads your reply as
 text. Your arm and camera still work if he asks for them. Keep it short and natural."""
@@ -729,7 +734,8 @@ class LocalSession(VoiceSession):
     def __init__(self, body, cfg: LocalConfig | None = None, mic=None, speaker=None,
                  barge_in: bool = True, camera=None, debug: bool = False,
                  llm=None, stt=None, tts=None, vad=None, server=None, greet: bool = True,
-                 memory=None, curator=None, bridge: bool = False, shared=None, bridge_info=None):
+                 memory=None, curator=None, bridge: bool = False, shared=None, bridge_info=None,
+                 big=None, router=None, brain_mode=None):
         # deliberately not calling VoiceSession.__init__ (it builds a Gemini client)
         self.body = body
         self.cfg = cfg or LocalConfig()
@@ -756,6 +762,10 @@ class LocalSession(VoiceSession):
         self.history: list[dict] = []
         self.memory = memory                     # MemoryStore or None
         self.shared = shared                     # bridge.SharedChat: one conversation with the phone
+        self.big, self.router = big, router      # router.GeminiClient / Router: harder jobs go to Gemini
+        from .router import BrainMode
+        self.mode = brain_mode or BrainMode()    # auto | gemini | local (shared with the phone bot when file-backed)
+        self.brain_now = (self.cfg.label + " (local)", "local", "")   # what answered last: label, kind, why
         self._bridge_on, self._bridge, self._bridge_info = bridge, None, bridge_info
         self.remote_speaks = False               # phone messages are answered in text, not out loud
         self._last_user_at = 0.0                 # when he last wrote or said something real
@@ -816,13 +826,13 @@ class LocalSession(VoiceSession):
             self._bridge.stop()
             self._bridge = None
 
-    def ask_remote(self, text: str, timeout: float = 120.0) -> str:
+    def ask_remote(self, text: str, images=None, timeout: float = 120.0) -> str:
         """A message from the phone (Telegram): same brain, arm and memory as a typed one; returns the reply."""
         if not (self._loop and self.state == "live" and self._turns is not None):
             raise RuntimeError("the desktop brain is not live")
         from concurrent.futures import Future
         fut: Future = Future()
-        asyncio.run_coroutine_threadsafe(self._turns.put(("remote", (text, fut))), self._loop)
+        asyncio.run_coroutine_threadsafe(self._turns.put(("remote", (text, fut, images))), self._loop)
         return fut.result(timeout)
 
     def _seed_history(self):
@@ -957,12 +967,18 @@ class LocalSession(VoiceSession):
         frame_s = FRAME / SAMPLE_16K
         end_frames = max(1, int(self.cfg.end_silence_s / frame_s))
         spec_frames = max(1, int(0.2 / frame_s))
+        echo, speak_t0, last_speaking, was_speaking = 0.0, 0.0, -9.0, False      # how loud our own voice is in the mic
         while True:
             chunk = await self._mic_q.get()
             now = time.monotonic()
             if self.body.sfx_busy():
                 continue
             speaking = self.speaker.playing or (self.worker is not None and self.worker.busy())
+            if speaking and not was_speaking and now - last_speaking > 0.8:
+                speak_t0 = now                                  # a new reply (not just a gap between sentences)
+            if speaking:
+                last_speaking = now
+            was_speaking = speaking
             if speaking and not self.barge_in:
                 continue                                    # no headphones: do not hear ourselves
             if now < self._guard_until and not self.barge_in:
@@ -971,12 +987,22 @@ class LocalSession(VoiceSession):
             while len(buf) >= FRAME:
                 frame, buf = buf[:FRAME], buf[FRAME:]
                 prob = await loop.run_in_executor(None, self.vad, frame)
-                thresh = 0.75 if speaking else 0.5
+                rms = float(np.sqrt(np.mean(frame.astype(np.float32) ** 2)))
+                if speaking and not talking and prob < 0.5:
+                    echo += (rms - echo) * 0.1                     # learn how loud our own voice bleeds in
+                if speaking:
+                    # cutting off Cyph is expensive, so only clear, sustained, louder-than-its-own-voice speech
+                    # counts, and never in the first moments of a reply
+                    ok = (prob > self.BARGE_PROB and now - speak_t0 > self.BARGE_GRACE_S
+                          and rms > max(self.BARGE_MIN_RMS, self.BARGE_ECHO_X * echo))
+                    need = self.BARGE_FRAMES
+                else:
+                    ok, need = prob > 0.5, 2
                 if not talking:
                     pre.append(frame)
                     del pre[:-10]
-                    hot = hot + 1 if prob > thresh else 0
-                    if hot >= (4 if speaking else 2):
+                    hot = hot + 1 if ok else 0
+                    if hot >= need:
                         talking, quiet = True, 0
                         utter = list(pre)
                         if getattr(self.stt, "streaming", False):
@@ -1010,6 +1036,12 @@ class LocalSession(VoiceSession):
                             stream.cancel()
                         spec, stream = None, None
 
+    BARGE_PROB = 0.85          # VAD confidence needed to interrupt a reply
+    BARGE_FRAMES = 8           # ...for this many 32 ms frames in a row (about a quarter of a second)
+    BARGE_MIN_RMS = 700        # ...and at least this loud (int16 RMS), so keyboard taps and breaths do not count
+    BARGE_ECHO_X = 2.0         # ...and this much louder than Cyph's own voice is in the mic
+    BARGE_GRACE_S = 0.5        # nothing can interrupt the first half second of a reply
+
     # ---- thinking and speaking -----------------------------------------------------------------
     def _cancel_generation(self):
         if self._gen_task and not self._gen_task.done():
@@ -1036,8 +1068,9 @@ class LocalSession(VoiceSession):
             else:
                 text = payload
             remote = None
+            remote_images = None
             if kind == "remote":
-                text, remote = payload
+                text, remote, remote_images = payload
             self.body.converse()
             self._clear_actions()                                  # a new request replaces an old routine
             self._seq = {"n": 0, "t": 0.0}
@@ -1045,7 +1078,7 @@ class LocalSession(VoiceSession):
                 self._cancel_generation()
                 await asyncio.gather(self._gen_task, return_exceptions=True)
             if remote is not None:
-                self._gen_task = asyncio.create_task(self._respond_remote(text, t0, remote))
+                self._gen_task = asyncio.create_task(self._respond_remote(text, t0, remote, remote_images))
             else:
                 self._gen_task = asyncio.create_task(self._respond(text, t0, force_image))
 
@@ -1247,27 +1280,78 @@ class LocalSession(VoiceSession):
             self.body.express(name)
         self.body.converse()
 
-    async def _respond_remote(self, text: str, t0: float, fut):
+    def _pick_brain(self, text: str, content=None):
+        """(use_gemini, reason). Body commands, events and the wake-up prompt always stay local and fast."""
+        local_label = self.cfg.label + " (local)"
+        if not (self.router and self.big) or text.startswith(("[", "EVENT:")):
+            return False, ""
+        mode = self.mode.get()
+        images = sum(1 for p in (content or []) if p.get("type") == "image_url")
+        if mode == "auto" and intent_commands(text):
+            d = Decision(False, "arm command")                 # fast and local, whatever the question
+        else:
+            d = decide_with_mode(self.router, mode, text, images=images)
+        if d.big and not self.big.available():
+            self._log("warn", "router: Gemini is unavailable (no key, or today's cap is used); staying local")
+            self.brain_now = (local_label, "local", "Gemini unavailable")
+            return False, ""
+        if d.big:
+            self._log("info", f"router: using {BIG_LABEL} ({d.reason})")
+            from .router import log_switch
+            log_switch("gemini", d.reason)
+            self.brain_now = (BIG_LABEL, "gemini", d.reason)
+        else:
+            self.brain_now = (local_label, "local", d.reason)
+        return d.big, d.reason
+
+    async def _llm_stream(self, use_big: bool, messages, tools):
+        """Gemini when asked, with a silent fall back to the local model if it fails before saying anything."""
+        if use_big:
+            started = False
+            try:
+                async for kind, val in self.big.stream(messages, tools):
+                    started = started or (kind == "text" and bool(val))
+                    yield kind, val
+                return
+            except Exception as e:
+                self._log("warn", f"router: Gemini failed ({type(e).__name__}); using the local model")
+                self.brain_now = (self.cfg.label + " (local)", "local", "Gemini failed")
+                if started:
+                    yield "tools", []
+                    return
+        async for item in self.llm.stream(messages, tools):
+            yield item
+
+    async def _respond_remote(self, text: str, t0: float, fut, images=None):
         self._last_reply, self._last_acted = "", False
         try:
-            await self._respond(text, t0, remote=True)
+            await self._respond(text, t0, remote=True, images=images)
         finally:
             if not fut.done():
-                fut.set_result(self._last_reply)
+                label, kind, _ = self.brain_now
+                fut.set_result(self._last_reply + (f"\n\n(answered by {label})" if kind == "gemini" and self._last_reply else ""))
 
-    async def _respond(self, text: str, t0: float, force_image: bool = False, remote: bool = False):
+    async def _respond(self, text: str, t0: float, force_image: bool = False, remote: bool = False, images=None):
         gen = self.worker.gen
         prev_user = self._last_user_at
         if not text.startswith(("[", "EVENT:")):
             self._last_user_at = time.time()
         say = (lambda piece, g: None) if remote and not self.remote_speaks else self.worker.say
-        system = self.system + ("\n\n" + LOCAL_REMOTE if remote else "")
         content = text
         if self.camera is not None and (force_image or wants_image(text)):
             part = self._frame_part()
             if part:
                 self._drop_old_images()
                 content = [{"type": "text", "text": text}, part]
+        if images:                                           # photos sent from the phone
+            import base64 as _b64
+            self._drop_old_images()
+            content = [{"type": "text", "text": text}] + [
+                {"type": "image_url", "image_url": {"url": f"data:{i['mime']};base64," + _b64.b64encode(i["data"]).decode()}}
+                for i in images]
+        use_big, why = self._pick_brain(text, content if isinstance(content, list) else None)
+        system = (self.system + ("\n\n" + LOCAL_REMOTE if remote else "")
+                  + ("\n\n" + LOCAL_BIG if use_big else ""))
         self.history.append({"role": "user", "content": content})
         self._trim()
         if not text.startswith("["):                        # not the wake-up prompt
@@ -1291,7 +1375,7 @@ class LocalSession(VoiceSession):
                 chunker, tags = Chunker(), TagStream()
                 said, raw, calls = "", "", []
                 cur["said"] = cur["raw"] = ""
-                async for kind, val in self.llm.stream(
+                async for kind, val in self._llm_stream(use_big, 
                         stamp([{"role": "system", "content": system}] + self.history, prev=prev_user), self.tools):
                     if kind == "text":
                         for ev, x in tags.feed(val):

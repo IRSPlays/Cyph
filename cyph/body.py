@@ -94,6 +94,8 @@ CAMERA_HFOV = 80.0      # WIT Stereo Camera V1.2 datasheet: D 90 / H 80 / V 43 d
 CAMERA_VFOV = 43.0
 TRACK_GAIN = 1.0        # multiplier on the computed bearing (1 = camera at the arm's base)
 TRACK_PITCH = 40.0      # most the wrist tilts for a face at the top/bottom edge
+HOME_JOINTS = (0, 1, 2, 3, 4)   # joints whose moods play around where the arm was left (not the gripper)
+HOLD_MOOD_SHARE = 0.0           # a held joint stays exactly where it was told; moods show once it is let go
 TRACK_BASE_SPEED = 160.0   # deg/s the base may slew while tracking (was 90)
 TRACK_TILT_SPEED = 110.0
 TRACK_SMOOTH = 0.65        # weight of the newest detection (was 0.4): less lag
@@ -322,6 +324,9 @@ class Body:
         self._task_spd = [TASK_SPEED] * 6
         self._task_w = [0.0] * 6       # eased blend weight (1 = fully task)
         self._task_last = 0.0
+        # where the arm was last left. Moods and the idle motion play AROUND this, not around the factory
+        # centre, so after "turn left" or following a face the arm does not snap back to 135 to emote.
+        self._home = list(CENTER)
         self.tracking = False
         self.track_gain = TRACK_GAIN
         self.hfov = CAMERA_HFOV
@@ -485,6 +490,14 @@ class Body:
                 raise ValueError("set needs an angle")
             return self.move_joints({"grabber": float(angle)}, relative=False)
         raise ValueError("gripper action must be open, close or set")
+
+    def recenter(self):
+        """Forget where the arm was left: moods play around the middle (135) again, and it eases back there."""
+        with self._tlock:
+            self.tracking = False
+            self._task_tgt = [None] * 6
+            self._home = list(CENTER)
+        self._log("info", "recentred: the arm eases back to the middle")
 
     def release_task(self):
         """Give the held joints back to the moods (tracking stays as it was)."""
@@ -858,22 +871,30 @@ class Body:
               and self.T - self._task_last > TASK_HOLD_S):
             self._task_tgt = [None] * 6
             self._log("info", "held pose timed out, back to moods")
+        around = HOME_JOINTS if not self.still else ()
         for j in range(6):
+            off = p[j] - CENTER[j] if j in around else 0.0      # the mood's motion, as an offset
+            free = self._home[j] + off if j in around else p[j]  # what the moods want, around where we are
             tgt, w = self._task_tgt[j], self._task_w[j]
             if tgt is not None:
                 if self._task_pos[j] is None:
-                    self._task_pos[j] = p[j]                  # start from where we are
+                    self._task_pos[j] = free                  # start from where we are
                 step = self._task_spd[j] * DT
                 pos = self._task_pos[j]
                 self._task_pos[j] = pos + max(-step, min(step, tgt - pos))
                 w += (1.0 - w) * 0.2
+                if j in around:
+                    self._home[j] = self._task_pos[j]         # remember where the arm was taken
             else:
                 w *= 0.9
                 if w < 0.01:
                     w, self._task_pos[j] = 0.0, None
             self._task_w[j] = w
             if w > 0.0 and self._task_pos[j] is not None:
-                p[j] = p[j] * (1.0 - w) + self._task_pos[j] * w
+                held = self._task_pos[j] + off * HOLD_MOOD_SHARE      # moods still show a little while held
+                p[j] = free * (1.0 - w) + held * w
+            else:
+                p[j] = free
         return p
 
     def _compose(self):

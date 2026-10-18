@@ -134,11 +134,11 @@ class FakeLlm:
 
 class FakeTts:
     def __init__(self):
-        self.said = []
+        self.said, self.delay = [], 0.02
 
     def speak(self, text):
         self.said.append(text)
-        time.sleep(0.02)
+        time.sleep(self.delay)
         return (np.sin(np.arange(2400) * 0.05) * 8000).astype(np.int16)
 
 
@@ -384,11 +384,20 @@ s.stop()
 long = [("text", "[happy] " + "This is a long answer that keeps going. " * 30)]
 s, body, llm, tts, stt, mic, spk, seen = make([long, [("text", "Okay, listening.")]])
 idle(s)
+tts.delay = 0.15                                    # a long reply that takes a few seconds to say
 s.send_text("tell me everything")
 wait(lambda: bool(tts.said), 6)
 before = spk.cleared
 mic.push(True, 20)
-check(wait(lambda: spk.cleared > before, 4), "speaking over it clears the queued audio")
+time.sleep(0.3)
+check(spk.cleared == before, "nothing can interrupt the first half second of a reply")
+time.sleep(0.4)
+mic.push(True, 4)
+mic.push(False, 6)
+time.sleep(0.5)
+check(spk.cleared == before, "a short noise (4 frames) does not cut the reply")
+mic.push(True, 20)
+check(wait(lambda: spk.cleared > before, 4), "speaking over it for a quarter of a second clears the queued audio")
 check(wait(lambda: s._gen_task is None or s._gen_task.done() or True), "generation is cancelled")
 s.stop()
 
@@ -483,6 +492,71 @@ check(last_user.startswith("[") and "Singapore time" in last_user and last_user.
       f"the model is told the time ({last_user[:60]!r})")
 check(s.history[0]["content"] == "what day is it", "the time is not stored in the history")
 check("never guess the date" in llm.calls[-1][0]["content"], "the system prompt says to trust the clock")
+s.stop()
+
+# 9. routing: hard requests go to Gemini, body commands and chat stay local, a failing Gemini falls back
+from cyph.router import Router
+
+
+class FakeBig:
+    def __init__(self, fail=False):
+        self.calls, self.fail = [], fail
+
+    def available(self):
+        return True
+
+    async def stream(self, messages, tools):
+        self.calls.append(messages)
+        if self.fail:
+            raise RuntimeError("boom")
+        yield "text", "[curious] A servo turns a shaft to a set angle using feedback. It compares the position to the target."
+        yield "tools", []
+
+
+big = FakeBig()
+s, body, llm, tts, stt, mic, spk, seen = make([[("text", "[happy] Hi there.")], [("text", "[nod] Turning.")]],
+                                               big=big, router=Router())
+ask(s, llm, "explain how a servo works")
+check(len(big.calls) == 1 and not llm.calls, "a hard question goes to Gemini")
+check("stronger model" in big.calls[0][0]["content"], "Gemini is told it is the stronger model")
+check(any("servo turns a shaft" in x for x in tts.said) or wait(lambda: any("servo" in x for x in tts.said), 4), "its answer is spoken")
+ask(s, llm, "hello")
+check(len(big.calls) == 1 and len(llm.calls) == 1, "chat stays local")
+ask(s, llm, "turn right")
+check(len(big.calls) == 1 and len(llm.calls) == 2, "body commands stay local (fast)")
+s.stop()
+
+bad = FakeBig(fail=True)
+s, body, llm, tts, stt, mic, spk, seen = make([[("text", "[happy] Local answer here.")]], big=bad, router=Router())
+ask(s, llm, "explain how a servo works")
+check(len(bad.calls) == 1 and len(llm.calls) == 1 and any("Local answer" in x for x in tts.said),
+      "if Gemini fails, the local model answers instead")
+s.stop()
+
+# 10. model modes, the status the screen shows, and one shared context across both models
+from cyph.router import BrainMode
+
+big = FakeBig()
+mode = BrainMode()
+s, body, llm, tts, stt, mic, spk, seen = make([[("text", "[happy] Local one.")], [("text", "[happy] Local two knows.")]],
+                                               big=big, router=Router(), brain_mode=mode)
+check(s.brain_now[1] == "local", "starts on the local model")
+mode.set("gemini")
+ask(s, llm, "hello there")
+check(len(big.calls) == 1 and s.brain_now[0] == "Gemini 3.8 Flash" and s.brain_now[2] == "you set it to Gemini",
+      f"forced Gemini: even small talk goes there and the screen says so ({s.brain_now})")
+ask(s, llm, "turn right")
+check(len(big.calls) == 2, "forced Gemini also answers arm commands")
+mode.set("local")
+ask(s, llm, "explain how a servo works")
+check(len(big.calls) == 2 and len(llm.calls) == 1 and s.brain_now[1] == "local", "forced local: a hard question stays on Qwen")
+sent = " ".join(str(m["content"]) for m in llm.calls[0])
+check("servo turns a shaft" in sent and "hello there" in sent, "Qwen sees the earlier turns, including what Gemini answered")
+mode.set("auto")
+ask(s, llm, "hello again")
+sent = " ".join(str(m["content"]) for m in llm.calls[-1])
+check("A servo" in sent or "Local" in sent or "hello there" in sent, "context carries on after switching back")
+check(s.brain_now[1] == "local" and s.brain_now[2] == "short chat", f"auto: chat is local again ({s.brain_now})")
 s.stop()
 
 print("\nALL LOCAL TESTS PASSED" if not fails else f"\n{fails} FAILURES")
