@@ -1,0 +1,13 @@
+textual
+rich
+numpy
+httpx
+websockets
+pillow
+pyserial
+opencv-python
+onnxruntime
+sounddevice
+faster-whisper
+supertonic
+google-genai
