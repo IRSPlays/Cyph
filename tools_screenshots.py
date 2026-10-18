@@ -1,4 +1,4 @@
-"""Regenerates docs/tui.svg and docs/topbar.svg for the README from the real UI (simulator, no arm).
+"""Regenerates docs/cyph-ui.svg and docs/cyph-topbar.svg for the README from the real UI (simulator, no arm).
 
     python tools_screenshots.py
 
@@ -72,7 +72,7 @@ async def main():
         app.log_line("you", "turn right a bit")
         app.log_line("cyph", "Hey Cypher! Ready when you are. What are we building today?")
         await pilot.pause(1.5)
-        (OUT / "tui.svg").write_text(solid_blocks(app.export_screenshot(title="Cyph")), encoding="utf-8")
+        (OUT / "cyph-ui.svg").write_text(solid_blocks(app.export_screenshot(title="Cyph")), encoding="utf-8")
     app = CyphApp(Body(SimBackend(), seed=3), None, autostart_voice=False, camera=None)
     async with app.run_test(size=(150, 22)) as pilot:         # just the top bar: face, logo, status
         await pilot.pause(0.5)
@@ -81,9 +81,9 @@ async def main():
             for w in app.query(sel):
                 w.display = False
         await pilot.pause(1.5)
-        (OUT / "topbar.svg").write_text(solid_blocks(app.export_screenshot(title="Cyph")), encoding="utf-8")
+        (OUT / "cyph-topbar.svg").write_text(solid_blocks(app.export_screenshot(title="Cyph")), encoding="utf-8")
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-    print("wrote", OUT / "tui.svg", "and", OUT / "topbar.svg")
+    print("wrote", OUT / "cyph-ui.svg", "and", OUT / "cyph-topbar.svg")

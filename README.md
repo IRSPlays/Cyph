@@ -8,7 +8,7 @@
 
 <sub>Python · Textual TUI · local Qwen brain · Telegram · long-term memory</sub>
 
-<img src="docs/topbar.svg" alt="Cyph's top bar: the pixel face, the logo and the live status">
+<img src="docs/cyph-topbar.svg" alt="Cyph's top bar: the pixel face, the logo and the live status">
 
 </div>
 
@@ -23,7 +23,7 @@ voice, type to it, or message it on Telegram from your phone.
 The real interface (this one is the simulator, so no arm is needed to try it):
 
 <div align="center">
-<img src="docs/tui.svg" alt="The full Cyph terminal UI: face, mood list, joint bars, status and event log">
+<img src="docs/cyph-ui.svg" alt="The full Cyph terminal UI: face, mood list, joint bars, status and event log">
 </div>
 
 ## What works today
