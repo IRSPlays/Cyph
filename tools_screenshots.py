@@ -58,7 +58,7 @@ def solid_blocks(svg: str) -> str:
 
 def _insert(svg: str, rects: list[str]) -> str:
     marker = re.search(r'<g class="terminal-\d+-matrix">', svg)
-    block = '<g transform="translate(9, 41)">' + "".join(rects) + "</g>\n    "
+    block = "<g>" + "".join(rects) + "</g>\n    "          # the marker is already inside translate(9, 41)
     return svg[:marker.start()] + block + svg[marker.start():]
 
 
