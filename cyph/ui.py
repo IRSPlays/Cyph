@@ -175,6 +175,8 @@ class CyphApp(App):
         self.query_one("#log", RichLog).write(t)
 
     def refresh_view(self):
+        if not self.screen_stack or self.screen.id == "_default":
+            return                                   # the app is closing: the widgets are already gone
         s = self.body.status()
         while True:
             try:

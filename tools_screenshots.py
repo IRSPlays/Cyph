@@ -52,8 +52,7 @@ def solid_blocks(svg: str) -> str:
 
     svg = TEXT.sub(fix, svg)
     # the pixel art goes right after the background rectangles, under the remaining text
-    return svg.replace('<g class="terminal-', '<g transform="translate(9, 41)">' + "".join(rects)
-                       + '</g>\n    <g class="terminal-', 1) if False else _insert(svg, rects)
+    return _insert(svg, rects)
 
 
 def _insert(svg: str, rects: list[str]) -> str:
