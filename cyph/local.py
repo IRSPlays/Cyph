@@ -486,6 +486,9 @@ class LocalConfig:
     end_silence_s: float = 0.45
     tts_steps: int = 5                      # Supertonic diffusion steps: 8 = best, 3 = fastest
     extra_args: list = field(default_factory=list)
+    wake_model: str = ""                    # blank = models/wake/hey_cyph.onnx (openWakeWord); else Whisper spots the phrase
+    wake_threshold: float = 0.5
+    sleep_after_s: float = 180.0           # no talking for this long -> asleep until "Hey Cyph" (0 = never)
 
     def __post_init__(self):
         prof = LLM_PROFILES[self.llm]
@@ -666,6 +669,55 @@ class Vad:
         return float(out[0][0])
 
 
+class WhisperSpotter:
+    """Wake word with no trained model: Silero VAD finds speech, local Whisper transcribes ONLY those short bursts and the
+    phrase is looked for in the text. Same feed()/reset() interface as wake.WakeWord. Nothing is stored or sent anywhere.
+    Costs CPU only while someone is talking nearby; a trained openWakeWord model is lighter and more accurate."""
+
+    MAX_S = 8.0
+
+    def __init__(self, whisper_path: str, vad=None, stt=None):
+        self.path = Path(whisper_path)
+        self._vad, self._stt = vad, stt
+        self.buf = np.zeros(0, dtype=np.int16)
+        self.reset()
+
+    def reset(self):
+        self.buf = np.zeros(0, dtype=np.int16)
+        self.pre, self.utter, self.hot, self.quiet, self.talking = [], [], 0, 0, False
+        if self._vad is not None:
+            self._vad.reset()
+
+    def feed(self, pcm16: np.ndarray) -> bool:
+        if self._vad is None:
+            self._vad = Vad()
+        self.buf = np.concatenate([self.buf, pcm16])
+        end_frames = int(0.5 / (FRAME / SAMPLE_16K))
+        while len(self.buf) >= FRAME:
+            frame, self.buf = self.buf[:FRAME], self.buf[FRAME:]
+            prob = self._vad(frame)
+            if not self.talking:
+                self.pre = (self.pre + [frame])[-10:]
+                self.hot = self.hot + 1 if prob > 0.5 else 0
+                if self.hot >= 2:
+                    self.talking, self.quiet, self.utter = True, 0, list(self.pre)
+                continue
+            self.utter.append(frame)
+            self.quiet = self.quiet + 1 if prob < 0.35 else 0
+            if self.quiet >= end_frames or len(self.utter) * FRAME / SAMPLE_16K > self.MAX_S:
+                pcm = np.concatenate(self.utter)
+                self.talking, self.hot, self.utter = False, 0, []
+                self._vad.reset()
+                if len(pcm) > SAMPLE_16K * 0.4 and self._heard_wake(pcm):
+                    return True
+        return False
+
+    def _heard_wake(self, pcm) -> bool:
+        if self._stt is None:
+            self._stt = Stt(str(self.path))
+        return bool(LocalSession.WAKE.search(self._stt.transcribe(pcm) or ""))
+
+
 class TtsWorker:
     """Synthesises queued text on its own thread and feeds the speaker, so the LLM never waits for
     audio and audio never waits for the LLM. Items from a cancelled generation are dropped."""
@@ -767,6 +819,10 @@ class LocalSession(VoiceSession):
         self._bridge_on, self._bridge, self._bridge_info = bridge, None, bridge_info
         self.sync, self.tunnel = sync, tunnel      # the 24/7 server (sync.Sync / sync.Tunnel) or None
         self._sync_at = 0.0
+        self.asleep = False                      # voice off until the wake word; typing, Telegram and the buttons still work
+        self._active_at = time.monotonic()       # last time he talked or typed to me
+        self._wake_stt = None
+        self._wake_det, self._wake_det_tried = None, False
         self.remote_speaks = False               # phone messages are answered in text, not out loud
         self._last_user_at = 0.0                 # when he last wrote or said something real
         self._last_reply, self._last_acted = "", False
@@ -981,6 +1037,11 @@ class LocalSession(VoiceSession):
             now = time.monotonic()
             if self.body.sfx_busy():
                 continue
+            if self.asleep and self._wake_det is not None:
+                # asleep: only the keyword spotter listens. No VAD, no transcription, nothing leaves the PC.
+                if await loop.run_in_executor(None, self._wake_det.feed, np.frombuffer(chunk, dtype=np.int16)):
+                    await self._turns.put(("wake", None))
+                continue
             speaking = self.speaker.playing or (self.worker is not None and self.worker.busy())
             if speaking and not was_speaking and now - last_speaking > 0.8:
                 speak_t0 = now                                  # a new reply (not just a gap between sentences)
@@ -1013,7 +1074,7 @@ class LocalSession(VoiceSession):
                     if hot >= need:
                         talking, quiet = True, 0
                         utter = list(pre)
-                        if getattr(self.stt, "streaming", False):
+                        if getattr(self.stt, "streaming", False) and not self.asleep:
                             stream = self.stt.open()
                             for f in utter:
                                 stream.feed(f)
@@ -1028,7 +1089,7 @@ class LocalSession(VoiceSession):
                     if quiet == 0:
                         spec = None                         # they kept talking: the guess is stale
                     elif (quiet == spec_frames and spec is None and stream is None
-                          and len(utter) * frame_s > 0.6):
+                          and len(utter) * frame_s > 0.6 and not self.asleep):
                         spec = loop.run_in_executor(self._stt_pool, self.stt.transcribe,
                                                     np.concatenate(utter))
                     if quiet >= end_frames or len(utter) * frame_s > 20.0:
@@ -1064,7 +1125,16 @@ class LocalSession(VoiceSession):
             t0 = time.monotonic()
             force_image = False
             if kind == "event":
+                if self.asleep:
+                    continue                                      # asleep: no check-ins, no reacting out loud
                 text, force_image = payload
+            elif kind == "speech" and self.asleep:
+                text = await loop.run_in_executor(self._stt_pool, self._wake_check, payload[0])
+                if text is None:
+                    continue                                      # not for me; never logged or kept
+                self._wake("wake word")
+                self._log("you", text or "Hey Cyph")
+                text = text or "[Cypher called you by saying 'Hey Cyph'. Answer in a few words, like 'yeah?'.]"
             elif kind == "speech":
                 self._cancel_generation()
                 pcm, fut = payload
@@ -1073,8 +1143,21 @@ class LocalSession(VoiceSession):
                 if not text:
                     continue
                 self._log("you", text)
+                self._active_at = time.monotonic()
+            elif kind == "speech":
+                pass                                          # (the wake-word branch above set text)
+            elif kind == "wake":
+                if not self.asleep:
+                    continue
+                self._wake("wake word")
+                self._log("you", "Hey Cyph")
+                text = "[Cypher called you by saying 'Hey Cyph'. Answer in a few words, like 'yeah?'.]"
             else:
                 text = payload
+                if kind == "text" and self.asleep and not text.startswith("["):
+                    self._wake("typed")
+                if kind == "text" and not text.startswith(("[", "EVENT:")):
+                    self._active_at = time.monotonic()
             remote = None
             remote_images = None
             if kind == "remote":
@@ -1114,6 +1197,67 @@ class LocalSession(VoiceSession):
             self._curate_async()
 
     SYNC_EVERY_S = 300.0
+    # "hey cyph" as Whisper tends to hear it
+    WAKE = re.compile(r"\b(?:hey|hay|hi|hello|okay|ok|yo)[\s,.!]*(?:cyph|cypher|cipher|siph|sif|siff|sith|sipher|sighf|sife|cife|ciph|sai?f)\b[\s,.!?]*", re.I)
+
+    def _wake_check(self, pcm):
+        """Asleep: transcribe with the LOCAL Whisper only (room audio never goes to the cloud) and look for the
+        wake word. Returns None if it was not said, else whatever followed it ('' if nothing)."""
+        try:
+            if self._wake_stt is None:
+                self._wake_stt = Stt(self.cfg.whisper)
+            heard = self._wake_stt.transcribe(pcm)
+        except Exception as e:
+            self._log("warn", f"wake word: {type(e).__name__}: {e}")
+            return None
+        m = self.WAKE.search(heard or "")
+        return None if not m else heard[m.end():].strip()
+
+    def _wake_detector(self):
+        """The openWakeWord spotter if its models are in models/wake/ (None otherwise: Whisper spots the phrase)."""
+        if self._wake_det is None and not self._wake_det_tried:
+            self._wake_det_tried = True
+            from . import wake as wakeword
+            model = self.cfg.wake_model or None
+            if wakeword.available(model):
+                try:
+                    self._wake_det = wakeword.WakeWord(model, threshold=self.cfg.wake_threshold)
+                    self._log("info", f"wake word: openWakeWord ({self._wake_det.path.name}), nothing is transcribed while asleep")
+                except Exception as e:
+                    self._log("warn", f"wake word: openWakeWord failed to load ({type(e).__name__}: {e}); using Whisper")
+        return self._wake_det
+
+    def _check_sleep(self):
+        if (self.asleep or self.cfg.sleep_after_s <= 0 or self.state != "live" or self.worker is None
+                or not (self._wake_detector() or Path(self.cfg.whisper).exists())):
+            return
+        busy = (self.speaker.playing or self.worker.busy() or self._listening
+                or (self._gen_task is not None and not self._gen_task.done()) or not self._turns.empty())
+        if not busy and time.monotonic() - self._active_at > self.cfg.sleep_after_s:
+            self.sleep()
+
+    def sleep(self):
+        """Voice off until 'Hey Cyph'. The arm keeps doing small, quiet idle moves so it still feels alive."""
+        if self.asleep:
+            return
+        if self._wake_detector() is not None:
+            self._wake_det.reset()
+        self.asleep = True
+        self.body.set_calm(True)
+        self.body.express("sleepy")
+        self._log("info", "asleep: voice is off. Say 'Hey Cyph' or type to wake me (Telegram still works)")
+
+    def wake(self):
+        self._wake("asked")
+
+    def _wake(self, why: str):
+        if not self.asleep:
+            return
+        self.asleep = False
+        self._active_at = time.monotonic()
+        self.body.set_calm(False)
+        self.body.wake()
+        self._log("info", f"awake ({why})")
 
     def _sync_now(self):
         """Push what happened here, take the server's newer memory / schedule / chat. Never raises."""
@@ -1126,9 +1270,25 @@ class LocalSession(VoiceSession):
         except Exception as e:                             # the app must run without the server
             self._log("warn", f"sync: {type(e).__name__}: {e}")
 
+    def _sync_soon(self, delay: float = 15.0):
+        """After a reply, tell the server about it shortly (one push pending at a time), so the phone stays in step."""
+        if not self.sync or getattr(self, "_sync_pending", False):
+            return
+        self._sync_pending = True
+
+        def go():
+            time.sleep(delay)
+            self._sync_pending = False
+            try:
+                self.sync.push()
+            except Exception as e:
+                self._log("warn", f"sync: {type(e).__name__}: {e}")
+        threading.Thread(target=go, name="cyph-sync-soon", daemon=True).start()
+
     async def _memory_idle(self):
         while True:
             await asyncio.sleep(5.0)
+            self._check_sleep()
             if self.sync and time.monotonic() - self._sync_at > self.SYNC_EVERY_S:
                 self._sync_at = time.monotonic()
                 threading.Thread(target=self._sync_now, name="cyph-sync", daemon=True).start()
@@ -1267,7 +1427,7 @@ class LocalSession(VoiceSession):
             busy = (self.speaker.playing or (self.worker is not None and self.worker.busy())
                     or (self._gen_task is not None and not self._gen_task.done()) or self._listening
                     or now - self._heard_at < 8.0 or not self._turns.empty())
-            if busy or now - getattr(self, "_ambient_said", 0.0) < AMBIENT_COOLDOWN_S:
+            if busy or self.asleep or now - getattr(self, "_ambient_said", 0.0) < AMBIENT_COOLDOWN_S:
                 continue
             self._ambient_said = now
             self._log("info", "ambient: " + ev)
@@ -1348,6 +1508,7 @@ class LocalSession(VoiceSession):
 
     async def _respond_remote(self, text: str, t0: float, fut, images=None):
         self._last_reply, self._last_acted = "", False
+        self._log("you", "[phone] " + text + (" (+ photo)" if images else ""))
         try:
             await self._respond(text, t0, remote=True, images=images)
         finally:
@@ -1488,6 +1649,7 @@ class LocalSession(VoiceSession):
             self.transcript.append(("cyph", clean_for_tts(spoke)))
             if self.shared:
                 self.shared.append("assistant", clean_for_tts(spoke), "tg" if remote else "desk")
+                self._sync_soon()
         self._last_acted = cur["acted"]
         self._last_reply = clean_for_tts(spoke) or ("Done." if cur["acted"] else "")
         self._memory_tick(text)

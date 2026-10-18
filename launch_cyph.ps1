@@ -57,7 +57,8 @@ try {
 
     $python = (& python -c "import sys;print(sys.executable)").Trim()
     # never inherit NO_COLOR (the whole UI is colour) and make sure truecolor is on
-    $cmd = "set NO_COLOR=&& set COLORTERM=truecolor&& `"$python`" -m cyph $CyphArgs"
+    # /c: the window closes when Cyph quits (q). If it exits with an error, pause so the message can be read.
+    $cmd = "set NO_COLOR=&& set COLORTERM=truecolor&& `"$python`" -m cyph $CyphArgs || pause"
 
     # smaller text than the default: a hidden Windows Terminal profile "Cyph" (a fragment, so your own
     # settings are not edited). Terminal loads fragments when it starts.
@@ -69,7 +70,7 @@ try {
 
     $wtArgs = @("-w", "new")
     if (-not $Tabs) { $wtArgs += "--focus" }
-    $wtArgs += @("-p", "Cyph", "-d", "`"$here`"", "--title", $title, "--suppressApplicationTitle", "cmd", "/k", $cmd)
+    $wtArgs += @("-p", "Cyph", "-d", "`"$here`"", "--title", $title, "--suppressApplicationTitle", "cmd", "/c", $cmd)
     Start-Process wt.exe -ArgumentList $wtArgs
     Log "started: python -m cyph $CyphArgs"
 

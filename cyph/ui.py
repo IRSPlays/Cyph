@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import queue
+from pathlib import Path
 
 from rich.text import Text
 from textual import on
@@ -33,7 +34,7 @@ HELP = (
     "grip close [gentle|firm|max] | measure <x> <y> (0-1000, distance via stereo)\n"
     "tracking tuning: hfov <deg> | trackgain <x> | flip | armpos <x_m> <z_m> (arm vs camera)\n"
     "demo [mood mood ...] | pet | wake | idle on/off | speak on/off | listen on/off\n"
-    "voice on/off | say <text to Cyph> | stop | estop | release | help | quit"
+    "voice on/off | sleep | wake (voice off until \"Hey Cyph\") | say <text to Cyph> (or just type without a /) | stop | estop | release | help | quit"
 )
 
 
@@ -125,7 +126,7 @@ class CyphApp(App):
                 yield Static(id="joints")
                 yield Static(id="status")
             yield RichLog(id="log", wrap=True, markup=False, highlight=False, min_width=20)
-        yield Input(placeholder="type a command, /help for the list", id="cmd")
+        yield Input(placeholder="type to talk to Cyph, or /help for commands", id="cmd")
         yield Footer()
 
     def on_mount(self):
@@ -150,6 +151,8 @@ class CyphApp(App):
         if not self.body.status()["real"]:
             self.log_line("warn", "simulator mode - no arm connected")
         self.set_interval(1 / 12, self.refresh_view)
+        self._wake_listener = None
+        self.set_interval(1.0, self._wake_watch)
         if self.voice is None:
             self.log_line("info", "voice off: press v to start it")
         elif self.autostart_voice:
@@ -160,7 +163,48 @@ class CyphApp(App):
         p = getattr(self.camera, "person", None) if self.camera is not None else None
         return (p[0], p[1]) if p else None
 
+    def _wake_watch(self):
+        """Voice turned off: only the keyword spotter keeps listening (if models/wake/hey_cyph.onnx is trained), so
+        'Hey Cyph' turns the voice back on. It stops again the moment the voice session starts (one mic user at a time)."""
+        v = self.voice
+        want = False
+        if v is not None and getattr(v, "state", "") == "off" and hasattr(v, "cfg"):
+            from . import wake
+            want = wake.available(v.cfg.wake_model or None) or Path(v.cfg.whisper).exists()
+        wl = self._wake_listener
+        if wl is not None and not wl.running:
+            self._wake_listener = wl = None                  # it ended (a hit, or the mic failed): maybe start a new one
+        if want and wl is None:
+            from . import audio, wake
+            try:
+                if wake.available(v.cfg.wake_model or None):
+                    spot = wake.WakeWord(v.cfg.wake_model or None, threshold=v.cfg.wake_threshold)
+                else:                                        # no trained model: VAD + local Whisper on short bursts
+                    from .local import WhisperSpotter
+                    spot = WhisperSpotter(v.cfg.whisper)
+            except Exception as e:
+                self.log_line("warn", f"wake word: {type(e).__name__}: {e}")
+                return
+            self._wake_listener = wake.WakeListener(
+                lambda: self.call_from_thread(self._wake_hit), audio.Mic(getattr(v.mic, "spec", None)), spot,
+                log=lambda lv, m: self.call_from_thread(self.log_line, lv, m))
+            self._wake_listener.start()
+            self.log_line("info", "voice is off: only the wake word listens ('Hey Cyph' turns it back on)")
+        elif not want and wl is not None:
+            wl.stop()
+            self._wake_listener = None
+
+    def _wake_hit(self):
+        if self._wake_listener is not None:
+            self._wake_listener.stop()
+            self._wake_listener = None
+        if self.voice is not None and self.voice.state == "off":
+            self.log_line("you", "Hey Cyph")
+            self.voice.start()
+
     def on_unmount(self):
+        if getattr(self, "_wake_listener", None) is not None:
+            self._wake_listener.stop()
         if self.body.sfx is not None:
             self.body.sfx.stop()
         if self.voice:
@@ -217,6 +261,10 @@ class CyphApp(App):
             mode, col = "E-STOP", C.RED
         elif s["idle"] and s["convo"]:
             mode, col = "talking (idle held)", C.NEON
+        elif s["idle"] and getattr(self.voice, "asleep", False):
+            mode, col = "asleep (say Hey Cyph)", C.DIM
+        elif s["idle"] and s.get("calm"):
+            mode, col = "calm (small passive moves)", C.MINT
         elif s["idle"]:
             mode, col = "alive (idle moods on)", C.MINT
         else:
@@ -333,7 +381,8 @@ class CyphApp(App):
 
     @on(Input.Submitted)
     def _command(self, ev: Input.Submitted):
-        raw = ev.value.strip().lstrip("/").lower()
+        typed = ev.value.strip()
+        raw = typed.lstrip("/").lower()
         ev.input.value = ""
         ev.input.blur()
         if not raw:
@@ -515,6 +564,8 @@ class CyphApp(App):
                     text = raw[3:].strip()
                     self.log_line("you", text)
                     self.voice.send_text(text)
+            elif cmd in ("sleep", "wake") and hasattr(self.voice, "asleep"):
+                self.voice.sleep() if cmd == "sleep" else self.voice.wake()
             elif cmd == "stop":
                 self.body.stop()
             elif cmd == "estop":
@@ -525,6 +576,9 @@ class CyphApp(App):
                 self.log_line("info", HELP)
             elif cmd in ("quit", "exit"):
                 self.exit()
+            elif not typed.startswith("/") and self.voice is not None and self.voice.state == "live":
+                self.log_line("you", typed)                    # plain text is a message to Cyph, same brain as speaking
+                self.voice.send_text(typed)
             else:
                 self.log_line("warn", f"unknown command {raw!r} - try /help")
         except ValueError as e:

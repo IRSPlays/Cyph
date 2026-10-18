@@ -75,6 +75,7 @@ def build_local(body, a, camera=None):
     from .bridge import SharedChat
     from .local import LocalConfig, LocalSession
     cfg = LocalConfig(llm=a.llm, voice=a.local_voice, port=a.llm_port or 0, tts_steps=a.tts_steps,
+                      sleep_after_s=a.sleep_after * 60.0,
                       stt="cartesia" if a.stt == "cartesia" else "whisper",
                       whisper=str(MODEL_DIR / f"whisper-{'base' if a.stt == 'cartesia' else a.stt}.en"))
     memory = curator = None
@@ -492,6 +493,9 @@ def main():
                     help="--brain local: never hand a hard request to Gemini")
     ap.add_argument("--no-bridge", action="store_true",
                     help="--brain local: do not accept Telegram messages / share the chat with the phone bot")
+    ap.add_argument("--sleep-after", type=float, default=3.0, metavar="MIN",
+                    help="--brain local: after this many quiet minutes the voice turns off until you say "
+                         "\"Hey Cyph\" (0 = never)")
     ap.add_argument("--no-server", action="store_true",
                     help="--brain local: do not sync with the 24/7 server (data/server.json) or open the link to it")
     ap.add_argument("--no-ambient", action="store_true",

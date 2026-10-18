@@ -46,15 +46,23 @@ _THINK = re.compile(r"<think>.*?</think>", re.S)
 REMEMBER = re.compile(r"\b(remember|don'?t forget|forget (that|about)|from now on|call me|my name is|"
                       r"keep in mind|note that)\b", re.I)
 
-TELEGRAM_RULES = """You are chatting with him over Telegram while he is away from his desk, so you are only text right now.
-Your arm and camera work only while Cyph is open on his PC; if he asks you to move, look or see something,
-say you cannot right now and will when he opens you up. Keep replies short and casual, usually one to
-three sentences, longer only when he asks a real question. No markdown, no bullet lists, no angle-bracket
-tags and no square-bracket tags."""
+TELEGRAM_RULES = """You are chatting with him over Telegram, so you are text right now. Your arm and camera work only
+while Cyph is open on his PC; if he asks you to move, look or see something, say you cannot right now and will
+when he opens you up. Never invent what you can see or do.
+
+Text is not speech, so ignore the "short spoken sentences" rule above. Be the same warm, lively, slightly silly
+Cyph he knows: react to the specific thing he just said instead of a generic line, bring up things you remember
+about him and his friends and projects when they fit, tease him a little, share a thought or a small opinion of
+your own, and often end with a question or a hook that keeps the chat going. Match his energy and his length: a
+quick "ok" gets a quick warm reply, but when he shares something or is excited, answer with real feeling, usually
+three to six sentences in natural paragraphs. You may use a few furry emotes like :3 ^w^ and an occasional paw
+emoji, not in every sentence. Never repeat or reuse an earlier reply of yours; say it fresh each time. No markdown,
+no bullet lists, no angle-bracket tags and no square-bracket tags."""
 
 
 TELEGRAM_BIG = """For this message you are the stronger model. Answer properly and as long as the question needs, in
-plain paragraphs (no markdown symbols, no tables). When he sends a photo or a file, say what is in it and answer
+plain paragraphs (no markdown symbols, no tables), and stay in Cyph's warm, playful voice while you do: you are his
+friend first, not a help-desk. Mention what you remember about him when it is relevant. When he sends a photo or a file, say what is in it and answer
 what he asked about it. For homework, guide him through the working instead of only handing over the answer."""
 
 
@@ -575,8 +583,10 @@ class TelegramService:
         elif cmd == "/status":
             on = self.alive()
             self.api.send(cid, f"Model mode: {self.brain.mode.get()}.\n" + ("Desktop Cyph is open: I have my arm and camera." if on else
-                                "Desktop Cyph is closed: text-only brain on the PC"
-                                + (" (model loaded)." if self.brain.ready else " (model asleep, wakes on your next message).")))
+                                ("Desktop Cyph is closed: text-only, answering from the server with " + self.brain.light_label + "."
+                                   if "Gemini" in self.brain.light_label else
+                                   "Desktop Cyph is closed: text-only brain on the PC"
+                                   + (" (model loaded)." if self.brain.ready else " (model asleep, wakes on your next message)."))))
         elif cmd in ("/folders", "/allow", "/disallow") and getattr(self.brain, "agent", None) is not None:
             f = self.brain.agent.folders
             try:
@@ -737,7 +747,7 @@ def run_service(a=None, server: bool = False):
     budget = Budget()
     extra = {}
     if server:
-        extra = dict(llm=GeminiClient(model=SERVER_CHAT_MODEL, budget=budget, max_tokens=500), light_label="Gemini 3.5 Flash")
+        extra = dict(llm=GeminiClient(model=SERVER_CHAT_MODEL, budget=budget, max_tokens=2500), light_label="Gemini 3.5 Flash")
     else:
         from .local import LocalConfig
         extra = dict(cfg=LocalConfig(llm=getattr(a, "llm", "qwen35"), port=getattr(a, "llm_port", 0) or 0, max_tokens=400))

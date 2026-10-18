@@ -102,7 +102,8 @@ TRACK_SMOOTH = 0.65        # weight of the newest detection (was 0.4): less lag
 TRACK_KV = 2.6          # centre mode: deg/s of slew per degree of error (a 0.4 s time constant)
 TRACK_DEAD_DEG = 1.5    # centre mode: ignore errors smaller than this (servo deadband)
 TRACK_LOST_S = 4.0      # give the pose back this long after the face is lost
-CONVO_HOLD_S = 25.0    # idle moods stay off this long after the last sign of conversation
+CALM_AFTER_S = 180.0   # no conversation for this long (voice off, or quiet): idle becomes small, quiet passive moves
+CONVO_HOLD_S = 25.0   # idle moods stay off this long after the last sign of conversation
 
 
 # Base/pitch signs are unverified on the real arm: flip these if "left" looks
@@ -296,6 +297,7 @@ class Body:
         self.alive = Alive(self.rng)
 
         self.idle = True
+        self.calm = False              # asleep: only the small passive moods, far apart, no sound effects
         self.sfx = None                # SfxPlayer (or None): mood and event sound effects
         self.still = False             # calibration: every non-commanded joint holds centre
         self.estopped = False
@@ -679,6 +681,7 @@ class Body:
             "real": self.backend.is_real,
             "mood": self.mood,
             "idle": self.idle,
+            "calm": self._is_calm(),
             "convo": self.T < self._convo_until,
             "tracking": self.tracking,
             "track_info": self.track_info if self.tracking else None,
@@ -738,7 +741,8 @@ class Body:
         self._idle_started = tag == "idle"
         self._mood_until = self.T + (secs or ex.EXPRESSIONS[name][1])
         self._log("mood", f"{tag + ' -> ' if tag else ''}{name}")
-        self.sfx_play(name, 0.45 if tag == "idle" else 1.0)   # idle moods stay quieter
+        if not (tag == "idle" and self._is_calm()):
+            self.sfx_play(name, 0.45 if tag == "idle" else 1.0)   # idle moods stay quieter
 
     def _end_mood(self):
         if self._queue:
@@ -749,7 +753,15 @@ class Body:
         self.mood = "rest"
         self._idle_started = False
         self._mood_until = None
-        self._next_idle_at = self.T + self.rng.uniform(0.8, 3.0)
+        self._next_idle_at = self.T + (self.rng.uniform(6.0, 16.0) if self._is_calm() else self.rng.uniform(0.8, 3.0))
+
+    def set_calm(self, on):
+        self.calm = bool(on)
+
+    def _is_calm(self) -> bool:
+        """Calm = only small passive moves, far apart, silent. Set by the voice brain while it sleeps, and also
+        on its own once there has been no conversation for CALM_AFTER_S (voice turned off, or nobody talking)."""
+        return self.calm or self.T - max(0.0, self._convo_until - CONVO_HOLD_S) > CALM_AFTER_S
 
     def _start_demo(self, plan):
         self._demo_n = len(plan)
@@ -829,7 +841,7 @@ class Body:
             return
         if self.T < self._next_idle_at or self.T < self._convo_until:
             return
-        pool = LIVELY if self.rng.random() < 0.2 else PASSIVE
+        pool = LIVELY if (self.rng.random() < 0.2 and not self._is_calm()) else PASSIVE
         name = self.rng.choice([n for n in pool if n != self._last_idle])
         self._last_idle = name
         self._start_mood(name, ex.EXPRESSIONS[name][1] * self.rng.uniform(0.6, 1.0), tag="idle")

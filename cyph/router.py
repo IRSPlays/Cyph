@@ -235,7 +235,7 @@ def to_declarations(tools: list[dict] | None):
 class GeminiClient:
     """Streams like local.LlmClient: yields ("text", str) pieces and finally ("tools", [calls])."""
 
-    def __init__(self, model: str = BIG_MODEL, key: str | None = None, max_tokens: int = 1200, client=None,
+    def __init__(self, model: str = BIG_MODEL, key: str | None = None, max_tokens: int = 4096, client=None,
                  budget: Budget | None = None):
         self.model, self.max_tokens, self.budget = model, max_tokens, budget
         self._key, self._client = key, client

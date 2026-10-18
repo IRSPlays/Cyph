@@ -299,5 +299,25 @@ for kind, joint in (("chomp", 5), ("flap", 5), ("wag", 4)):
     span = max(abs(f[joint] - r[joint]) for f, r in zip(fr, ref))
     fails += check(span > 5, f"{kind} moves joint {joint + 1} ({span:.0f} deg)")
 
+# 20. calm idle: after 3 quiet minutes (voice off or nobody talking) only small passive moods, silent and far apart
+from cyph.body import CALM_AFTER_S, PASSIVE
+b = Body(SimBackend(), seed=9)
+sounds, picked = [], []
+b.sfx_play = lambda *a, **k: sounds.append(a)
+b._log = lambda kind, msg: picked.append(msg.split(" -> ")[-1]) if kind == "mood" else None
+fails += check(not b._is_calm(), "not calm at the start")
+b.T = CALM_AFTER_S + 1
+fails += check(b._is_calm(), "calm after 3 minutes without any conversation")
+for _ in range(30):
+    run_frames(b, 1500)
+fails += check(picked and set(picked) <= set(PASSIVE), f"calm idle only plays passive moods: {sorted(set(picked))}")
+fails += check(not sounds, "calm idle makes no sound effects")
+fails += check(len(picked) <= 30 * 30 / 6, f"calm moods are far apart ({len(picked)} in 900 s)")
+b.converse()
+run_frames(b, 2)
+fails += check(not b._is_calm(), "a conversation ends the calm mode")
+b.T += CALM_AFTER_S + 30
+fails += check(b._is_calm(), "and it comes back after another quiet 3 minutes")
+
 print("\nALL BODY TESTS PASSED" if not fails else f"\n{fails} FAILURES")
 sys.exit(1 if fails else 0)

@@ -9,5 +9,6 @@ opencv-python
 onnxruntime
 sounddevice
 faster-whisper
+openwakeword            # the "Hey Cyph" wake word (models/wake/, see docs/wake-word.md)
 supertonic
 google-genai

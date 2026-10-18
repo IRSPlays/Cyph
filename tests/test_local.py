@@ -559,5 +559,123 @@ check("A servo" in sent or "Local" in sent or "hello there" in sent, "context ca
 check(s.brain_now[1] == "local" and s.brain_now[2] == "short chat", f"auto: chat is local again ({s.brain_now})")
 s.stop()
 
+# 20. asleep: voice is off until "Hey Cyph"; nothing is heard by the cloud STT; the arm turns calm
+class WakeStt:
+    def __init__(self, heard):
+        self.heard, self.calls = list(heard), 0
+
+    def transcribe(self, pcm):
+        self.calls += 1
+        return self.heard.pop(0) if self.heard else ""
+
+
+s, body, llm, tts, stt, mic, spk, seen = make([[("text", "[happy] Yeah?")], [("text", "Your desk.")]])
+idle(s)
+s._wake_stt = WakeStt(["the weather is nice today", "hey cyph what is on my desk"])
+s._active_at -= 1000
+s.cfg.sleep_after_s = 60
+s._check_sleep()
+check(s.asleep and body.calm, "quiet for a long time -> asleep and the arm goes calm")
+n_llm = len(llm.calls)
+mic.push(True, 30)
+mic.push(False, 30)
+time.sleep(1.0)
+check(len(llm.calls) == n_llm and s.asleep, "ordinary speech while asleep is ignored")
+check(stt.calls == 0, "the cloud/normal STT never hears anything while asleep")
+check(not any("weather" in str(l) for l in s.transcript), "ambient speech is not kept")
+mic.push(True, 30)
+mic.push(False, 30)
+check(wait(lambda: len(llm.calls) > n_llm, 8), "'Hey Cyph ...' wakes it and the rest is answered")
+check(not s.asleep and not body.calm, "awake again, arm back to normal")
+check(any("what is on my desk" in str(m["content"]) for m in llm.calls[-1] if m["role"] == "user"),
+      "the words after the wake word are what the model hears")
+idle(s)
+s.sleep()
+n_llm = len(llm.calls)
+s._turns.put_nowait(("event", ("EVENT: Cypher walked in", False)))
+time.sleep(0.5)
+check(len(llm.calls) == n_llm, "ambient events do not make it talk while asleep")
+ask(s, llm, "are you there")
+check(not s.asleep, "typing wakes it")
+s.sleep()
+n_llm = len(llm.calls)
+s.cfg.sleep_after_s = 0
+s._active_at -= 1000
+s.wake()
+s._check_sleep()
+check(not s.asleep, "sleep_after_s = 0 never sleeps")
+s.stop()
+# 21. with an openWakeWord spotter: asleep, only it listens (no VAD / STT), and its hit wakes Cyph
+class FakeSpotter:
+    path = Path("hey_cyph.onnx")
+
+    def __init__(self):
+        self.fed, self.fire = 0, False
+
+    def reset(self):
+        pass
+
+    def feed(self, pcm):
+        self.fed += len(pcm)
+        if self.fire:
+            self.fire = False
+            return True
+        return False
+
+
+s, body, llm, tts, stt, mic, spk, seen = make([[("text", "[happy] Yeah?")]])
+idle(s)
+det = FakeSpotter()
+s._wake_det, s._wake_det_tried = det, True
+s.sleep()
+n_llm = len(llm.calls)
+mic.push(True, 30)
+mic.push(False, 10)
+time.sleep(0.8)
+check(det.fed > 0 and len(llm.calls) == n_llm and s.asleep, "asleep with a spotter: audio goes only to the spotter")
+check(stt.calls == 0, "no transcription at all while the spotter listens")
+det.fire = True
+mic.push(False, 3)
+check(wait(lambda: len(llm.calls) > n_llm, 6) and not s.asleep, "the spotter's hit wakes Cyph and it answers")
+s.stop()
+
+# 22. voice session OFF: a stand-alone listener (mic + spotter only) reports the wake word, then stops
+from cyph import wake as wakemod
+mic22, det22, hits22 = FakeMic(), FakeSpotter(), []
+wl = wakemod.WakeListener(lambda: hits22.append(1), mic22, det22)
+wl.start()
+check(wait(lambda: hasattr(mic22, "q"), 3), "the listener opens the mic")
+mic22.push(True, 6)
+check(wait(lambda: det22.fed > 0, 3) and not hits22, "audio reaches only the spotter, no hit on ordinary sound")
+det22.fire = True
+mic22.push(False, 3)
+check(wait(lambda: bool(hits22), 3), "the wake word is reported")
+check(wait(lambda: not wl.running, 3), "the listener stops itself after a hit (the voice takes the mic)")
+
+# 23. no trained model: VAD + Whisper on short bursts only, never on silence
+from cyph.local import WhisperSpotter
+
+
+class BurstStt:
+    def __init__(self, texts):
+        self.texts, self.calls = list(texts), 0
+
+    def transcribe(self, pcm):
+        self.calls += 1
+        return self.texts.pop(0)
+
+
+loud = (np.random.default_rng(2).integers(-9000, 9000, 512 * 40)).astype(np.int16)
+quiet_pcm = np.zeros(512 * 40, dtype=np.int16)
+bst = BurstStt(["what a nice day", "Hey Cyph, are you there"])
+sp = WhisperSpotter("x", vad=FakeVad(), stt=bst)
+check(not sp.feed(quiet_pcm) and bst.calls == 0, "silence is never transcribed")
+check(not sp.feed(np.concatenate([loud, quiet_pcm])) and bst.calls == 1, "ordinary speech is checked, no wake")
+check(sp.feed(np.concatenate([loud, quiet_pcm])) and bst.calls == 2, "'Hey Cyph ...' in a burst is a hit")
+
+check(all(LocalSession.WAKE.search(t) for t in ("hey cyph", "Hey, Cipher!", "hey siff", "ok sith"))
+      and not any(LocalSession.WAKE.search(t) for t in ("heyday", "hey there", "cypher is my name")),
+      "wake phrase matching")
+
 print("\nALL LOCAL TESTS PASSED" if not fails else f"\n{fails} FAILURES")
 sys.exit(1 if fails else 0)
