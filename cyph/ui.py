@@ -149,7 +149,7 @@ class CyphApp(App):
             self.log_line("warn", "simulator mode - no arm connected")
         self.set_interval(1 / 12, self.refresh_view)
         if self.voice is None:
-            self.log_line("info", "voice off: start with --voice (needs GEMINI_API_KEY)")
+            self.log_line("info", "voice off: press v to start it")
         elif self.autostart_voice:
             self.voice.start()
 
@@ -211,7 +211,7 @@ class CyphApp(App):
         if s["estop"]:
             mode, col = "E-STOP", C.RED
         elif s["idle"] and s["convo"]:
-            mode, col = "talking (Gemini drives, idle held)", C.NEON
+            mode, col = "talking (idle held)", C.NEON
         elif s["idle"]:
             mode, col = "alive (idle moods on)", C.MINT
         else:

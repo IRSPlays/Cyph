@@ -6,7 +6,7 @@
 
 **A furry robot co-engineer that lives in your terminal, talks, remembers you, and moves a real 6-joint arm.**
 
-<sub>Python · Textual TUI · local Qwen or Gemini brain · Telegram · long-term memory</sub>
+<sub>Python · Textual TUI · local Qwen brain · Telegram · long-term memory</sub>
 
 <img src="docs/topbar.svg" alt="Cyph's top bar: the pixel face, the logo and the live status">
 
@@ -31,7 +31,7 @@ The real interface (this one is the simulator, so no arm is needed to try it):
 | | |
 |---|---|
 | **Body** | A daemon owns the arm: mood, idle "alive" motion and task moves layered together, joint limits, a speed guard, e-stop and reconnect. A simulator runs the same code with no hardware. |
-| **Two brains** | `--brain local`: Qwen3.5-4B through llama-server on your GPU, fully offline apart from speech-to-text. `--brain gemini`: the Gemini Live API. |
+| **Local brain** | Qwen3.5-4B through llama-server on your GPU (Vulkan). The conversation never leaves the PC; only speech-to-text uses the network, and Cyph falls back to local Whisper if that is down. Gemini is used only in the background, to curate memory. |
 | **Voice** | Silero VAD, streaming Cartesia Ink-2 speech-to-text (local Whisper as the fallback), Supertonic text-to-speech, barge-in so you can interrupt it. |
 | **Arm by words** | The model writes tags like `[turn right 40]` or `[grip close]` in its reply. They run in order and are never spoken. |
 | **Memory** | Capped Markdown files about you, your own notes and the people in your life, plus daily notes. A background curator (Gemini Flash-Lite) updates them with small add / replace / remove edits, and every edit is logged. |
@@ -67,9 +67,9 @@ Needs Python 3.13 on Windows. The arm host library (`arm_client`, `expressions`)
 
 ```bash
 pip install -r requirements.txt
-python -m cyph --sim                          # simulator, no arm needed
-python -m cyph --port COM15                   # the real arm
-python -m cyph --brain local --port COM15     # local brain + voice
+python -m cyph --sim --no-voice               # simulator only, no arm and no models
+python -m cyph --sim                          # simulator with the local brain and voice
+python -m cyph --port COM15                   # the real arm, local brain and voice
 python -m cyph telegram                       # the Telegram service on its own
 python -m cyph memory                         # show what Cyph remembers
 ```
@@ -77,7 +77,7 @@ python -m cyph memory                         # show what Cyph remembers
 Keys live in the environment or an untracked `cyph/.env`, never in the code:
 
 ```
-GEMINI_API_KEY=...        # memory curator, and the Gemini brain
+GEMINI_API_KEY=...        # background memory curator (Gemini Flash-Lite)
 CARTESIA_API_KEY=...      # speech-to-text (falls back to local Whisper without it)
 TELEGRAM_BOT_TOKEN=...    # from @BotFather
 ```
@@ -111,6 +111,6 @@ arm or Cartesia/Telegram themselves.
 
 ## Roadmap
 
-Planned, not built yet: a 24/7 server as the single owner of memory and uploads; routing hard jobs to a stronger
-Gemini model; images over Telegram; file and task tools with approval; a quick-add schedule in Telegram with
+Planned, not built yet: a 24/7 server as the single owner of memory and uploads; routing hard jobs from the local
+model to a stronger Gemini model; images over Telegram; file and task tools with approval; a quick-add schedule in Telegram with
 morning briefs and deadline nudges; a study mode that explains your code in its own window.

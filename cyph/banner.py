@@ -136,7 +136,7 @@ def render(s, info, t, width=60):
         d = abs(i - pos)
         out.append("━", style=_lerp(C.TEAL, "#ffffff", max(0.0, 1 - d / 5.0) * 0.85) if d < 5 else C.DEEP_TEAL)
     out.append("\n")
-    out.append("VectorM 6-DOF arm · local or Gemini brain · stereo eyes\n", style=C.TEAL)
+    out.append("VectorM 6-DOF arm · local brain · stereo eyes\n", style=C.TEAL)
     out.append("\n")
 
     # status chips

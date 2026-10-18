@@ -451,13 +451,14 @@ def main():
                     help=f"serial port of the arm (default {DEFAULT_PORT})")
     ap.add_argument("--sim", action="store_true", help="no arm: run against the simulator")
     ap.add_argument("--wild", type=float, default=1.5)
-    ap.add_argument("--no-voice", action="store_true", help="do not use Gemini Live")
+    ap.add_argument("--no-voice", action="store_true", help="no voice brain (simulator-only runs)")
     ap.add_argument("--no-start-voice", action="store_true",
-                    help="do not connect to Gemini on launch (press v)")
+                    help="do not start the voice brain on launch (press v)")
     ap.add_argument("--voice", action="store_true", help=argparse.SUPPRESS)        # old, now default
     ap.add_argument("--start-voice", action="store_true", help=argparse.SUPPRESS)  # old, now default
-    ap.add_argument("--brain", choices=["gemini", "local"], default="gemini",
-                    help="gemini = Gemini Live (cloud); local = Qwen3-VL + Whisper + Supertonic on this PC")
+    ap.add_argument("--brain", choices=["local", "gemini"], default="local",
+                    help="local = Qwen on this PC + Cartesia/Whisper + Supertonic (default); "
+                         "gemini = the old Gemini Live brain, no longer used")
     ap.add_argument("--local-voice", default="M1", help="Supertonic voice for --brain local (M1..M5, F1..F5)")
     ap.add_argument("--llm", choices=["qwen", "qwen35"], default="qwen35",
                     help="local model: qwen35 = Qwen3.5-4B (default), qwen = Qwen3-VL-4B")
