@@ -152,7 +152,7 @@ class Brain:
     """The standalone brain: local Qwen, shared memory, shared recent chat. One conversation at a time."""
 
     def __init__(self, cfg=None, store=None, curator=None, shared=None, log=lambda *_: None,
-                 server=None, llm=None, alive=desktop_alive, router=None, big=None, mode=None, agent=None):
+                 server=None, llm=None, alive=desktop_alive, router=None, big=None, mode=None, agent=None, summary=None):
         from .local import LlamaServer, LocalConfig
         self.cfg = cfg or LocalConfig(max_tokens=400)
         self.store, self.curator, self.log, self.alive = store, curator, log, alive
@@ -164,6 +164,7 @@ class Brain:
         from .router import BrainMode
         self.mode = mode or BrainMode()
         self.agent, self.approve = agent, None        # file tools for Gemini; approve(text) -> bool asks him
+        self.summary = summary                        # summary.RollingSummary: older messages, folded down by Flash-Lite
         self.lock = threading.RLock()
         self.transcript: list[tuple[str, str]] = []
         self.started = time.time()
@@ -259,12 +260,18 @@ class Brain:
                 self.started = time.time()
             self.transcript.append(("user", note))
             system = remote_system_prompt(self.store.snapshot() if self.store else "")
+            earlier = self.summary.get() if self.summary else ""
+            if earlier:
+                system += ("\n\nEarlier in this conversation (a summary of messages that are no longer shown; "
+                           "treat it as what you already know):\n" + earlier)
             if dec.big:
                 system += "\n\n" + TELEGRAM_BIG + ("\n\n" + self.agent.prompt() if self.agent else "")
             history = self.shared.load(14)[:-1] + [{"role": "user", "content": content}]
             msgs = stamp([{"role": "system", "content": system}] + history, prev=prev)
             out = tidy(asyncio.run(self._collect(msgs, dec.big, bool(files)))) or "..."
             self.shared.append("assistant", out, "tg")
+            if self.summary:
+                threading.Thread(target=self.summary.maybe_update, args=(self.shared,), daemon=True).start()
             self.transcript.append(("cyph", out))
             self.turn_at = time.monotonic()
             if REMEMBER.search(text) or self._unsaved() >= CURATE_EVERY:
@@ -334,10 +341,12 @@ class Brain:
 
 class TelegramService:
     def __init__(self, api, brain, store=None, state_path=None, log=lambda *_: None, pair_code=None,
-                 ask=ask_desktop, alive=desktop_alive, schedule=None, schedule_gen=None, proactive=None, threaded=False):
+                 ask=ask_desktop, alive=desktop_alive, schedule=None, schedule_gen=None, proactive=None, threaded=False,
+                 digest=None):
         self.api, self.brain, self.store, self.log = api, brain, store, log
         self.schedule, self.schedule_gen, self.pending = schedule, schedule_gen, None   # pending: a question we asked
         self.proactive = proactive
+        self.digest, self._digesting = digest, False   # nightly review of the daily notes (digest.Digester)
         self.threaded = threaded                      # chats run on a worker so approvals can arrive meanwhile
         self._work, self._approvals = threading.Lock(), {}
         self.state_path = Path(state_path) if state_path else STATE
@@ -442,6 +451,33 @@ class TelegramService:
         for a in out:
             save_inbox(a["data"], a["name"], getattr(self, "inbox", None))
         return out
+
+    def _digest_tick(self):
+        """At night, when he has been quiet a while, fold the last days into long-term memory."""
+        if self.digest is None or self._digesting:
+            return
+        from datetime import datetime
+        turn_at = getattr(self.brain, "turn_at", 0.0)
+        quiet = time.monotonic() - turn_at if turn_at else 1e9
+        if not self.digest.due(datetime.now(), quiet, self.alive()):
+            return
+        self._digesting = True
+        threading.Thread(target=self._run_digest, name="cyph-digest", daemon=True).start()
+
+    def _run_digest(self, cid=None):
+        try:
+            res = self.digest.run()
+            if cid is not None:
+                n = len(res.get("applied", []))
+                self.api.send(cid, f"Nightly review done: {n} change{'s' if n != 1 else ''} to long-term memory"
+                              + (f", {res['archived']} old daily note(s) archived." if res.get("archived") else ".")
+                              + (" /memory shows what I remember." if n else ""))
+        except Exception as e:
+            self.log("warn", f"digest: could not run ({type(e).__name__}); will retry")
+            if cid is not None:
+                self.api.send(cid, "The nightly review could not run (Gemini unreachable?). I will try again later.")
+        finally:
+            self._digesting = False
 
     def _callback(self, cq: dict):
         if (cq.get("from") or {}).get("id") != self.owner:
@@ -564,6 +600,17 @@ class TelegramService:
                                 "gemini": "Always Gemini 3.8 Flash.",
                                 "local": "Always the local Qwen (no Gemini)."}[mode.get()]
                           + " Change it with /auto, /gemini or /local.")
+        elif cmd == "/digest" and self.digest is not None:
+            if self._digesting:
+                self.api.send(cid, "The review is already running.")
+            else:
+                self._digesting = True
+                self.api.send(cid, "Reviewing the last few days against long-term memory...")
+                self._dispatch(self._run_digest, cid)
+        elif cmd == "/summary" and getattr(self.brain, "summary", None) is not None:
+            text = self.brain.summary.get()
+            self.api.send(cid, ("Summary of the earlier part of this chat:\n" + text) if text else
+                          "Nothing summarised yet: the chat is still short enough that I can see all of it.")
         elif cmd in ("/memory", "/forget"):
             self._memory(cid, cmd, arg)
         elif cmd == "/nudges" and self.proactive is not None:
@@ -622,6 +669,7 @@ class TelegramService:
                 except Exception as e:
                     self.log("error", f"update failed: {type(e).__name__}: {e}")
             self.brain.tick()
+            self._digest_tick()
             if self.proactive is not None and self.owner is not None:
                 try:
                     self.proactive.tick()
@@ -660,8 +708,11 @@ def run_service(a=None):
     from .router import Budget, GeminiClient, Router
     from .router import MODE_FILE, BrainMode
     from .agent import Agent
+    from .memory import gemini_generate
+    from .summary import RollingSummary
     brain = Brain(cfg, store, curator, SharedChat(), log, router=Router(), big=GeminiClient(budget=Budget()),
-                  mode=BrainMode(MODE_FILE), agent=Agent())
+                  mode=BrainMode(MODE_FILE), agent=Agent(),
+                  summary=RollingSummary(gemini_generate("gemini-3.5-flash-lite"), log=log))
     api = TelegramApi(token)
     try:
         me = api.call("getMe")
@@ -671,7 +722,8 @@ def run_service(a=None):
     from .schedule import Schedule
     from .proactive import Proactive
     sched = Schedule(store.root / "schedule.json")
-    svc = TelegramService(api, brain, store, log=log, schedule=sched, threaded=True,
+    from .digest import Digester
+    svc = TelegramService(api, brain, store, log=log, schedule=sched, threaded=True, digest=Digester(store, curator, log=log),
                           schedule_gen=gemini_generate("gemini-3.5-flash-lite"))
     svc.proactive = Proactive(sched, lambda text: svc.api.send(svc.owner, text), log=log)
     STOP_FILE.unlink(missing_ok=True)
