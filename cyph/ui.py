@@ -6,6 +6,7 @@ import queue
 
 from rich.text import Text
 from textual import on
+from textual.css.query import NoMatches
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -175,8 +176,6 @@ class CyphApp(App):
         self.query_one("#log", RichLog).write(t)
 
     def refresh_view(self):
-        if not self.screen_stack or self.screen.id == "_default":
-            return                                   # the app is closing: the widgets are already gone
         s = self.body.status()
         while True:
             try:
@@ -185,9 +184,12 @@ class CyphApp(App):
                 break
             self.log_line(level, text)
 
-        self.query_one("#face", Static).update(
-            face_text(s["mood"], s["speaking"], s["listening"], s["T"], s.get("speech"),
-                      self._gaze_person()))
+        try:
+            self.query_one("#face", Static).update(
+                face_text(s["mood"], s["speaking"], s["listening"], s["T"], s.get("speech"),
+                          self._gaze_person()))
+        except NoMatches:
+            return                                   # the app is closing: its widgets are already gone
 
         info = {}
         if self.voice is not None:
