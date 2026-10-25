@@ -1537,6 +1537,13 @@ class LocalSession(VoiceSession):
         use_big, why = self._pick_brain(text, content if isinstance(content, list) else None)
         system = (self.system + ("\n\n" + LOCAL_REMOTE if remote else "")
                   + ("\n\n" + LOCAL_BIG if use_big else ""))
+        if self.memory is not None and not text.startswith(("[", "EVENT:")):
+            try:
+                recalled = self.memory.recall(text)
+            except Exception:                                # recall is a bonus: never break a reply
+                recalled = ""
+            if recalled:
+                system += "\n\n" + recalled
         self.history.append({"role": "user", "content": content})
         self._trim()
         if not text.startswith("["):                        # not the wake-up prompt

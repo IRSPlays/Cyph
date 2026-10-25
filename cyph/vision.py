@@ -296,16 +296,42 @@ class Camera:
         return None, None
 
     def _run(self):
+        """Keep the camera alive: when it stops delivering (a USB glitch, the stereo camera browning out) close it and open it
+        again, with a growing wait, until stopped. A camera that is gone for good retries quietly every 15 s."""
+        from . import debuglog
+        wait = 1.0
+        while not self._stop.is_set():
+            t0 = time.monotonic()
+            try:
+                why = self._session()
+            except Exception as e:                       # a bug or a driver error must not end the camera for good
+                why = f"{type(e).__name__}: {e}"
+                debuglog.exc("camera %s: session crashed", self.index)
+            if self._stop.is_set():
+                break
+            self.state = "error"
+            if self.body is not None:
+                self.body.camera_ok = False
+            wait = 1.0 if time.monotonic() - t0 > 30 else min(wait * 2, 15.0)    # it ran for a while: start the waits over
+            debuglog.warn("camera %s: %s; reopening in %.0f s", self.index, why, wait)
+            self._log("warn", f"camera {self.index}: {why}; trying again in {wait:.0f} s")
+            self._stop.wait(wait)
+            if not self._stop.is_set():
+                self.state = "opening"
+
+    def _session(self) -> str:
+        """One open camera, from opening it until it stops delivering. Returns why it ended."""
+        from . import debuglog
         cap, frame = self._grab_open()
         if cap is None:
-            self.state = "error"
-            self._log("error", f"camera {self.index}: cannot open (try `python -m cyph cameras`)")
-            return
+            return f"cannot open (try `python -m cyph cameras`)"
+        debuglog.info("camera %s: opened, first frame %sx%s", self.index, frame.shape[1], frame.shape[0])
         self.stereo = frame.shape[1] >= 2.5 * frame.shape[0]      # side-by-side eyes
         det = Detector() if self.track else None
         self.detector_kind = det.kind if det else "off"
         n, t_fps, last_det, bad = 0, time.monotonic(), 0.0, 0
         first = True
+        reason = "stopped"
         while not self._stop.is_set():
             if first:
                 ok, first = True, False
@@ -314,8 +340,7 @@ class Camera:
             if not ok or frame is None:
                 bad += 1
                 if bad > 50:
-                    self.state = "error"
-                    self._log("error", f"camera {self.index}: stopped delivering frames")
+                    reason = "stopped delivering frames"
                     break
                 time.sleep(0.05)
                 continue
@@ -367,8 +392,7 @@ class Camera:
                 elif now - self._person_at > 1.0:
                     self.person = None
         cap.release()
-        if self.body is not None:
-            self.body.camera_ok = False
+        return reason
 
     def _face_distance(self, left, right, hit):
         """Metres to the face: stereo matching on the face centre, else from its size."""

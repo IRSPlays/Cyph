@@ -1,0 +1,117 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Arm</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+.page{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) 340px;grid-template-rows:auto minmax(0,1fr);padding-bottom:24px}
+.head{grid-column:1/-1;display:flex;align-items:flex-end;gap:16px}
+.head .sp{flex:1}
+.state{display:flex;gap:6px;align-items:center}.state b{font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--am)}
+.viz{display:flex;flex-direction:column;gap:10px}
+.vwrap{position:relative;flex:1;min-height:210px;border-radius:10px;overflow:hidden;background:radial-gradient(90% 80% at 40% 100%,rgba(217,152,74,.32),transparent 70%),linear-gradient(#10190c,#070a05);box-shadow:inset 0 0 0 1px #1d2815}
+.vwrap:before{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:34%;background:repeating-linear-gradient(90deg,rgba(93,255,122,.22) 0 1px,transparent 1px 38px),repeating-linear-gradient(0deg,rgba(93,255,122,.22) 0 1px,transparent 1px 18px);transform:perspective(300px) rotateX(60deg);transform-origin:bottom}
+.vwrap svg{position:absolute;inset:0;width:100%;height:100%}
+.vwrap .tag{position:absolute;left:12px;top:10px;font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--cr);background:#0b0f08cc;padding:4px 9px;border-radius:4px}
+.dial{position:absolute;right:14px;top:10px;width:92px;height:92px;border-radius:50%;background:#07100a;box-shadow:0 0 0 2px #1d2815,inset 0 0 18px #000}
+.dial svg{position:static;width:100%;height:100%}
+.dial small{position:absolute;left:0;right:0;bottom:-16px;text-align:center;font:9px 'DM Mono';color:var(--dim)}
+.jr{display:grid;grid-template-columns:96px 1fr 62px;gap:10px;align-items:center;padding:5px 0;font:12px 'DM Mono'}
+.jr .n{font-weight:500;white-space:nowrap}
+.jr .bar{position:relative;height:12px;border-radius:2px;background:repeating-linear-gradient(90deg,#1b2412 0 3px,#161d10 3px 4px)}
+.jr .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--c);width:var(--w);box-shadow:0 0 8px color-mix(in srgb,var(--c) 50%,transparent)}
+.jr .bar u{position:absolute;left:50%;top:-2px;bottom:-2px;border-left:1px dashed #6b7a5e}
+.jr .bar input{position:absolute;inset:-6px 0;width:100%;opacity:0;cursor:pointer;margin:0}
+.jr b{text-align:right;color:var(--cr);font-weight:500;white-space:pre}
+.exps{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:7px}
+.exps button{border:0;cursor:pointer;text-align:left;padding:8px 10px;border-radius:8px;background:#10170b;box-shadow:inset 0 0 0 1px #1d2815;color:var(--tx);transition:.12s;font:inherit}
+.exps button:hover{background:#17240f;box-shadow:inset 0 0 0 1px var(--ne)}
+.exps button b{display:block;font:600 14px 'Pixelify Sans';color:var(--cr)}
+.exps button small{display:flex;justify-content:space-between;font:9.5px 'DM Mono';color:var(--dim);margin-top:2px}
+.exps button small em{font-style:normal;color:var(--tl)}
+.exps button.on{background:var(--ne);box-shadow:0 0 16px rgba(93,255,122,.5)}.exps button.on *{color:#0d120a}
+.cam{position:relative;height:150px;border-radius:9px;background:linear-gradient(135deg,#17210f,#0a0f07);overflow:hidden;box-shadow:inset 0 0 0 1px #1d2815}
+.cam:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(transparent 0 3px,rgba(0,0,0,.25) 3px 4px)}
+.cam .face{position:absolute;width:56px;height:68px;border:2px solid var(--ne);border-radius:4px;box-shadow:0 0 14px rgba(93,255,122,.4);left:var(--x,40%);top:var(--y,26%);transition:left .6s,top .6s}
+.cam .face:after{content:"PERSON";position:absolute;left:-2px;top:-17px;font:700 9px 'Pixelify Sans';letter-spacing:.14em;color:var(--ne);background:#0b0f08;padding:1px 5px}
+.cam .sil{position:absolute;left:var(--x,40%);top:var(--y,26%);width:56px;height:68px;margin:0;background:radial-gradient(circle at 50% 36%,#5b6e4a 0 22%,transparent 23%),radial-gradient(ellipse at 50% 100%,#44543a 0 60%,transparent 61%);opacity:.7;transition:left .6s,top .6s}
+.cam .cl{position:absolute;right:8px;bottom:6px;font:9px 'DM Mono';color:var(--dim)}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;border-radius:8px;background:#10170b;font:12px 'DM Mono';margin-top:8px;cursor:pointer}
+.sw{width:36px;height:18px;border-radius:9px;background:#2a3320;position:relative;transition:.15s}.sw:after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#7d8d6c;transition:.15s}
+.toggle.on .sw{background:var(--ne)}.toggle.on .sw:after{left:20px;background:#0d120a}
+.st{display:flex;justify-content:space-between;font:12px 'DM Mono';padding:5px 0;border-bottom:1px dashed #1b2613;color:var(--dim)}
+.st b{font-weight:500;color:var(--cr)}.st b.ok{color:var(--ne)}.st b.bad{color:var(--co)}
+.estop{width:100%;padding:16px 0;border:0;cursor:pointer;border-radius:12px;font:700 22px 'Pixelify Sans';letter-spacing:.3em;color:#fff;background:radial-gradient(circle at 50% 30%,#d9453a,#8a1f17);box-shadow:0 6px 0 #4a0f0a,0 0 30px rgba(217,69,58,.45),inset 0 2px 0 #fff4;margin-top:6px}
+.estop:active{transform:translateY(5px);box-shadow:0 1px 0 #4a0f0a}
+.logb{font:11px/1.45 'DM Mono';display:flex;flex-direction:column;gap:2px}
+.logb div span{color:var(--dim);margin-right:8px}
+.logb .mood{color:#8be37a}.logb .info{color:var(--cr)}.logb .warn{color:var(--am)}.logb .error{color:var(--co)}
+.lock{position:absolute;inset:0;z-index:6;border-radius:12px;background:rgba(7,10,5,.88);backdrop-filter:blur(3px);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:26px;gap:12px}
+.off .lock{display:flex}
+.lock h3{font:italic 38px/1 'Instrument Serif';color:var(--cr)}.lock p{font:13px/1.5 'DM Mono';color:#a9b896;max-width:420px}
+.lock ol{text-align:left;font:12.5px/1.7 'DM Mono';color:#b6c4a0;padding-left:20px}
+.lock .no{font:700 11px 'Pixelify Sans';letter-spacing:.3em;color:var(--co)}
+</style></head><body>
+<div class="deck" id="deck"><div id="bar" class="bar"></div>
+ <div class="page" id="pg">
+  <div class="head"><h1 class="t"><em>VECTORM · 6-JOINT ARM</em>The arm</h1><span class="sub" id="hs">Optional. He's the same Cyph with or without it.</span><div class="sp"></div>
+   <div class="state"><b>DEMO STATE</b><div class="tabs"><button class="on" data-st="on">CONNECTED</button><button data-st="off">NOT CONNECTED</button></div></div></div>
+  <div class="cp viz" style="grid-row:2;position:relative"><div class="lock"><span class="no">○ NOT CONNECTED</span><h3>The arm isn't plugged in.</h3><p>Nothing is wrong. Cyph runs without it and the rest of the app doesn't need it.</p><ol><li>Plug the VectorM into your PC (USB).</li><li>Start Cyph on the PC. It looks for COM15.</li><li>This page lights up by itself.</li></ol></div>
+   <div class="lbl">Live pose <b>side view + base dial</b></div>
+   <div class="vwrap"><span class="tag" id="vt">LIVE</span><svg viewBox="0 0 640 340" preserveAspectRatio="xMidYMax meet"><rect x="70" y="304" width="150" height="14" rx="3" fill="#4a5035"/><rect x="100" y="290" width="90" height="16" rx="3" fill="#3a4129"/><g id="segs"></g></svg>
+    <div class="dial"><svg viewBox="-50 -50 100 100"><circle r="40" fill="none" stroke="#1d2815" stroke-width="2"/><g stroke="#2c3820">${""}</g><path d="M0 -40v8M40 0h-8M0 40v-8M-40 0h8" stroke="#2c3820"/><g id="dar"><path d="M0 0L0 -34" stroke="var(--ne)" stroke-width="4" stroke-linecap="round"/><path d="M-6 -26L0 -36L6 -26" fill="var(--ne)"/></g><circle r="5" fill="#f3ecb2"/></svg><small id="dv">base 135.0°</small></div></div>
+   <div id="jrows"></div>
+   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="lbl" style="margin:0 8px 0 0">Gripper</span><button class="btn sm" data-g="open">OPEN</button><button class="btn sm" data-g="gentle">CLOSE · GENTLE</button><button class="btn sm" data-g="firm">FIRM</button><button class="btn sm" data-g="max">MAX</button><span class="chip" style="margin-left:auto">span ±45° · cal ok</span></div>
+  </div>
+  <div class="cp" style="grid-row:2;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+   <div><div class="lbl">Expressions <b>26 · he plays these himself when idle (PASSIVE ones)</b></div><div class="exps scroll" id="exps" style="max-height:310px"></div></div>
+   <div><div class="lbl">Follow me <b>stereo camera · the arm turns toward you</b></div><div class="cam" id="cam"><div class="sil"></div><div class="face"></div><span class="cl">cam 0 · 24 fps · stereo</span></div>
+    <div class="toggle on" id="trk"><span>Track me with the base joint</span><div class="sw"></div></div></div>
+  </div>
+  <div style="grid-row:2;display:flex;flex-direction:column;gap:14px;min-height:0">
+   <div class="cp" id="lk"><div class="lbl">Link</div>
+    <div class="st"><span>● link</span><b class="ok" id="k1">serial COM15 · 115200</b></div><div class="st"><span>  mode</span><b id="k2">calm (small passive moves)</b></div><div class="st"><span>  voice</span><b>quiet</b></div><div class="st"><span>  camera</span><b class="ok">live · 24 fps</b></div>
+    <div class="tabs" style="margin-top:10px" id="modes"><button class="on" data-m="0">CALM</button><button data-m="1">ALIVE</button><button data-m="2">MANUAL</button></div></div>
+   <div class="cp bad"><div class="lbl">Safety <b>limits 15° – 255° per joint</b></div><button class="estop" id="estop">E-STOP</button><div class="st" style="margin-top:8px"><span>torque</span><b class="ok">on</b></div></div>
+   <div class="cp" style="flex:1;display:flex;flex-direction:column"><div class="lbl">Events</div><div class="logb scroll" id="logb" style="flex:1"></div></div>
+  </div>
+ </div>
+</div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script><script src="corner.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let on = true; shell("ARM", {arm: "on"}); const api = buddy(5);
+const JN = ["base","shoulder","elbow","wrist","pivot","grabber"], JC = ["#2f9d8f","#5b9fb8","#8be37a","#5dff7a","#f3ecb2","#f08a73"];
+const J = [135,135,135,135,135,135], T = [135,135,135,135,135,135]; let mode = 0, est = false, play = null;
+$("jrows").innerHTML = JN.map((n, i) => `<div class="jr"><span class="n" style="color:${JC[i]}">${i + 1} ${n}</span><div class="bar"><i id="g${i}" style="--c:${JC[i]}"></i><u></u><input type="range" min="15" max="255" step="0.5" value="135" data-j="${i}"></div><b id="v${i}"></b></div>`).join("");
+document.querySelectorAll("input[data-j]").forEach(s => s.oninput = () => { if (est) return; mode = 2; setMode(2); T[+s.dataset.j] = +s.value; log("info", `joint ${JN[+s.dataset.j]} -> ${(+s.value).toFixed(1)}`); });
+const EXP = {happy:6,excited:5,curious:9,sniff:5,sleepy:12,sad:7,startle:3,purr:6,zoomies:7,proud:6,shy:8,grumpy:6,love:8,laugh:4,confused:6,yawn:6,stretch:7,nervous:6,playbow:6,dance:8,think:7,boop:3,awoo:6,wave:4,smug:6,sneeze:3.5};
+const PASS = ["curious","sniff","sleepy","purr","shy","confused","yawn","stretch","think","smug"];
+$("exps").innerHTML = Object.entries(EXP).map(([n, s]) => `<button data-e="${n}"><b>${Cyph.info[n] ? Cyph.info[n].glyph.replace(/</g, "&lt;") : n}</b><small>${n}<em>${PASS.includes(n) ? "◦ passive" : s + "s"}</em></small></button>`).join("");
+document.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { if (est || !on) return; const n = b.dataset.e; play = {n, t0: performance.now(), d: EXP[n] * 1000}; document.querySelectorAll("[data-e]").forEach(x => x.classList.toggle("on", x === b)); api.setMood(n, EXP[n]); log("mood", `${n} ${EXP[n]}s`); setTimeout(() => { if (play && play.n === n) { play = null; b.classList.remove("on"); } }, EXP[n] * 1000); });
+function log(l, t) { const el = $("logb"), d = new Date(); el.insertAdjacentHTML("beforeend", `<div class="${l}"><span>${String(12 + 0).padStart(2, "0")}:${String(14 + el.children.length % 40).padStart(2, "0")}:${String((el.children.length * 7) % 60).padStart(2, "0")}</span>${t}</div>`); el.scrollTop = el.scrollHeight; }
+["info|link up: serial COM15 @115200","info|torque on, limits 15-255","mood|curious 9s (idle)","info|track on","mood|sniff 5s (idle)","warn|gripper cal: jaws stalled at 41° (ok)","mood|smug 6s (idle)"].forEach(x => { const [a, b] = x.split("|"); log(a, b); });
+document.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { if (est || !on) return; T[5] = {open: 225, gentle: 110, firm: 85, max: 55}[b.dataset.g]; log("info", `grip ${b.dataset.g} -> ${T[5]}°`); });
+const MN = ["calm (small passive moves)", "alive (idle moods on)", "manual (idle off)"];
+function setMode(m) { mode = m; $("k2").textContent = MN[m]; document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("on", +b.dataset.m === m)); }
+document.querySelectorAll("#modes button").forEach(b => b.onclick = () => { setMode(+b.dataset.m); log("info", "mode " + MN[+b.dataset.m]); });
+$("estop").onclick = () => { est = !est; $("estop").textContent = est ? "RELEASE" : "E-STOP"; $("k2").textContent = est ? "E-STOP" : MN[mode]; $("k2").className = est ? "bad" : ""; log(est ? "error" : "info", est ? "E-STOP: torque off, idle off" : "released: resting"); api.say(est ? "Stopped. Everything's limp. Tell me when it's safe." : "Back on. Gently.", est ? "startle" : "happy", 3500); };
+$("trk").onclick = () => { $("trk").classList.toggle("on"); log("info", "track " + ($("trk").classList.contains("on") ? "on" : "off")); };
+setInterval(() => { const x = 25 + Math.random() * 40, y = 14 + Math.random() * 30; $("cam").style.setProperty("--x", x + "%"); $("cam").style.setProperty("--y", y + "%"); if ($("trk").classList.contains("on") && !est && on && mode !== 2) T[0] = 135 + (x - 45) * 1.6; }, 2400);
+document.querySelectorAll("[data-st]").forEach(b => b.onclick = () => { on = b.dataset.st === "on"; document.querySelectorAll("[data-st]").forEach(x => x.classList.toggle("on", x === b)); $("pg").classList.toggle("off", !on); shell("ARM", {arm: on ? "on" : "off"}); $("hs").textContent = on ? "Optional. He's the same Cyph with or without it." : "Optional. Nothing here is needed for the rest of the app."; $("k1").textContent = on ? "serial COM15 · 115200" : "not connected"; $("k1").className = on ? "ok" : "bad"; if (!on) api.say("No arm today? Fine. I'm more expressive on my own anyway.", "smug", 5000); else api.say("Oh. There you are, VectorM. Hello.", "wave", 4000); });
+/* the arm drawing */
+const segs = $("segs"); const L = [120, 108, 66];
+function draw(t) {
+  if (!on) { J.fill(135); } else if (!est) {
+    const k = 1 - Math.exp(-0.08);
+    for (let i = 0; i < 6; i++) { let tgt = T[i]; if (mode !== 2 && !play) tgt += Math.sin(t * (.4 + i * .13) + i) * (mode === 0 ? 2 : 6); if (play) tgt += Math.sin(t * (2 + i * .7) + i) * 14 * (EXP[play.n] > 5 ? 1 : .6); if (api.state.speaking) tgt += Math.sin(t * 6 + i) * 3; J[i] += (Math.max(15, Math.min(255, tgt)) - J[i]) * k; }
+  }
+  const a1 = -90 + (J[1] - 135) * .75, a2 = a1 + (J[2] - 135) * .9, a3 = a2 + (J[3] - 135) * .8;
+  let x = 145, y = 292, p = [[x, y]]; [[a1, L[0]], [a2, L[1]], [a3, L[2]]].forEach(([a, l]) => { x += Math.cos(a * Math.PI / 180) * l; y += Math.sin(a * Math.PI / 180) * l; p.push([x, y]); });
+  const sp = (J[5] - 45) / 180 * 24 + 4, ar = a3 * Math.PI / 180, nx = -Math.sin(ar), ny = Math.cos(ar), ex = p[3][0], ey = p[3][1];
+  segs.innerHTML = `<polyline points="${p.map(q => q.join(",")).join(" ")}" fill="none" stroke="${est ? "#6b7a5e" : "#8be37a"}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${p.map(q => q.join(",")).join(" ")}" fill="none" stroke="#10150e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>` +
+    p.slice(0, 3).map((q, i) => `<circle cx="${q[0]}" cy="${q[1]}" r="11" fill="${JC[i + 1]}" stroke="#10150e" stroke-width="3"/>`).join("") + `<circle cx="${ex}" cy="${ey}" r="9" fill="${JC[3]}" stroke="#10150e" stroke-width="3"/>` +
+    `<line x1="${ex}" y1="${ey}" x2="${ex + Math.cos(ar) * 30 + nx * sp}" y2="${ey + Math.sin(ar) * 30 + ny * sp}" stroke="#f3ecb2" stroke-width="7" stroke-linecap="round"/><line x1="${ex}" y1="${ey}" x2="${ex + Math.cos(ar) * 30 - nx * sp}" y2="${ey + Math.sin(ar) * 30 - ny * sp}" stroke="#f08a73" stroke-width="7" stroke-linecap="round"/>`;
+  $("dar").setAttribute("transform", `rotate(${(J[0] - 135) * .9})`); $("dv").textContent = "base " + J[0].toFixed(1) + "°";
+  J.forEach((v, i) => { $("g" + i).style.setProperty("--w", (v / 270 * 100) + "%"); $("v" + i).textContent = on ? v.toFixed(1).padStart(5, " ") + "°" : "  —  "; const s = document.querySelector(`[data-j="${i}"]`); if (document.activeElement !== s) s.value = v; });
+  requestAnimationFrame(() => draw(performance.now() / 1000));
+}
+draw(0); setTimeout(() => api.say("Yes, it's a real arm, and yes, I can make it do my face. Try an expression.", "excited", 5000), 700);
+</script></body></html>

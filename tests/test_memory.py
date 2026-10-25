@@ -24,7 +24,7 @@ r = st.apply([{"file": "user", "action": "add", "text": "Haziq is in Secondary 3
               {"file": "user", "action": "add", "text": "His key is AIzaSyA1234567890abcdefghijklmnopqrstu"},
               {"file": "user", "action": "add", "text": "password is hunter2"},
               {"file": "nope", "action": "add", "text": "x"},
-              {"file": "user", "action": "add", "text": "x" * 400}])
+              {"file": "user", "action": "add", "text": "x" * (M.MAX_ENTRY + 20)}])
 check(len(r["applied"]) == 1, f"only the real fact is stored ({len(r['applied'])})")
 why = [w for _, w in r["rejected"]]
 check("already known" in why and "looks like a secret" in why and any("too long" in w for w in why),
@@ -43,7 +43,7 @@ check(any(x["action"] == "replace" and "Valorant" in x["old"] for x in log), "ev
 
 # cap: a full file refuses an add, and the curator squeezes it once and retries
 full = MemoryStore(tempfile.mkdtemp())
-for i in range(40):
+for i in range(100):
     full.apply([{"file": "people", "action": "add",
                  "text": f"Friend number {i} is called Person{i} and plays {'a' * 20}{i}."}])
 used, cap = full.usage("people")
@@ -56,7 +56,8 @@ def gen(prompt):
     if "Rewrite this list" in prompt:
         return json.dumps({"entries": [f"Friend group A: Person{i}." for i in range(5)]})
     return json.dumps({"summary": "Met a friend.", "ops": [
-        {"file": "people", "action": "add", "text": "Zed is his cousin who visits on Fridays."}]})
+        {"file": "people", "action": "add", "text": "Zed is his cousin who visits on Fridays. He lives in Jurong, studies nursing "
+                                                    "and plays Minecraft with Haziq most weekends."}]})
 
 
 Curator(full, generate=gen).curate([("user", "my cousin Zed visits on fridays"), ("cyph", "Nice!")])
@@ -78,5 +79,23 @@ check("About Haziq" in snap and "Earlier today" in snap and "Secondary 3" in sna
       "snapshot has the files and today's note")
 text = render_transcript([("user", "[happy] hello"), ("event", "someone waved"), ("cyph", "[nod] hi")])
 check(text == "Haziq: hello\n(camera event: someone waved)\nCyph: hi", f"transcript drops tags ({text!r})")
+# recall: a name that is only in OLDER daily notes (not in long-term memory, not in the 2-day window) is found
+from datetime import date, timedelta
+import tempfile as _tf
+from pathlib import Path as _P
+rs = MemoryStore(_P(_tf.mkdtemp()) / "mem")
+d_old = date.today() - timedelta(days=5)
+(rs.root / "daily").mkdir(parents=True, exist_ok=True)
+(rs.root / "daily" / f"{d_old:%Y-%m-%d}.md").write_text(
+    "- 21:50 Haziq felt drained by a clingy classmate named Adam who crossed his boundaries.\n"
+    "- 22:10 Haziq ate dinner.\n", encoding="utf-8")
+r = rs.recall("Don't u remember Adam?")
+check("Adam" in r and "crossed his boundaries" in r and "dinner" not in r, f"older note about a named person is recalled ({r!r})")
+check(rs.recall("what is the weather today") == "", "no names, nothing recalled")
+check(rs.recall("Sunday Haziq Cypher Hey") == "", "stopwords and his own names are not treated as people")
+rs.apply([{"file": "people", "action": "add", "text": "Adam is a classmate who crossed Haziq's boundaries."}], "test")
+check(rs.recall("Adam again") == "", "once the person is in long-term memory it is not recalled twice")
+
 print("\nALL MEMORY TESTS PASSED" if not fails else f"\n{fails} FAILURES")
 sys.exit(1 if fails else 0)
+

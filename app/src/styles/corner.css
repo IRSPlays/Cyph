@@ -1,0 +1,46 @@
+/* The Corner look, shared by every page except Home (which has its own giant layout). Load AFTER bench2.css. */
+.deck{padding:0;background:radial-gradient(70% 90% at 85% 100%,var(--glow,rgba(93,255,122,.16)),transparent 70%),linear-gradient(160deg,#1c2314,#0b0f08 70%)!important;overflow:hidden;box-shadow:none!important}
+.deck:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:repeating-linear-gradient(90deg,rgba(93,255,122,.05) 0 1px,transparent 1px 48px),repeating-linear-gradient(0deg,rgba(93,255,122,.05) 0 1px,transparent 1px 48px)}
+.circ,.scr{display:none!important}
+.bar{position:relative;z-index:9;display:flex;align-items:center;gap:16px;padding:14px 22px 0}
+.bar .nav a{background:#12170dcc;backdrop-filter:blur(6px)}
+.bar .leds{background:#0b0f08cc;padding:6px 12px;border-radius:7px}
+.page{position:relative;z-index:5;flex:1;min-height:0;padding:14px 22px 22px;display:grid;gap:14px}
+/* panels */
+.cp,.pn{background:#0b130d;border-radius:12px;box-shadow:0 0 0 1px var(--ln),0 10px 30px #0007;padding:14px;position:relative;min-height:0}
+.cp.glow{box-shadow:0 0 0 2px var(--ne),0 0 30px rgba(93,255,122,.18),0 10px 30px #0007}
+.cp.warn{box-shadow:0 0 0 2px var(--am),0 0 26px rgba(217,152,74,.16)}
+.cp.bad{box-shadow:0 0 0 2px var(--co),0 0 26px rgba(240,138,115,.16)}
+.cp>.lbl,.pn>.lbl{margin-bottom:10px}
+h1.t{font:italic 400 clamp(34px,3vw,52px)/.95 'Instrument Serif';color:var(--cr)}
+h1.t em{display:block;font:700 12px 'Pixelify Sans';letter-spacing:.3em;color:var(--am);font-style:normal;margin-bottom:6px}
+.sub{font:italic 18px/1.2 'Instrument Serif';color:#9aa889}
+.tabs{display:flex;gap:6px}
+.tabs button,.btn{border:0;cursor:pointer;font:700 10.5px 'Pixelify Sans';letter-spacing:.14em;padding:8px 14px;border-radius:6px;background:#1d2615;color:#b9c7a3;box-shadow:0 2px 0 #0009,inset 0 1px 0 #ffffff12;transition:.12s}
+.tabs button:hover,.btn:hover{background:#27341b;color:var(--cr)}
+.tabs button.on,.btn.go{background:var(--ne);color:#0d120a;box-shadow:0 0 14px rgba(93,255,122,.45)}
+.btn.am{background:var(--am);color:#1a1405}.btn.red{background:#4a1d17;color:var(--co)}.btn.red:hover{background:var(--co);color:#1a0805}
+.btn.sm{padding:5px 9px;font-size:9.5px}
+.chip{display:inline-block;font:500 11px 'DM Mono';padding:3px 10px;border-radius:12px;background:#1c2614;color:#b6c4a0;box-shadow:inset 0 0 0 1px #2c3820}
+.chip.ne{background:rgba(93,255,122,.14);color:var(--ne);box-shadow:inset 0 0 0 1px rgba(93,255,122,.4)}
+.chip.am{background:rgba(217,152,74,.14);color:var(--am);box-shadow:inset 0 0 0 1px rgba(217,152,74,.4)}
+.chip.co{background:rgba(240,138,115,.14);color:var(--co);box-shadow:inset 0 0 0 1px rgba(240,138,115,.4)}
+.chip.bl{background:rgba(91,159,184,.14);color:var(--bl);box-shadow:inset 0 0 0 1px rgba(91,159,184,.4)}
+.scroll{overflow:auto;min-height:0}
+.serif{font-family:'Instrument Serif',serif;font-style:italic}
+.ledi{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ne);box-shadow:0 0 8px var(--ne);margin-right:7px;vertical-align:1px}
+.ledi.o{background:var(--am);box-shadow:0 0 8px var(--am)}.ledi.x{background:#3b432b;box-shadow:none}.ledi.r{background:var(--co);box-shadow:0 0 8px var(--co)}
+input.f,textarea.f,select.f{width:100%;background:#05080a;border:0;border-radius:7px;padding:9px 11px;color:var(--tx);font:12.5px 'DM Mono';outline:0;box-shadow:inset 0 2px 5px #000,0 0 0 1px #1d2815}
+input.f:focus,textarea.f:focus{box-shadow:inset 0 2px 5px #000,0 0 0 1px var(--ne)}
+/* the buddy: a live Cyph in the bottom-right of every page. That corner is HIS: the last column of the page stops above him,
+   and his bubble pops out to his left. */
+.page>:last-child{margin-bottom:var(--cy-h,214px)}
+.buddy{position:fixed;right:18px;bottom:0;z-index:30;display:flex;flex-direction:row;align-items:flex-end;pointer-events:none}
+.buddy canvas{filter:drop-shadow(0 0 24px rgba(93,255,122,.2)) drop-shadow(0 10px 0 rgba(0,0,0,.4));pointer-events:auto;cursor:pointer;image-rendering:pixelated;margin-bottom:-4px}
+.buddy .bb{position:relative;width:310px;margin:0 22px 70px 0;background:#07100a;border:2px solid var(--ne);border-radius:12px;box-shadow:0 0 0 4px #07100a,0 0 34px rgba(93,255,122,.25),0 10px 30px #000c;pointer-events:auto;transition:opacity .3s,transform .3s}
+.buddy .bb:after{content:"";position:absolute;right:-22px;bottom:24px;border:10px solid transparent;border-left:18px solid var(--ne);border-right:0}
+.buddy .bb .h{display:flex;gap:6px;align-items:center;padding:5px 10px;background:#0f1e14;border-bottom:1px solid #1d3a26;font:600 9.5px 'Pixelify Sans';letter-spacing:.16em;color:var(--ne);border-radius:9px 9px 0 0}
+.buddy .bb .h i{width:7px;height:7px;border-radius:50%;background:#2b3d30}.buddy .bb .h i:first-child{background:var(--co)}.buddy .bb .h i:nth-child(2){background:var(--am)}.buddy .bb .h i:nth-child(3){background:var(--ne)}
+.buddy .bb .b{padding:9px 14px 11px;font:italic 400 21px/1.16 'Instrument Serif';color:var(--cr)}
+.buddy .bb .b .caret{display:inline-block;width:.45em;height:.8em;background:var(--ne);margin-left:3px;vertical-align:-.1em;animation:bl .8s steps(1) infinite}
+.buddy.quiet .bb{opacity:0;transform:translateX(12px);pointer-events:none}

@@ -163,6 +163,9 @@ def declarations(only=None) -> list[types.FunctionDeclaration]:
             parameters=S(type=T.OBJECT, properties={
                 "x": S(type=T.NUMBER, description="0 to 1000, left to right"),
                 "y": S(type=T.NUMBER, description="0 to 1000, top to bottom"),
+                "align": S(type=T.STRING, enum=["gripper", "center"],
+                           description="gripper (default): turn until the target is where the gripper's tip shows in the "
+                                        "picture, so the gripper points at it. center: until it is in the middle."),
             }, required=["x", "y"]),
         ),
         types.FunctionDeclaration(
@@ -260,7 +263,7 @@ def _dispatch(body: Body, name: str, args: dict) -> dict:
             if name == "measure_point":
                 return {"result": "measured", **cam.measure(nx, ny)}
             dist = cam.distance_at(nx, ny)
-            res = body.aim_at(nx, ny, dist)
+            res = body.aim_at(nx, ny, dist, "center" if args.get("align") == "center" else "gripper")
             res["distance_cm"] = round(dist * 100) if dist else None
             return {"result": "aiming", **res}
         elif name == "track_person":

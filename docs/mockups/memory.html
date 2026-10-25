@@ -1,0 +1,133 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Memory</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+.page{grid-template-columns:270px minmax(0,1fr) 360px;padding-bottom:24px}
+.rail{display:flex;flex-direction:column;gap:10px;min-height:0}
+.file{display:block;width:100%;text-align:left;border:0;cursor:pointer;padding:11px 12px;border-radius:9px;background:#10170b;color:var(--tx);box-shadow:inset 0 0 0 1px #1d2815;transition:.12s;font:inherit}
+.file:hover{background:#162010}.file.on{background:#16241a;box-shadow:inset 0 0 0 2px var(--ne),0 0 20px rgba(93,255,122,.14)}
+.file h5{font:500 13px 'DM Mono';display:flex;justify-content:space-between}
+.file h5 small{font:700 9px 'Pixelify Sans';letter-spacing:.16em;color:var(--am)}
+.file p{font:italic 15px/1.1 'Instrument Serif';color:#8d9d78;margin:3px 0 7px}
+.meter{height:6px;border-radius:3px;background:#05080a;overflow:hidden;box-shadow:inset 0 1px 3px #000}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--tl),var(--ne))}
+.meter.hot i{background:linear-gradient(90deg,var(--am),var(--co))}
+.file .n{font:10px 'DM Mono';color:var(--dim);margin-top:4px;display:flex;justify-content:space-between}
+.sec2{font:700 9px 'Pixelify Sans';letter-spacing:.24em;color:#58684a;margin:8px 2px 0}
+.mini{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:8px;background:#0e150a;font:12px 'DM Mono';color:#9fb08a;cursor:pointer}
+.mini:hover{background:#162010}
+/* editor */
+.ed{display:flex;flex-direction:column}
+.edh{display:flex;align-items:flex-end;gap:14px;margin-bottom:12px}
+.edh .sp{flex:1}
+.entries{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:9px;padding-right:4px}
+.ent{position:relative;display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:start;padding:11px 13px 11px 0;border-radius:9px;background:#10170b;box-shadow:inset 0 0 0 1px #1d2815;transition:.15s}
+.ent:hover{box-shadow:inset 0 0 0 1px #2f4220}
+.ent .no{font:700 11px 'Pixelify Sans';color:#4b5a3f;text-align:right;padding-top:5px;letter-spacing:.06em}
+.ent .tx{font:italic 400 clamp(21px,1.5vw,25px)/1.2 'Instrument Serif';color:#e3dca5;outline:0;border-radius:4px;min-height:1.2em}
+.ent .tx:focus{background:#05080a;box-shadow:0 0 0 2px var(--ne);padding:2px 6px;margin:-2px -6px}
+.ent .meta{display:flex;gap:7px;align-items:center;margin-top:7px;font:10px 'DM Mono';color:var(--dim)}
+.ent .meta .cc{margin-left:auto}
+.ent .acts{display:flex;flex-direction:column;gap:5px;opacity:0;transition:.15s}
+.ent:hover .acts,.ent:focus-within .acts{opacity:1}
+.ent.gone{opacity:.35}.ent.gone .tx{text-decoration:line-through}
+.ent.new{animation:flash 1.6s}
+@keyframes flash{0%{background:#1d3a26;box-shadow:0 0 0 2px var(--ne)}100%{}}
+.adder{margin-top:12px;display:flex;gap:8px;align-items:flex-start}
+.adder textarea{flex:1;height:58px;resize:none;font:italic 20px/1.15 'Instrument Serif';color:#e8dc90;background:#05080a;border:0;border-radius:9px;padding:10px 13px;outline:0;box-shadow:inset 0 2px 6px #000,0 0 0 1px #1d2815}
+.adder textarea:focus{box-shadow:inset 0 2px 6px #000,0 0 0 2px var(--ne)}
+.adder .col{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.cnt{font:11px 'DM Mono';color:var(--dim)}.cnt.over{color:var(--co)}
+.rej{margin-top:8px;padding:8px 12px;border-radius:8px;background:rgba(240,138,115,.12);box-shadow:inset 0 0 0 1px rgba(240,138,115,.45);font:12px 'DM Mono';color:var(--co);display:none}
+.rej.on{display:block}
+.conf{margin-bottom:10px;padding:9px 13px;border-radius:9px;background:rgba(217,152,74,.12);box-shadow:inset 0 0 0 1px rgba(217,152,74,.5);font:12px 'DM Mono';color:var(--am);display:none;align-items:center;gap:12px}
+.conf.on{display:flex}.conf span{flex:1}
+/* right */
+.side{display:flex;flex-direction:column;gap:14px;min-height:0}
+.prop{padding:11px 12px;border-radius:9px;background:#10170b;box-shadow:inset 0 0 0 1px #1d2815;margin-bottom:8px}
+.prop .why{font:10px 'DM Mono';color:var(--dim);margin-bottom:5px}
+.prop q{display:block;quotes:none;font:italic 20px/1.18 'Instrument Serif';color:var(--cr);margin-bottom:8px}
+.prop .row{display:flex;gap:6px;align-items:center}
+.log{display:flex;flex-direction:column;gap:7px}
+.lg{display:grid;grid-template-columns:48px 1fr auto;gap:9px;align-items:start;font:11px/1.35 'DM Mono';padding:7px 0;border-bottom:1px dashed #1b2613}
+.lg .t{color:var(--dim)}.lg .d{color:#b6c4a0}.lg .d s{color:#7a5a52;display:block}.lg .d u{text-decoration:none;color:var(--ne);display:block}
+.lg.undone{opacity:.4}
+.toast{position:fixed;left:50%;top:76px;transform:translate(-50%,-20px);z-index:60;background:#12170d;color:var(--cr);padding:9px 16px;border-radius:8px;font:12px 'DM Mono';box-shadow:0 0 0 1px var(--ne),0 10px 30px #000a;opacity:0;transition:.3s;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+</style></head><body>
+<div class="deck"><div id="bar" class="bar"></div>
+ <div class="page">
+  <div class="rail">
+   <div class="cp" style="padding:12px"><div class="lbl">Always in his head <b>capped</b></div><div id="files" style="display:flex;flex-direction:column;gap:8px"></div></div>
+   <div class="cp" style="padding:12px;display:flex;flex-direction:column;gap:7px"><div class="lbl" style="margin-bottom:2px">Read when needed</div>
+    <div class="mini"><span>daily/ · today</span><span class="chip">3 lines</span></div><div class="mini"><span>daily/ · yesterday</span><span class="chip">5 lines</span></div>
+    <div class="mini" id="imp"><span>imports/ · Gemini export</span><span class="chip am">1 draft</span></div>
+    <div class="mini"><span>sessions/ · transcripts</span><span class="chip">412 files</span></div></div>
+  </div>
+  <div class="cp ed">
+   <div class="edh"><h1 class="t"><em id="eyb">MEMORY · USER.md</em><span id="ttl">About you</span></h1><div class="sp"></div><span class="sub" id="capline"></span><button class="btn sm" id="sim">SIMULATE EDIT ON PHONE</button></div>
+   <div class="conf" id="conf"><span>⚠ This file was edited on <b>Pixel 8</b> two minutes ago. Your copy is out of date. Saving now would overwrite it.</span><button class="btn sm am" id="reload">RELOAD</button></div>
+   <div class="entries" id="entries"></div>
+   <div class="adder"><textarea id="add" placeholder="add something he should remember… one fact per entry, like you'd say it out loud" maxlength="600"></textarea><div class="col"><span class="cnt" id="cnt">0 / 450</span><button class="btn go" id="addb">ADD</button></div></div>
+   <div class="rej" id="rej"></div>
+  </div>
+  <div class="side">
+   <div class="cp warn" id="props" style="flex:none"><div class="lbl">He wants to remember <b id="pc"></b></div></div>
+   <div class="cp" style="flex:1;display:flex;flex-direction:column"><div class="lbl">What changed <b>changes.log · undo anything</b></div><div class="log scroll" id="log"></div></div>
+  </div>
+ </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script><script src="corner.js"></script>
+<script>
+shell("MEMORY");
+const $ = (id) => document.getElementById(id), api = buddy(5);
+const FILES = {
+  user: {name:"USER.md", title:"About you", sub:"who you are, what you like, what you've told him to fix", cap:5000, items:[
+    ["Haziq, Secondary 3, class Phoenix 1, Singapore.","you","Oct 2"],["Wants brutal honesty. Hates glazing. Raw data and root causes over reassurance.","you","Oct 2"],["Fursona is Cipher, a kemono. Cyph is allowed to joke about it.","curator","Oct 9"],["Likes kopi with less sugar.","curator","Oct 14"],
+    ["Active projects: Project-Cortex V2 (deadline April 30), SNAP-C1, KopiTalk, the NRPC platform.","curator","Oct 14"],["NCDCC on uniformed-group days. Tuesday parade commander is Qaisarah.","you","Oct 18"],["Amounts in Vietnamese Dong, never Rupiah.","you","Oct 19"],["Goal this term: finish the Cyph companion app and keep sleeping before 23:00.","curator","Oct 23"]]},
+  memory: {name:"MEMORY.md", title:"His own notes", sub:"standing decisions and quirks he keeps for himself", cap:3500, items:[
+    ["Remind about parade at 13:30 on parade days, not earlier.","curator","Oct 19"],["Don't mention sleep more than once a day. It works better as a joke than a lecture.","you","Oct 20"],["After three study notes, offer a quiz. He says no more often than yes, so offer once.","curator","Oct 21"],["Call him Cypher when teasing, Haziq when it matters.","curator","Oct 22"]]},
+  people: {name:"people.md", title:"People and pets", sub:"who he has mentioned, and what to remember about them", cap:4000, items:[
+    ["Qaisarah: parade commander on Tuesdays.","you","Oct 18"],["Sharkie: the plush shark. Gets extra hugs. Is a recurring character.","curator","Oct 21"],["Class Minecraft server: shared with the class, Haziq hosts.","curator","Oct 22"]]},
+};
+let cur = "user", log = [{t:"11:52",who:"curator",kind:"add",file:"MEMORY.md",txt:"Call him Cypher when teasing, Haziq when it matters."},{t:"09:08",who:"app",kind:"edit",file:"USER.md",old:"Goal this term: finish the app.",txt:"Goal this term: finish the Cyph companion app and keep sleeping before 23:00."},{t:"Fri",who:"telegram",kind:"add",file:"people.md",txt:"Class Minecraft server: shared with the class, Haziq hosts."}];
+const props = [["nightly review · from today's chat","Parade is at 14:00 on Saturdays this term, not Tuesdays only.","user"],["his own commitment · you told him \"remind me Friday\"","Remind Haziq about the physics worksheet on Friday at 16:00.","memory"]];
+const used = (k) => FILES[k].items.reduce((a, i) => a + i[0].length, 0);
+function renderFiles() {
+  $("files").innerHTML = Object.entries(FILES).map(([k, f]) => { const u = used(k), pc = Math.round(u / f.cap * 100);
+    return `<button class="file ${k === cur ? "on" : ""}" data-k="${k}"><h5>${f.name}<small>${f.items.length} entries</small></h5><p>${f.sub}</p><div class="meter ${pc > 85 ? "hot" : ""}"><i style="width:${pc}%"></i></div><div class="n"><span>${u.toLocaleString()} / ${f.cap.toLocaleString()} chars</span><span>${pc}%</span></div></button>`; }).join("");
+  document.querySelectorAll(".file").forEach(b => b.onclick = () => { cur = b.dataset.k; render(); });
+}
+function renderEntries(flash) {
+  const f = FILES[cur]; $("ttl").textContent = f.title; $("eyb").textContent = "MEMORY · " + f.name;
+  const u = used(cur); $("capline").textContent = `${u.toLocaleString()} of ${f.cap.toLocaleString()} characters used · ${(f.cap - u).toLocaleString()} left`;
+  $("entries").innerHTML = f.items.map((it, i) => `<div class="ent ${it.gone ? "gone" : ""} ${flash === i ? "new" : ""}" data-i="${i}"><div class="no">${String(i + 1).padStart(2, "0")}</div><div><div class="tx" contenteditable="${it.gone ? "false" : "true"}" spellcheck="false">${it[0]}</div><div class="meta"><span class="chip ${it[1] === "you" ? "bl" : it[1] === "curator" ? "ne" : "am"}">${it[1]}</span><span>${it[2]}</span><span class="cc">${it[0].length} / 450</span></div></div><div class="acts"><button class="btn sm" data-a="del">${it.gone ? "UNDO" : "DELETE"}</button></div></div>`).join("");
+  document.querySelectorAll(".ent .tx").forEach(t => { t.onblur = () => { const i = +t.closest(".ent").dataset.i, v = t.textContent.trim(); if (v && v !== f.items[i][0]) { logAdd({kind:"edit", file:f.name, old:f.items[i][0], txt:v, who:"you"}); f.items[i][0] = v; f.items[i][1] = "you"; renderAll(); } }; t.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); t.blur(); } }; });
+  document.querySelectorAll(".ent [data-a=del]").forEach(b => b.onclick = () => { const i = +b.closest(".ent").dataset.i, it = f.items[i]; it.gone = !it.gone; logAdd({kind: it.gone ? "remove" : "restore", file: f.name, txt: it[0], who:"you"}); if (it.gone) setTimeout(() => { if (it.gone) { f.items.splice(f.items.indexOf(it), 1); renderAll(); } }, 4000); renderAll(); toast(it.gone ? "Removed. Undo within 4 seconds." : "Restored."); });
+}
+function logAdd(e) { const d = new Date(); log.unshift({t: "12:" + String(14 + log.length % 40).padStart(2, "0"), ...e}); renderLog(); }
+function renderLog() {
+  $("log").innerHTML = log.map((l, i) => `<div class="lg ${l.undone ? "undone" : ""}"><div class="t">${l.t}</div><div class="d"><span class="chip ${l.who === "you" ? "bl" : l.who === "curator" ? "ne" : "am"}" style="margin-right:6px">${l.who}</span>${l.file}${l.old ? `<s>${l.old}</s>` : ""}<u>${l.kind === "remove" ? "− " : l.kind === "restore" ? "↺ " : "+ "}${l.txt}</u></div><button class="btn sm" data-u="${i}" ${l.undone ? "disabled" : ""}>UNDO</button></div>`).join("");
+  document.querySelectorAll("[data-u]").forEach(b => b.onclick = () => { log[+b.dataset.u].undone = true; renderLog(); toast("Undone from changes.log"); api.say("Gone. I'll pretend I never knew it.", "shy"); });
+}
+function renderProps() {
+  const p = $("props"); p.querySelectorAll(".prop").forEach(x => x.remove()); $("pc").textContent = props.length + " waiting";
+  props.forEach((x, i) => p.insertAdjacentHTML("beforeend", `<div class="prop"><div class="why">${x[0]}</div><q>${x[1]}</q><div class="row"><button class="btn sm go" data-y="${i}">REMEMBER</button><button class="btn sm" data-n="${i}">NOT THAT</button><span class="chip" style="margin-left:auto">→ ${FILES[x[2]].name}</span></div></div>`));
+  p.style.display = props.length ? "" : "none";
+  p.querySelectorAll("[data-y]").forEach(b => b.onclick = () => { const x = props.splice(+b.dataset.y, 1)[0]; FILES[x[2]].items.push([x[1], "curator", "today"]); logAdd({kind:"add", file:FILES[x[2]].name, txt:x[1], who:"curator"}); cur = x[2]; renderAll(FILES[x[2]].items.length - 1); api.say("Got it. I'll hold on to that one.", "happy"); });
+  p.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { props.splice(+b.dataset.n, 1); renderProps(); api.say("Okay, forgotten before it started.", "shy"); });
+}
+function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("on"); setTimeout(() => e.classList.remove("on"), 2200); }
+const SECRET = /AIza[0-9A-Za-z_\-]{20,}|sk-[A-Za-z0-9_\-]{16,}|ghp_[A-Za-z0-9]{20,}|\b[A-Za-z0-9_\-]{32,}\b|pass(word|code)\s*(is|:|=)|api[ _-]?key|secret\s*(is|:|=)|token\s*(is|:|=)|\b\d{12,19}\b/i;
+$("add").addEventListener("input", e => { const n = e.target.value.length; $("cnt").textContent = n + " / 450"; $("cnt").classList.toggle("over", n > 450); $("rej").classList.remove("on"); api.listen(n > 0); });
+$("addb").onclick = () => {
+  const v = $("add").value.trim(), r = $("rej"); if (!v) return;
+  const why = v.length > 450 ? `Too long (${v.length} > 450). Split it into two facts.` : SECRET.test(v) ? "That looks like a secret (a key, password, token or long number). It was not saved, and never will be." : "";
+  if (why) { r.textContent = "✕ " + why; r.classList.add("on"); api.say(SECRET.test(v) ? "Whoa, nope. I don't keep keys. Not even for you." : "That's an essay. One fact per line, please.", SECRET.test(v) ? "startle" : "confused"); return; }
+  FILES[cur].items.push([v, "you", "today"]); logAdd({kind:"add", file:FILES[cur].name, txt:v, who:"you"}); $("add").value = ""; $("cnt").textContent = "0 / 450"; renderAll(FILES[cur].items.length - 1); api.say("Written down. I read it twice.", "love");
+};
+$("sim").onclick = () => $("conf").classList.add("on"); $("reload").onclick = () => { $("conf").classList.remove("on"); toast("Reloaded the newest version from the server"); };
+$("imp").onclick = () => api.say("That's the Gemini export draft. I won't merge any of it unless you read it with me first.", "think");
+function renderAll(f) { renderFiles(); renderEntries(f); renderProps(); renderLog(); }
+renderAll(); setTimeout(() => api.say("This is everything I know about you, in plain text. You can edit any line, and I can't change a file without writing it in the log.", "curious"), 600);
+</script></body></html>

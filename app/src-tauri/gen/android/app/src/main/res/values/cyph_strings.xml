@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wd_desc_wide">Cyph: what you are doing now and what is next</string>
+    <string name="wd_desc_next">Cyph: the next thing in your plan</string>
+    <string name="wd_desc_strip">Cyph: one line, what is on now or next</string>
+    <string name="wd_desc_face">Cyph, just him</string>
+    <string name="ch_reply">Replies</string>
+    <string name="ch_nudge">Nudges</string>
+    <string name="ch_reminder">Reminders</string>
+    <string name="ch_arm">Arm</string>
+    <string name="ch_study">Study</string>
+    <string name="ch_alert">Alerts</string>
+    <string name="ch_quiet">Quiet</string>
+</resources>

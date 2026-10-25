@@ -1,0 +1,269 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Calendar</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+.page{grid-template-columns:318px minmax(0,1fr) 340px}
+.rail{overflow:auto}
+.pn.cal{padding:14px 16px 12px}
+.dayhead .big{font-size:64px}
+/* rail */
+.rail{display:flex;flex-direction:column;gap:10px;min-height:0}
+.mini{padding:12px}
+.mh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font:italic 21px 'Instrument Serif';color:var(--cr)}
+.mh span{font:11px 'DM Mono';color:var(--dim);font-style:normal;cursor:pointer}
+.mg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:10.5px}
+.mg i{font-style:normal;color:var(--dim);font-size:9px;padding-bottom:3px}
+.mg b{font-weight:400;padding:4px 0;border-radius:4px;cursor:pointer;color:#a9b896;position:relative}
+.mg b:hover{background:#1d2615}.mg b.o{color:#44523a}
+.mg b.t{color:var(--ne);box-shadow:inset 0 0 0 1px var(--ne)}
+.mg b.s{background:var(--am);color:#1a1405}
+.mg b.d:after{content:"";position:absolute;left:50%;bottom:1px;width:3px;height:3px;border-radius:50%;background:var(--tl);transform:translateX(-50%)}
+.cyp{flex:1;min-height:0;padding:0;overflow:hidden;display:flex;flex-direction:column;background:#0d120a}
+.cyp .st{position:relative;flex:1;min-height:0;display:flex;align-items:flex-end;justify-content:center;background:radial-gradient(90% 80% at 50% 100%,rgba(217,152,74,.38),transparent 70%)}
+.cyp .st:before{content:"";position:absolute;left:-20%;right:-20%;bottom:0;height:38%;background:repeating-linear-gradient(90deg,rgba(93,255,122,.25) 0 1px,transparent 1px 24px),repeating-linear-gradient(0deg,rgba(93,255,122,.25) 0 1px,transparent 1px 12px);transform:perspective(160px) rotateX(58deg);transform-origin:bottom}
+.cyp canvas{position:relative;filter:drop-shadow(0 8px 0 #0006)}
+.take{margin:0;padding:11px 13px 12px;background:#07100a;border-top:2px solid var(--ne);font:italic 18px/1.18 'Instrument Serif';color:var(--cr)}
+.take small{display:block;font:600 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne);font-style:normal;margin-bottom:4px}
+.take .key{margin-top:8px;display:inline-block}
+/* calendar */
+.cal{display:flex;flex-direction:column;min-height:0;padding:14px 16px 12px}
+.ch{display:flex;align-items:flex-end;gap:16px;margin-bottom:12px}
+.ch h1{font:italic 400 clamp(38px,3.6vw,60px)/.9 'Instrument Serif';color:var(--cr);letter-spacing:-.01em}
+.ch h1 em{font-style:normal;font:600 14px 'Pixelify Sans';letter-spacing:.3em;color:var(--am);display:block;margin-bottom:6px}
+.vw{margin-left:auto;display:flex;gap:6px;align-items:center}
+.vw .key.on{background:var(--ne);color:#0d120a;box-shadow:0 0 14px rgba(93,255,122,.5)}
+.view{flex:1;min-height:0;position:relative;overflow:hidden;border-radius:6px;background:#0b0f08;box-shadow:inset 0 2px 6px #000}
+/* week + day grid */
+.tg{position:absolute;inset:0;display:grid;grid-template-rows:auto 1fr}
+.tgh{display:grid;grid-template-columns:44px repeat(var(--n),1fr);border-bottom:1px solid var(--ln)}
+.tgh div{padding:7px 6px 6px;text-align:center;cursor:pointer;border-left:1px solid #162011}
+.tgh div:first-child{border:0;cursor:default}
+.tgh small{display:block;font:600 10px 'Pixelify Sans';letter-spacing:.18em;color:var(--dim)}
+.tgh b{font:italic 400 26px/1 'Instrument Serif';color:#c4d1ae}
+.tgh .t b{color:var(--ne);text-shadow:0 0 12px rgba(93,255,122,.6)}.tgh .s{background:#161e10}
+.tgh .cf small:after{content:" ⚠";color:var(--am)}
+.tgb{overflow:auto;position:relative}
+.tgi{position:relative;display:grid;grid-template-columns:44px repeat(var(--n),1fr);height:calc(var(--hh)*17)}
+.hrs{position:relative}
+.hrs span{position:absolute;right:6px;font:9.5px 'DM Mono';color:#4d5c40;transform:translateY(-6px)}
+.col{position:relative;border-left:1px solid #162011;background:repeating-linear-gradient(transparent 0 calc(var(--hh) - 1px),#141c0e calc(var(--hh) - 1px) var(--hh))}
+.col.t{background-color:#0e150a}
+.ev2{position:absolute;left:3px;right:7px;padding:3px 8px 3px 6px;overflow:hidden;color:#10150e;font:500 11px/1.2 'DM Mono';cursor:pointer;border-radius:3px 6px 6px 3px;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%);transition:filter .12s,transform .12s}
+.ev2:hover{filter:brightness(1.12);transform:translateX(2px);z-index:3}
+.ev2 b{display:block;font:700 9.5px 'Pixelify Sans';letter-spacing:.08em;opacity:.7}
+.ev2.dn{opacity:.4}.ev2.dn:after{content:"✓";position:absolute;right:12px;top:2px;font-weight:700}
+.ev2.cf{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.28) 0 5px,transparent 5px 10px)}
+.ev2.dl{background:none!important;border-top:2px solid var(--co);color:var(--co);clip-path:none;padding:1px 4px;font-weight:700}
+.ev2.dl:before{content:"◆ ";}
+.nowl{position:absolute;left:0;right:0;height:2px;background:var(--am);box-shadow:0 0 10px var(--am);z-index:4;pointer-events:none}
+.nowl:before{content:"NOW";position:absolute;left:3px;top:-12px;font:700 9px 'Pixelify Sans';letter-spacing:.14em;color:var(--am)}
+/* month */
+.mo{position:absolute;inset:0;display:grid;grid-template-rows:auto repeat(6,minmax(0,1fr))}
+.moh{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--ln)}
+.moh div{padding:7px;font:600 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--dim)}
+.mr{display:grid;grid-template-columns:repeat(7,1fr);min-height:0}
+.mc{position:relative;border-left:1px solid #162011;border-bottom:1px solid #162011;padding:5px 7px;overflow:hidden;cursor:pointer;transition:background .12s;min-height:0}
+.mc:hover{background:#121a0c}
+.mc .n{font:italic 400 24px/1 'Instrument Serif';color:#b9c7a3}
+.mc.o .n{color:#3d4a33}
+.mc.t{box-shadow:inset 0 0 0 2px var(--ne),inset 0 0 22px rgba(93,255,122,.12)}.mc.t .n{color:var(--ne)}
+.mc.s{background:#171f0f}
+.mc .dots{position:absolute;right:7px;top:8px;display:flex;gap:3px}
+.mc .dots i{width:6px;height:6px;border-radius:50%}
+.mc .tp{font-size:9.5px;padding:1px 5px;margin-top:3px;display:block;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.mc .cfw{position:absolute;left:7px;bottom:4px;font:700 10px 'Pixelify Sans';color:var(--am);animation:bl 1.4s steps(1) infinite}
+.mc .load{position:absolute;left:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--tl),var(--ne));box-shadow:0 0 8px var(--ne)}
+/* agenda */
+.ag{position:absolute;inset:0;overflow:auto;padding:14px 18px;display:flex;flex-direction:column;gap:14px}
+.ag h3{font:italic 28px 'Instrument Serif';color:var(--cr);display:flex;align-items:baseline;gap:12px}
+.ag h3 small{font:11px 'DM Mono';color:var(--dim);font-style:normal}
+.ar{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:center;padding:7px 0;border-bottom:1px dashed #1f2a17}
+.ar .tm{font:600 12px 'Pixelify Sans';color:var(--am);letter-spacing:.06em}
+.ar .tt{font:500 13px 'DM Mono'}
+.ar .kd{font:700 9px 'Pixelify Sans';letter-spacing:.16em;color:var(--dim)}
+/* side */
+.side{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden}
+.dayhead{display:flex;align-items:flex-end;gap:12px}
+.dayhead .big{font:italic 400 84px/.8 'Instrument Serif';color:var(--cr);text-shadow:0 0 30px rgba(243,236,178,.14)}
+.dayhead .meta{padding-bottom:4px}
+.dayhead .meta b{display:block;font:700 15px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne)}
+.dayhead .meta small{color:var(--dim);font-size:11px}
+.ritual{position:relative;padding:13px 14px;border-radius:9px;background:linear-gradient(#18230f,#111a0a);box-shadow:inset 0 0 0 1px #2a3a1c}
+.ritual:before{content:"MORNING RITUAL";position:absolute;right:12px;top:-8px;font:700 9px 'Pixelify Sans';letter-spacing:.2em;background:var(--am);color:#1a1405;padding:2px 7px;border-radius:3px}
+.ritual q{display:block;font:italic 24px/1.1 'Instrument Serif';color:var(--cr);quotes:none;margin-bottom:9px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.chips span{font-size:11px;padding:3px 9px;border-radius:12px;background:#1c2614;color:#b6c4a0;box-shadow:inset 0 0 0 1px #2c3820;cursor:pointer;transition:.12s}
+.chips span:hover{background:var(--ne);color:#0d120a}
+.sec{padding:11px 12px}
+textarea{width:100%;height:70px;resize:none;background:#07100a;border:0;border-radius:5px;padding:9px 10px;color:#e8dc90;font:italic 18px/1.18 'Instrument Serif';outline:0;box-shadow:inset 0 2px 5px #000}
+.nl{display:flex;gap:8px;background:#05080a;border-radius:7px;padding:8px 10px;box-shadow:inset 0 2px 5px #000}
+.nl .p{color:var(--ne)}.nl input{flex:1;background:none;border:0;outline:0;color:var(--tx);font:12.5px 'DM Mono'}
+.pv{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.pv .tp{display:block}
+.pv small{font-size:10px;color:var(--dim)}
+.list{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.it{display:grid;grid-template-columns:18px 4px 1fr auto;gap:9px;align-items:center;padding:7px 8px;border-radius:5px;background:#141b0e}
+.it .cb{width:16px;height:16px;border-radius:4px;border:2px solid #3b4a2c;cursor:pointer;display:grid;place-items:center;font-size:10px;color:#0d120a}
+.it.dn .cb{background:var(--ne);border-color:var(--ne)}.it.dn .cb:after{content:"✓"}
+.it .ib{align-self:stretch;border-radius:2px}
+.it h6{font:500 12.5px 'DM Mono'}.it.dn h6{text-decoration:line-through;opacity:.55}
+.it p{font-size:10.5px;color:var(--dim)}
+.it .w{font:700 9px 'Pixelify Sans';letter-spacing:.14em;color:var(--am)}
+</style></head><body>
+<div class="deck"><div id="bar" class="bar"></div>
+ <div class="page">
+  <div class="rail">
+   <div class="pn mini"><div class="mh"><span id="mp">‹</span><i id="mt" style="font-style:italic">October</i><span id="mn">›</span></div><div class="mg" id="mg"></div></div>
+   <div class="pn" style="padding:12px"><div class="dayhead"><div class="big" id="dn">24</div><div class="meta"><b id="dw">SATURDAY</b><small id="dsub"></small></div></div></div>
+   <div class="pn ritual" id="rit"><q>What do you want to do today?</q><div class="chips" id="chips"><span>Finish the planner build</span><span>Physics worksheet</span><span>Just rest</span><span>Plan next week</span></div>
+    <div class="nl"><span class="p">▸</span><input id="rin" placeholder="tell Cyph how you want today to go"><button class="key live" id="rsend">TELL</button></div></div>
+   <div class="pn sec"><div class="lbl">Quick add <b>natural language</b></div>
+    <div class="nl"><span class="p">+</span><input id="qa" placeholder="plan friday afternoon: parade prep, then maths"><button class="key live" id="qadd">ADD</button></div><div class="pv" id="pv2"></div></div>
+  </div>
+  <div class="pn cal">
+   <div class="ch"><h1><em id="ey">WEEK 43</em><span id="ttl">19 – 25 October</span></h1>
+    <div class="vw"><button class="btn am" id="fixbtn" style="display:none">MOVE VALORANT</button><button class="key" id="pv">‹</button><button class="key" id="td">TODAY</button><button class="key" id="nx">›</button>
+     <span style="width:14px"></span>
+     <button class="key" data-v="day">DAY</button><button class="key on" data-v="week">WEEK</button><button class="key" data-v="month">MONTH</button><button class="key" data-v="agenda">AGENDA</button></div></div>
+   <div class="view" id="view"></div>
+  </div>
+  <div class="pn sec side" style="display:flex;flex-direction:column"><div class="lbl">This day <b id="cnt"></b></div><div class="list" id="list"></div>
+    <div class="lbl" style="margin:10px 0 6px">Notes for the day <b>cyph reads these</b></div><textarea id="notes">Want to finish the sidebar before parade. Eat first.</textarea></div>
+ </div>
+</div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script><script src="corner.js"></script>
+<script>
+const COL = {ne:"#5dff7a", bl:"#5b9fb8", am:"#d9984a", co:"#f08a73", tl:"#2f9d8f", cr:"#f3ecb2"};
+const DOW = ["MON","TUE","WED","THU","FRI","SAT","SUN"], DOWL = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
+const MON = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const TD = new Date(2026, 9, 24);
+const iso = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const dow = (d) => (d.getDay() + 6) % 7;
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const mondayOf = (d) => addDays(d, -dow(d));
+let sel = new Date(TD), view = "week", anchor = new Date(TD), added = [], moved = false;
+const T = {
+  0: [["School","07:45","15:30","bl","fixed"],["Robotics CCA","16:00","18:00","tl","fixed"],["Maths homework","19:30","20:30","ne"]],
+  1: [["School","07:45","15:30","bl","fixed"],["NCDCC parade","15:45","18:15","bl","fixed"],["Physics","19:30","21:00","ne"]],
+  2: [["School","07:45","15:30","bl","fixed"],["Cyph planner build","16:00","18:30","ne"],["Chem revision","19:30","20:30","am"]],
+  3: [["School","07:45","15:30","bl","fixed"],["Robotics CCA","16:00","18:00","tl","fixed"],["Maths","19:30","21:30","ne"],["Valorant w/ class","20:30","22:00","co"]],
+  4: [["School","07:45","13:30","bl","fixed"],["Physics worksheet due","17:00","17:00","co","deadline"],["Minecraft server","19:00","22:00","co"]],
+  5: TODAY.map(e => [e.t, e.s, e.e, e.k, e.fixed ? "fixed" : "block", e.done]),
+  6: [["Cyph study","10:00","12:00","ne"],["Family lunch","13:00","15:00","cr","fixed"],["Plan the week","20:00","20:30","ne"]],
+};
+const ONE = {"2026-10-26":[["Maths test","09:00","10:30","co","fixed"]],"2026-10-30":[["Project demo","14:00","15:00","am","fixed"]],"2026-10-28":[["Dentist","17:00","17:45","cr","fixed"]]};
+function eventsFor(d) {
+  const key = iso(d);
+  let base = (T[dow(d)] || []).map(a => ({t:a[0], s:a[1], e:a[2], k:a[3], kind:a[4] || "block", done:a[5] || (d < TD && dow(d) < 5)}));
+  if (key === "2026-10-23" && moved) base = base.map(e => e);
+  if (dow(d) === 3 && moved) base = base.map(e => e.t.startsWith("Valorant") ? {...e, s:"22:00", e:"23:00"} : e);
+  (ONE[key] || []).forEach(a => base.push({t:a[0], s:a[1], e:a[2], k:a[3], kind:a[4] || "block", done:false}));
+  added.filter(a => a.d === key).forEach(a => base.push(a));
+  base.forEach((e, i) => e.id = key + i);
+  const bl = base.filter(e => e.kind !== "deadline" && e.kind !== "fixed" || true);
+  base.forEach(e => { e.cf = e.kind !== "deadline" && base.some(o => o !== e && o.kind !== "deadline" && toMin(o.s) < toMin(e.e) && toMin(e.s) < toMin(o.e) && !(e.kind === "fixed" && o.kind === "fixed")); });
+  return base.sort((a, b) => toMin(a.s) - toMin(b.s));
+}
+const hasConflict = (d) => eventsFor(d).some(e => e.cf);
+
+shell("CALENDAR"); const api = buddy(5);
+function say(msg, mood, key) { api.say(msg, mood, key ? 14000 : 7000); document.getElementById("fixbtn").style.display = key ? "" : "none"; }
+function fix() { moved = true; render(); say("Done. Valorant starts at 22:00 now, and maths gets its full two hours. You're welcome.", "happy"); }
+document.getElementById("fixbtn").onclick = fix;
+function mood() { return hasConflict(addDays(mondayOf(TD), 3)) ? () => say("Thursday evening is double-booked: maths and Valorant overlap for 60 minutes. Want me to push Valorant to 22:00?", "nervous", true) : () => say("Your week is clean. Saturday's the busy one. Parade at 14:00, so the planner build ends at 13:15.", "smug"); }
+
+/* ---- mini month ---- */
+function mini() {
+  const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1), start = mondayOf(first), mg = document.getElementById("mg");
+  document.getElementById("mt").textContent = MON[anchor.getMonth()] + " " + anchor.getFullYear();
+  mg.innerHTML = DOW.map(d => `<i>${d[0]}</i>`).join("");
+  for (let i = 0; i < 42; i++) { const d = addDays(start, i), c = ["", d.getMonth() !== anchor.getMonth() ? "o" : "", iso(d) === iso(TD) ? "t" : "", iso(d) === iso(sel) ? "s" : "", eventsFor(d).length ? "d" : ""].join(" ");
+    mg.insertAdjacentHTML("beforeend", `<b class="${c}" data-d="${iso(d)}">${d.getDate()}</b>`); }
+  mg.querySelectorAll("b").forEach(b => b.onclick = () => { sel = new Date(b.dataset.d + "T00:00:00"); if (view === "month") anchor = new Date(sel); render(); });
+}
+/* ---- views ---- */
+function timeGrid(days) {
+  const hh = 40, n = days.length;
+  let h = `<div class="tg" style="--n:${n};--hh:${hh}px"><div class="tgh"><div></div>` + days.map(d => `<div class="${iso(d) === iso(TD) ? "t" : ""} ${iso(d) === iso(sel) ? "s" : ""} ${hasConflict(d) ? "cf" : ""}" data-d="${iso(d)}"><small>${DOW[dow(d)]}</small><b>${d.getDate()}</b></div>`).join("") + `</div><div class="tgb"><div class="tgi"><div class="hrs">`;
+  for (let x = 6; x <= 22; x++) h += `<span style="top:${(x - 6) * hh}px">${pad(x)}:00</span>`;
+  h += `</div>` + days.map(d => {
+    const evs = eventsFor(d), isT = iso(d) === iso(TD);
+    return `<div class="col ${isT ? "t" : ""}" data-d="${iso(d)}">` + evs.map(e => {
+      const top = (toMin(e.s) - 360) / 60 * hh, ht = Math.max(18, (toMin(e.e) - toMin(e.s)) / 60 * hh - 2);
+      if (e.kind === "deadline") return `<div class="ev2 dl" style="top:${top}px">${e.t}</div>`;
+      return `<div class="ev2 c-${e.k} ${e.done ? "dn" : ""} ${e.cf ? "cf" : ""}" style="top:${top}px;height:${ht}px"><b>${e.s}${e.cf ? " ⚠" : ""}</b>${e.t}</div>`;
+    }).join("") + (isT ? `<div class="nowl" style="top:${(demoNow() - 360) / 60 * hh}px"></div>` : "") + `</div>`; }).join("") + `</div></div></div>`;
+  return h;
+}
+function monthView() {
+  const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1), start = mondayOf(first);
+  let h = `<div class="mo"><div class="moh">${DOW.map(d => `<div>${d}</div>`).join("")}</div>`;
+  for (let r = 0; r < 6; r++) { h += `<div class="mr">`; for (let c = 0; c < 7; c++) {
+    const d = addDays(start, r * 7 + c), evs = eventsFor(d).filter(e => e.kind !== "fixed" || e.t !== "School"), all = eventsFor(d), mins = all.reduce((a, e) => a + Math.max(0, toMin(e.e) - toMin(e.s)), 0);
+    h += `<div class="mc ${d.getMonth() !== anchor.getMonth() ? "o" : ""} ${iso(d) === iso(TD) ? "t" : ""} ${iso(d) === iso(sel) ? "s" : ""}" data-d="${iso(d)}"><div class="n">${d.getDate()}</div><div class="dots">${all.slice(0, 6).map(e => `<i style="background:${COL[e.k]}"></i>`).join("")}</div>` +
+      evs.slice(0, 2).map(e => `<span class="tp c-${e.k}">${e.s} ${e.t}</span>`).join("") + (hasConflict(d) ? `<div class="cfw">⚠ CLASH</div>` : "") + `<div class="load" style="width:${Math.min(100, mins / 8)}%"></div></div>`; }
+    h += `</div>`; }
+  return h + `</div>`;
+}
+function agenda() {
+  let h = `<div class="ag">`;
+  for (let i = 0; i < 7; i++) { const d = addDays(TD, i), evs = eventsFor(d);
+    h += `<div><h3>${DOWL[dow(d)][0] + DOWL[dow(d)].slice(1).toLowerCase()} ${d.getDate()} <small>${i === 0 ? "today" : i === 1 ? "tomorrow" : ""} · ${evs.length} items${hasConflict(d) ? " · ⚠ clash" : ""}</small></h3>` +
+      evs.map(e => `<div class="ar"><div class="tm">${e.s}${e.kind === "deadline" ? "" : "–" + e.e}</div><div class="tt"><span class="tp c-${e.k}" style="display:inline-block">${e.t}</span></div><div class="kd">${e.kind.toUpperCase()}</div></div>`).join("") + `</div>`; }
+  return h + `</div>`;
+}
+function bindDays(root) { root.querySelectorAll("[data-d]").forEach(el => el.addEventListener("click", () => { sel = new Date(el.dataset.d + "T00:00:00"); render(); })); }
+/* ---- side ---- */
+function side() {
+  const evs = eventsFor(sel), mins = evs.reduce((a, e) => a + Math.max(0, toMin(e.e) - toMin(e.s)), 0), isT = iso(sel) === iso(TD);
+  document.getElementById("dn").textContent = sel.getDate(); document.getElementById("dw").textContent = DOWL[dow(sel)];
+  document.getElementById("dsub").textContent = `${MON[sel.getMonth()]} ${sel.getFullYear()} · ${evs.length} items · ${Math.floor(mins / 60)}h ${pad(mins % 60)}m planned`;
+  document.getElementById("rit").style.display = isT ? "" : "none";
+  document.getElementById("cnt").textContent = evs.length + " items";
+  document.getElementById("list").innerHTML = evs.map(e => `<div class="it ${e.done ? "dn" : ""}"><div class="cb"></div><div class="ib c-${e.k}"></div><div><h6>${e.t}</h6><p>${e.s}${e.kind === "deadline" ? "" : " – " + e.e} · ${e.kind}</p></div>${e.cf ? '<div class="w">⚠ CLASH</div>' : ""}</div>`).join("") || `<p style="color:var(--dim);font-size:12px">Nothing planned. Tell Cyph what you want to do.</p>`;
+  document.querySelectorAll(".it .cb").forEach(cb => cb.onclick = () => cb.parentElement.classList.toggle("dn"));
+}
+function render() {
+  const v = document.getElementById("view"), mon = mondayOf(view === "month" ? anchor : sel);
+  const week = [...Array(7)].map((_, i) => addDays(mondayOf(sel), i));
+  document.querySelectorAll("[data-v]").forEach(b => b.classList.toggle("on", b.dataset.v === view));
+  if (view === "week") { v.innerHTML = timeGrid(week); document.getElementById("ttl").textContent = `${week[0].getDate()} – ${week[6].getDate()} ${MON[week[6].getMonth()]}`; document.getElementById("ey").textContent = "WEEK " + (Math.floor((week[0] - new Date(2026, 0, 5)) / 6048e5) + 2); }
+  if (view === "day") { v.innerHTML = timeGrid([sel]); document.getElementById("ttl").textContent = `${DOWL[dow(sel)].charAt(0) + DOWL[dow(sel)].slice(1).toLowerCase()} ${sel.getDate()} ${MON[sel.getMonth()]}`; document.getElementById("ey").textContent = iso(sel) === iso(TD) ? "TODAY" : "DAY"; }
+  if (view === "month") { v.innerHTML = monthView(); document.getElementById("ttl").textContent = MON[anchor.getMonth()] + " " + anchor.getFullYear(); document.getElementById("ey").textContent = "MONTH"; }
+  if (view === "agenda") { v.innerHTML = agenda(); document.getElementById("ttl").textContent = "Next 7 days"; document.getElementById("ey").textContent = "AGENDA"; }
+  bindDays(v); mini(); side();
+  const sc = v.querySelector(".tgb"); if (sc) sc.scrollTop = 40;
+  v.querySelectorAll(".ev2.cf").forEach(e => e.addEventListener("mouseenter", () => mood()()));
+}
+document.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { view = b.dataset.v; anchor = new Date(sel); render(); });
+const step = (k) => { const n = view === "month" ? 0 : view === "day" ? k : 7 * k; if (view === "month") { anchor = new Date(anchor.getFullYear(), anchor.getMonth() + k, 1); } else { sel = addDays(sel, n); } render(); };
+document.getElementById("pv").onclick = () => step(-1); document.getElementById("nx").onclick = () => step(1);
+document.getElementById("mp").onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1); mini(); }; document.getElementById("mn").onclick = () => { anchor = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1); mini(); };
+document.getElementById("td").onclick = () => { sel = new Date(TD); anchor = new Date(TD); render(); };
+/* ---- ritual ---- */
+const ritual = (t) => { api.listen(false); say(t.toLowerCase().includes("rest") ? "A rest day is a plan too. I'll protect the evening and keep the parade. Sleep before 22:30?" : `Got it: "${t}". I'll put it right after the parade and ask you at 17:30 how it's going.`, t.toLowerCase().includes("rest") ? "purr" : "excited"); document.getElementById("rin").value = ""; };
+document.querySelectorAll("#chips span").forEach(c => c.onclick = () => ritual(c.textContent));
+document.getElementById("rsend").onclick = () => ritual(document.getElementById("rin").value || "something good");
+document.getElementById("rin").addEventListener("input", e => api.listen(e.target.value.length > 0));
+/* ---- quick add ---- */
+const DAYWORD = {today:0,tomorrow:1,mon:0,tue:1,wed:2,thu:3,fri:4,sat:5,sun:6};
+function parse(text) {
+  const low = text.toLowerCase(); let d = null;
+  for (const w in DAYWORD) if (new RegExp("\\b" + w).test(low)) { d = w === "today" ? new Date(TD) : w === "tomorrow" ? addDays(TD, 1) : addDays(mondayOf(TD), DAYWORD[w]); break; }
+  if (!d) d = new Date(sel);
+  let start = /morning/.test(low) ? 9 * 60 : /afternoon/.test(low) ? 14 * 60 : /evening|tonight/.test(low) ? 19 * 60 : 16 * 60;
+  const tm = low.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/); if (tm) start = (parseInt(tm[1]) % 12 + (tm[3] === "pm" ? 12 : 0)) * 60 + parseInt(tm[2] || 0);
+  const items = (text.split(":").slice(1).join(":") || text).split(/,| then | and /i).map(s => s.replace(/^\s*(then|and)\s+/i, "").trim()).filter(Boolean);
+  const keys = ["ne", "bl", "am", "co", "tl"]; let cur = start;
+  return items.map((t, i) => { const e = {d: iso(d), t: t.charAt(0).toUpperCase() + t.slice(1), s: fmtMin(cur), e: fmtMin(cur + 60), k: keys[i % 5], kind: "block"}; cur += 60; return e; });
+}
+let pending = [];
+document.getElementById("qa").addEventListener("input", e => {
+  pending = e.target.value.length > 6 ? parse(e.target.value) : [];
+  document.getElementById("pv2").innerHTML = pending.map(p => `<span class="tp c-${p.k}">${p.d.slice(5)} ${p.s}–${p.e} · ${p.t}</span>`).join("") + (pending.length ? `<small>→ ${pending.length} block${pending.length > 1 ? "s" : ""}. Press ADD or Enter.</small>` : "");
+  api.listen(e.target.value.length > 0);
+});
+const commit = () => { if (!pending.length) return; added.push(...pending); const d = new Date(pending[0].d + "T00:00:00"); sel = d; pending = []; document.getElementById("qa").value = ""; document.getElementById("pv2").innerHTML = ""; render(); say("Added. I checked the clashes and there aren't any. Want a reminder 15 minutes before?", "happy"); };
+document.getElementById("qadd").onclick = commit; document.getElementById("qa").addEventListener("keydown", e => { if (e.key === "Enter") commit(); });
+render(); mood()();
+</script></body></html>

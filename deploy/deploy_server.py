@@ -5,6 +5,8 @@
     python deploy/deploy_server.py check       run `python -m cyph.server --check` on the server
     python deploy/deploy_server.py service     install + start the systemd user service (cyph-telegram)
     python deploy/deploy_server.py migrate     copy memory, schedule, chat and the owner pairing up (once)
+    python deploy/deploy_server.py core <host:port>   switch the apps' API on (Playit address is printed with pair codes)
+    python deploy/deploy_server.py pair               make a one-time pair code for a new device
     python deploy/deploy_server.py status|logs|stop
 
 Reads data/server.json (host, user, key, remote). The secrets (GEMINI_API_KEY, TELEGRAM_BOT_TOKEN) are taken from
@@ -13,6 +15,7 @@ the untracked cyph/.env and written to the server's cyph-server/app/.env with mo
 from __future__ import annotations
 
 import io
+import json
 import os
 import subprocess
 import sys
@@ -67,7 +70,9 @@ def tar_bytes(files: dict[str, Path]) -> bytes:
 
 def code():
     files = {f"cyph/{p.name}": p for p in sorted((ROOT / "cyph").glob("*.py"))}
-    ssh(f"mkdir -p {REMOTE}/app/data/user && cd {REMOTE}/app && rm -f cyph/*.py", check=False)
+    files.update({f"cyph/core/{p.name}": p for p in sorted((ROOT / "cyph" / "core").glob("*.py"))})
+    ssh(f"mkdir -p {REMOTE}/app/data/user {REMOTE}/app/cyph/core && cd {REMOTE}/app && rm -f cyph/*.py cyph/core/*.py",
+        check=False)
     ssh(f"mkdir -p {REMOTE}/app && cd {REMOTE}/app && tar xzf -", tar_bytes(files))
     env = {}
     for line in (ROOT / ".env").read_text(encoding="utf-8").splitlines():
@@ -84,7 +89,7 @@ def code():
 
 def venv():
     out = ssh(f"cd {REMOTE} && (test -x venv/bin/python || python3 -m venv venv) && "
-              f"venv/bin/pip install --quiet --disable-pip-version-check httpx google-genai pillow && echo installed",
+              f"venv/bin/pip install --quiet --disable-pip-version-check httpx google-genai pillow fastapi uvicorn cryptography && echo installed",
               timeout=900)
     print(out.strip()[-600:])
 
@@ -115,6 +120,19 @@ def migrate():
     print(f"migrated {len(files)} files (memory, schedule, chat, owner pairing)")
 
 
+def core():
+    """core <host:port>: switch the apps' API on (data/core.json on the server). The argument is the Playit tunnel's
+    public address, only printed with pair codes."""
+    addr = sys.argv[2] if len(sys.argv) > 2 else ""
+    body = json.dumps({"enabled": True, "host": "127.0.0.1", "port": 8443, "public_address": addr}).encode()
+    ssh(f"mkdir -p {REMOTE}/app/data && cat > {REMOTE}/app/data/core.json", body)
+    print("apps' API enabled on the server (127.0.0.1:8443). Run `service` to apply.")
+
+
+def pair():
+    print(ssh(f"cd {REMOTE}/app && {REMOTE}/venv/bin/python -m cyph.core pair").strip())
+
+
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "status":
@@ -123,7 +141,7 @@ def main():
         print(ssh("journalctl --user -u cyph-telegram -n 40 --no-pager", check=False))
     elif cmd == "stop":
         print(ssh("systemctl --user stop cyph-telegram; systemctl --user is-active cyph-telegram", check=False))
-    elif cmd in ("code", "venv", "check", "service", "migrate"):
+    elif cmd in ("code", "venv", "check", "service", "migrate", "core", "pair"):
         globals()[cmd]()
     else:
         raise SystemExit(__doc__)

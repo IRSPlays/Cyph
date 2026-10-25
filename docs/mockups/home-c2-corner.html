@@ -1,0 +1,264 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Home · The Corner v2</title>
+<link rel="stylesheet" href="bench2.css">
+<style>
+.deck{padding:0;background:radial-gradient(70% 90% at 80% 100%,var(--glow,rgba(93,255,122,.22)),transparent 70%),linear-gradient(160deg,#1c2314,#0b0f08 70%);overflow:hidden}
+.deck:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:repeating-linear-gradient(90deg,rgba(93,255,122,.05) 0 1px,transparent 1px 48px),repeating-linear-gradient(0deg,rgba(93,255,122,.05) 0 1px,transparent 1px 48px)}
+.mega{position:absolute;left:-2vw;top:50%;transform:translateY(-52%);font:italic 400 38vw/.8 'Instrument Serif';color:#fff;opacity:.035;letter-spacing:-.04em;pointer-events:none;white-space:nowrap}
+.bar{position:absolute;left:22px;right:22px;top:16px;z-index:9;display:flex;align-items:center;gap:16px}
+.bar .nav a{background:#12170dcc;backdrop-filter:blur(6px)}
+.bar .leds{background:#0b0f08cc;padding:6px 12px;border-radius:7px}
+.stat{position:absolute;z-index:6;right:96px;top:72px;text-align:right;font:700 clamp(40px,4.6vw,82px)/.9 'Pixelify Sans';color:var(--cr);text-shadow:0 0 30px rgba(93,255,122,.35),0 4px 0 #000}
+.stat small{display:block;font:600 12px 'Pixelify Sans';letter-spacing:.3em;color:var(--am);text-shadow:none;margin-top:6px}
+/* him */
+.giant{position:absolute;right:6vw;bottom:-1vh;top:17vh;width:50vw;display:flex;align-items:flex-end;justify-content:center;z-index:2}
+.giant canvas{filter:drop-shadow(0 0 40px rgba(93,255,122,.22)) drop-shadow(0 18px 0 rgba(0,0,0,.4))}
+.shadowline{position:absolute;right:6vw;bottom:0;width:50vw;height:6vh;background:radial-gradient(ellipse at 50% 100%,rgba(0,0,0,.7),transparent 70%);z-index:1}
+.pres{position:static;display:inline-flex;margin-top:12px;align-items:center;gap:9px;font:700 11px 'Pixelify Sans';letter-spacing:.2em;color:var(--cr);background:#0b0f08d9;padding:6px 12px;border-radius:20px;box-shadow:0 0 0 1px var(--ln);text-shadow:none}
+.pres i{width:9px;height:9px;border-radius:50%;background:var(--ne);box-shadow:0 0 10px var(--ne)}
+.pres.listen i{background:var(--bl);box-shadow:0 0 10px var(--bl);animation:bl .7s steps(1) infinite}
+.pres.think i{background:var(--am);box-shadow:0 0 10px var(--am);animation:bl .5s steps(1) infinite}
+.pres.speak i{animation:bl .3s steps(1) infinite}
+.pres b{color:var(--dim);font-weight:400;font-family:'DM Mono';letter-spacing:.04em;text-transform:none}
+/* conversation */
+.slips{position:absolute;z-index:6;left:22px;top:70px;bottom:22px;width:min(300px,20vw);display:flex;flex-direction:column;gap:9px}
+.nowcard{position:relative;padding:14px 15px;border-radius:10px;background:#0b130d;box-shadow:0 0 0 2px var(--ne),0 0 30px rgba(93,255,122,.2);display:flex;gap:13px;align-items:center}
+.ring{--p:60;width:60px;height:60px;border-radius:50%;flex:none;background:conic-gradient(var(--ne) calc(var(--p)*1%),#1b2512 0);display:grid;place-items:center;box-shadow:0 0 14px rgba(93,255,122,.35);position:relative}
+.ring:before{content:"";width:44px;height:44px;border-radius:50%;background:#0b130d}
+.ring span{position:absolute;font:700 13px 'Pixelify Sans';color:var(--ne)}
+.nowcard h4{font:italic 23px/1 'Instrument Serif';color:var(--cr)}
+.nowcard p{font:11px 'DM Mono';color:var(--dim);margin-top:5px}
+.nowcard small{position:absolute;right:11px;top:7px;font:700 9px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne);animation:bl 1.4s steps(1) infinite}
+.slip{display:flex;align-items:center;gap:10px;font:500 12px 'DM Mono';padding:7px 12px;border-radius:3px 7px 7px 3px;color:#10150e;transform:rotate(var(--r,0deg));box-shadow:2px 3px 0 #0008;position:relative;margin-right:12px}
+.slip b{font:700 11px 'Pixelify Sans';letter-spacing:.1em;min-width:44px}
+.slip:after{content:"";position:absolute;right:-9px;top:0;bottom:0;width:18px;background:inherit;clip-path:polygon(0 0,50% 0,100% 50%,50% 100%,0 100%)}
+.slip.dn{opacity:.4;filter:saturate(.4)}
+.quick{margin-top:auto;display:flex;flex-direction:column;gap:6px}
+.quick .lbl{margin:0 0 2px}
+.quick button{text-align:left;border:0;cursor:pointer;padding:9px 12px;border-radius:7px;background:#12170dcc;color:#b6c4a0;font:500 12px 'DM Mono';box-shadow:inset 0 0 0 1px #243019;transition:.12s}
+.quick button:hover{background:var(--ne);color:#0d120a}
+.quick button:before{content:"▸ ";color:var(--am)}
+.talk{position:absolute;z-index:6;left:calc(min(300px,20vw) + 44px);width:min(640px,33vw);top:70px;bottom:22px;display:flex;flex-direction:column}
+.hist{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:15px;padding:30px 10px 10px 0;scrollbar-width:thin;scrollbar-color:#2c3820 transparent;mask-image:linear-gradient(transparent,#000 34px)}
+.day{align-self:center;font:700 9px 'Pixelify Sans';letter-spacing:.3em;color:#58684a;margin:2px 0}
+.day:before,.day:after{content:"";display:inline-block;width:46px;border-top:1px solid #2c3820;vertical-align:middle;margin:0 10px}
+.msg{position:relative;display:grid;grid-template-columns:44px 1fr;gap:10px}
+.msg .tm{font:10px 'DM Mono';color:#586a4b;text-align:right;padding-top:9px}
+.msg.u{grid-template-columns:1fr}
+.msg.u .us{justify-self:end;max-width:86%;font:13.5px/1.4 'DM Mono';color:#cfe3f2;background:#15222d;border-radius:12px 12px 2px 12px;padding:8px 13px;box-shadow:inset 0 0 0 1px #20384a}
+.msg.u .us small{display:block;font:9.5px 'DM Mono';color:#5a7b92;text-align:right;margin-top:3px}
+.msg.c .tx{font:italic 400 clamp(22px,1.55vw,28px)/1.2 'Instrument Serif';color:#e3dca5}
+.msg.c .mt{display:block;font:700 9px 'Pixelify Sans';letter-spacing:.18em;color:var(--ne);margin-bottom:3px;font-style:normal;text-transform:uppercase}
+.msg.c.old .tx{color:#d6d0a0}
+.msg .ev{padding:0;font-size:10.5px;margin-bottom:4px;display:block}
+.msg.c .acts{position:absolute;right:0;top:-10px;display:none;gap:5px;z-index:2}
+.msg.c:hover .acts{display:flex}
+.acts button{border:0;cursor:pointer;font:600 10px 'Pixelify Sans';letter-spacing:.1em;padding:4px 8px;border-radius:4px;background:#1d2615;color:var(--cr);box-shadow:0 2px 0 #0009}
+.acts button:hover{background:var(--ne);color:#0d120a}
+.msg.latest{grid-template-columns:1fr}
+.msg.latest .bub{position:relative;background:#07100a;border:2px solid var(--ne);border-radius:12px;box-shadow:0 0 0 4px #07100a,0 0 44px rgba(93,255,122,.28);overflow:hidden}
+.bub .hd{display:flex;align-items:center;gap:6px;padding:6px 11px;background:#0f1e14;border-bottom:1px solid #1d3a26;font:600 10px 'Pixelify Sans';letter-spacing:.16em;color:var(--ne)}
+.bub .hd i{width:8px;height:8px;border-radius:50%;background:#2b3d30}.bub .hd i:first-child{background:var(--co)}.bub .hd i:nth-child(2){background:var(--am)}.bub .hd i:nth-child(3){background:var(--ne)}
+.bub .hd b{margin-left:auto;color:var(--dim);font-weight:400;font-family:'DM Mono';letter-spacing:.04em}
+.bub .bd{padding:13px 18px 16px;font:italic 400 clamp(25px,2vw,34px)/1.16 'Instrument Serif';color:var(--cr)}
+.bub .bd:before{content:"$ cyph says";display:block;font:400 11px 'DM Mono';color:var(--dim);font-style:normal;margin-bottom:6px}
+.caret{display:inline-block;width:.45em;height:.85em;background:var(--ne);margin-left:3px;vertical-align:-.1em;animation:bl .8s steps(1) infinite}
+.dots{display:inline-flex;gap:6px;padding:6px 0}.dots i{width:9px;height:9px;border-radius:50%;background:var(--ne);animation:dp 1s infinite}.dots i:nth-child(2){animation-delay:.18s}.dots i:nth-child(3){animation-delay:.36s}
+@keyframes dp{0%,60%,100%{opacity:.25;transform:none}30%{opacity:1;transform:translateY(-5px)}}
+.cmdw{margin-top:10px}
+.cmdw .cmd{background:#05080aee;box-shadow:0 0 0 1px var(--ln),0 12px 30px #000a;padding:12px 14px;border-radius:12px}
+.cmdw .cmd input{font-size:15px}
+.cmdw .to{font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--dim);margin:0 0 6px 4px}
+.cmdw .to b{color:var(--ne)}
+.dock{position:absolute;z-index:7;right:14px;top:72px;bottom:20px;width:64px;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.dock button{border:0;cursor:pointer;padding:7px 0 5px;border-radius:8px;background:#12170dcc;backdrop-filter:blur(6px);font:600 14px 'Pixelify Sans';color:#b9c7a3;box-shadow:inset 0 -3px 0 #0008;transition:.12s}
+.dock button small{display:block;font:400 9px 'DM Mono';color:var(--dim)}
+.dock button:hover{transform:translateX(-6px);background:#1b2512}
+.dock button.on{background:var(--ne);color:#0d120a;box-shadow:0 0 14px rgba(93,255,122,.6)}.dock button.on small{color:#0d120a}
+.toast{position:fixed;left:50%;top:70px;transform:translate(-50%,-20px);z-index:20;background:#12170d;color:var(--cr);padding:9px 16px;border-radius:8px;font:12px 'DM Mono';box-shadow:0 0 0 1px var(--ne),0 10px 30px #000a;opacity:0;transition:.3s;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+.arm{position:relative;border-radius:10px;background:#0b130d;box-shadow:0 0 0 1px var(--ln);padding:10px 11px 11px;min-height:0}
+.arm .ah{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--am)}
+.arm .ah em{font:600 9.5px 'Pixelify Sans';font-style:normal;letter-spacing:.14em;color:var(--dim);display:flex;align-items:center;gap:6px}
+.arm .ah em i{width:8px;height:8px;border-radius:50%;background:#3b432b}
+.arm.on{box-shadow:0 0 0 1px #2f9d8f,0 0 24px rgba(47,157,143,.18)}
+.arm.on .ah em{color:var(--ne)}.arm.on .ah em i{background:var(--ne);box-shadow:0 0 8px var(--ne)}
+.arm.off p{font:italic 17px/1.15 'Instrument Serif';color:#9aa889;margin:4px 0 8px}
+.arm.off p b{display:block;font:700 10px 'Pixelify Sans';letter-spacing:.18em;color:var(--co);font-style:normal;margin-bottom:3px}
+.arm .jr{display:grid;grid-template-columns:82px 1fr 52px;gap:8px;align-items:center;font:11px/1 'DM Mono';padding:3px 0}
+.arm .jr .n{font-weight:500;white-space:nowrap}
+.arm .jr .bar{position:relative;height:10px;border-radius:2px;background:repeating-linear-gradient(90deg,#1b2412 0 3px,#161d10 3px 4px);overflow:hidden}
+.arm .jr .bar i{position:absolute;left:0;top:0;bottom:0;width:var(--w);background:var(--c);box-shadow:0 0 8px color-mix(in srgb,var(--c) 50%,transparent)}
+.arm .jr .bar u{position:absolute;left:50%;top:-1px;bottom:-1px;border-left:1px dashed #6b7a5e}
+.arm .jr b{font-weight:500;color:var(--cr);text-align:right;white-space:pre}
+.arm.off .jr b,.arm.off .jr .n{opacity:.4}
+.arm .st{display:flex;gap:10px;font:11px 'DM Mono';color:var(--dim);margin-top:5px;white-space:pre}
+.arm .st b{font-weight:500;color:var(--cr)}.arm .st b.ok{color:var(--ne)}.arm .st b.bad{color:var(--am)}
+.arm.off p{margin-top:8px}
+.arm .chips{display:flex;gap:5px;margin-bottom:7px}
+.arm .chips span{font:700 9px 'Pixelify Sans';letter-spacing:.12em;padding:4px 8px;border-radius:4px;background:#161d10;color:var(--dim);cursor:pointer}
+.arm .chips span.on{background:var(--tl);color:#06140f}
+.arm .ak{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.arm .ak button{border:0;cursor:pointer;font:700 9.5px 'Pixelify Sans';letter-spacing:.1em;padding:7px 0;border-radius:5px;background:#1d2615;color:var(--cr);box-shadow:0 2px 0 #0009}
+.arm .ak button:hover{background:var(--ne);color:#0d120a}
+.arm .ak button.stop{background:#4a1d17;color:var(--co)}.arm .ak button.stop:hover{background:var(--co);color:#1a0805}
+.arm .demo{border:0;cursor:pointer;font:600 9px 'Pixelify Sans';letter-spacing:.14em;padding:5px 9px;border-radius:4px;background:#1d2615;color:#8d9d78}
+@media (max-height:860px){.quick button:nth-child(n+4){display:none}}
+</style></head><body>
+<div class="deck" id="deck">
+ <div class="mega" id="mega">12:14</div>
+ <div class="bar">
+  <div class="logo">CYPH<em>/</em>HOME</div>
+  <div class="nav"><a class="on" href="#">HOME</a><a href="calendar.html">CALENDAR</a><a href="memory.html">MEMORY</a><a href="study.html">STUDY</a><a href="arm.html">ARM</a><a href="settings.html">SETTINGS</a><a href="widget.html">WIDGET</a><a href="phone.html">PHONE</a></div>
+  <div class="leds"><div><i></i>SERVER <b>SYNCED</b></div><div><i class="x"></i>ARM <b>OFFLINE</b></div><div><i class="o"></i>VOICE <b>HOLD SPACE</b></div></div>
+ </div>
+ <div class="stat"><span id="big">12:14</span><small>SAT 24 OCT · 1H 46M TO PARADE</small><div class="pres" id="pres"><i></i><span id="pt">RESTING</span> <b id="pm"></b></div></div>
+
+ <div class="slips" id="slips"></div>
+ <div class="talk">
+  <div class="hist" id="hist"></div>
+  <div class="cmdw"><div class="to">TALKING TO <b>CYPH</b> · <span id="tostate">he's here</span></div>
+   <div class="cmd"><span class="p">▸</span><input id="in" placeholder="say something to him…" autocomplete="off"><button class="key mic" id="mic">● HOLD SPACE</button><button class="key live" id="send">SEND</button></div></div>
+ </div>
+ <div class="shadowline"></div>
+ <div class="giant" id="cybox"><canvas id="cv"></canvas></div>
+ <div class="dock" id="dock"></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="dbg" id="dbg">idle engine: starting…</div>
+<div class="hint">talk to him · hover his old lines for actions · click him: boop</div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const api = mountCyph($("cv"), $("cybox"), {fill: .97, max: 46});
+const dock = $("dock");
+buildKeypad(dock, api, 1, ["happy","curious","excited","love","sleepy","smug","think","dance","shy","grumpy"]); dock.className = "dock";
+const IDLEWORD = {sniff:"sniffing around",sleepy:"getting sleepy",curious:"curious about something",yawn:"yawning",stretch:"stretching",think:"thinking",purr:"purring",smug:"feeling smug",shy:"being shy",confused:"confused"};
+function setPres() {
+  const S = api.state, p = $("pres"); p.className = "pres";
+  let t = "RESTING", m = "";
+  if (S.thinking) { p.classList.add("think"); t = "THINKING"; m = "give him a second"; }
+  else if (S.speaking) { p.classList.add("speak"); t = "TALKING"; m = S.mood; }
+  else if (S.listening) { p.classList.add("listen"); t = "LISTENING"; m = "ears up"; }
+  else { t = S.mood === "rest" ? "RESTING" : "MOOD"; m = S.mood === "rest" ? "mostly awake" : (IDLEWORD[S.mood] || S.mood); }
+  $("pt").textContent = t; $("pm").textContent = m;
+  $("tostate").textContent = S.thinking ? "he's thinking" : S.speaking ? "he's talking" : S.listening ? "he's listening" : "he's here";
+}
+api.onMood = (m, why) => {
+  dock.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.m === m));
+  $("dbg").innerHTML = `idle engine · mood <b>${m}</b> (${why}) · ${api.calm() ? "calm mode" : "alive mode"}`; setPres();
+};
+setInterval(setPres, 400);
+
+/* ---------- the conversation ---------- */
+const hist = $("hist"), log = [];
+const nowStamp = () => fmtMin(demoNow());
+const esc = (s) => s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function renderLog() {
+  const lastC = log.map(m => m.who).lastIndexOf("c");
+  hist.innerHTML = `<div class="day">TODAY · SAT 24 OCT</div>` + log.map((m, i) => {
+    if (m.who === "u") return `<div class="msg u"><div class="us">${esc(m.text)}<small>${m.t}</small></div></div>`;
+    const tool = m.tool ? `<div class="ev">${m.tool}  ok</div>` : "";
+    const body = m.thinking ? `<span class="dots"><i></i><i></i><i></i></span>` : esc(m.text) + (m.streaming ? '<span class="caret"></span>' : "");
+    if (i === lastC) return `<div class="msg c latest" data-i="${i}">${tool}<div class="bub"><div class="hd"><i></i><i></i><i></i>CYPH ─ ${(m.mood || "rest").toUpperCase()}<b>${m.t} · gemini 3.8</b></div><div class="bd">${body}</div></div></div>`;
+    return `<div class="msg c old" data-i="${i}"><div class="tm">${m.t}</div><div>${tool}<span class="mt">${m.mood || ""}</span><div class="tx">${body}</div></div><div class="acts"><button data-a="love">♥ REACT</button><button data-a="plan">+ PLAN</button><button data-a="ask">↺ ASK AGAIN</button></div></div>`;
+  }).join("");
+  hist.scrollTop = hist.scrollHeight;
+}
+hist.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-a]"); if (!b) return;
+  if (b.dataset.a === "love") { api.setMood("love", 5); toast("He saw that. Ears up."); }
+  if (b.dataset.a === "plan") toast("Added to today's plan: from his message");
+  if (b.dataset.a === "ask") say("say that again, shorter");
+});
+function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 2200); }
+function cyphSays(text, mood, tool) {
+  const m = {who:"c", text:"", mood, tool, t:nowStamp(), streaming:true}; log.push(m); renderLog();
+  api.setMood(mood, 8); api.speak(true); let i = 0;
+  const iv = setInterval(() => { i += 2; m.text = text.slice(0, i); const bd = hist.querySelector(".msg.latest .bd"); if (bd) { bd.innerHTML = esc(m.text) + '<span class="caret"></span>'; } hist.scrollTop = hist.scrollHeight;
+    if (i >= text.length) { clearInterval(iv); m.streaming = false; m.text = text; api.speak(false); renderLog(); } }, 30);
+}
+const REPLIES = [
+  [/plan|tomorrow|week|schedule|today|left/i, "plan_list", "curious", "You've got the planner build until 13:15, parade at 14:00, then physics at 19:00. That's it. A suspiciously light evening, honestly."],
+  [/hello|hi\b|hey|morning/i, null, "wave", "Hey Cypher. I was just stretching. Don't tell anyone how long it took."],
+  [/tired|sad|stress|bad/i, null, "sad", "Okay. Small day, then. I'll cut tonight to one block and you eat something that isn't kopi."],
+  [/love|good|thanks|thank|nice/i, null, "love", "That made my ears do the thing. Back to work, you."],
+  [/.*/, null, "smug", "I heard you. I'm choosing to be dramatic about it. Anyway, shall I put it on the plan?"],
+];
+function say(text) {
+  text = (text || "").trim(); if (!text) return;
+  log.push({who:"u", text, t:nowStamp()}); $("in").value = ""; api.listen(false); renderLog();
+  api.state.thinking = true; api.setMood("think", 3); log.push({who:"c", thinking:true, mood:"think", t:nowStamp()}); renderLog();
+  const r = REPLIES.find(x => x[0].test(text));
+  setTimeout(() => { api.state.thinking = false; log.pop(); cyphSays(r[3], r[2], r[1]); }, 1100);
+}
+$("in").addEventListener("keydown", e => { if (e.key === "Enter") say($("in").value); });
+$("in").addEventListener("input", e => { api.listen(e.target.value.length > 0); /* he looks down at what you're typing */ api.lookAt(-0.5, 0.9); });
+$("in").addEventListener("blur", () => { api.listen(false); api.lookAt(null); });
+$("send").onclick = () => say($("in").value);
+$("mic").onclick = () => { api.listen(true); toast("listening… (voice is cloud STT, same on every device)"); setTimeout(() => say("what's left today?"), 1500); };
+addEventListener("keydown", e => { if (e.code === "Space" && document.activeElement !== $("in")) { e.preventDefault(); $("mic").click(); } });
+function seed() {
+  const H = [
+    ["u","morning","08:41"],
+    ["c","Morning, Cypher! You slept six hours. I am concerned, and judging you a little.","wave","08:41"],
+    ["u","what's the plan today","08:42"],
+    ["c","Maths first, then the planner build, then parade at 14:00. Valorant tonight, if the physics worksheet is dead by then.","curious","08:42","plan_list"],
+    ["u","move valorant after physics","09:02"],
+    ["c","Done. Physics at 19:00, Valorant at 20:30. New rule: no clips before the worksheet.","smug","09:02","plan_edit"],
+    ["u","ok maths done","11:25"],
+    ["c","Ears up. That was two hours of actual work. Refill the mug, then planner build.","love","11:25"],
+    ["u","how long until parade?","12:09"],
+    ["c","One hour and forty-six minutes. The build ends at 13:15, so you'll have time to eat.","curious","12:09"],
+  ];
+  H.forEach(h => log.push(h[0] === "u" ? {who:"u", text:h[1], t:h[2]} : {who:"c", text:h[1], mood:h[2], t:h[3], tool:h[4]}));
+  renderLog();
+}
+seed();
+
+
+/* ---------- VectorM arm panel: the same joint rows as the old terminal (name, 0-270 bar with centre tick, degrees) ---------- */
+let armOn = false, armMode = 1;
+const JN = ["base","shoulder","elbow","wrist","pivot","grabber"], JC = ["#2f9d8f","#5b9fb8","#8be37a","#5dff7a","#f3ecb2","#f08a73"], CEN = 135;
+const MODES = ["calm (small passive moves)", "alive (idle moods on)", "manual (idle off)"];
+const jrows = (on) => JN.map((n, i) => `<div class="jr"><span class="n" style="color:${JC[i]}">${i + 1} ${n}</span><div class="bar"><i id="g${i}" style="--c:${JC[i]};--w:${on ? CEN / 2.7 : 0}%"></i><u></u></div><b id="v${i}">${on ? CEN.toFixed(1) + "°" : "  —  "}</b></div>`).join("");
+function armHTML() {
+  if (!armOn) return `<div class="arm off"><div class="ah"><span>VECTORM ARM</span><em><i></i>NOT CONNECTED</em></div>${jrows(false)}
+   <div class="st"><span>○ link</span><b class="bad">not connected</b></div><div class="st"><span>  mode</span><b>—</b></div>
+   <p>The arm agent isn't running on your PC (COM15). Cyph works fine without it.</p><button class="demo" id="armdemo">PREVIEW CONNECTED</button></div>`;
+  return `<div class="arm on"><div class="ah"><span>VECTORM ARM</span><em><i></i>CONNECTED</em></div>${jrows(true)}
+   <div class="st"><span>● link</span><b class="ok">serial COM15</b></div><div class="st"><span>  mode</span><b id="amode">${MODES[armMode]}</b></div>
+   <div class="chips"><span data-m="0" class="${armMode === 0 ? "on" : ""}">CALM</span><span data-m="1" class="${armMode === 1 ? "on" : ""}">ALIVE</span><span data-m="2" class="${armMode === 2 ? "on" : ""}">MANUAL</span></div>
+   <div class="ak"><button>REST</button><button>CENTER</button><button>WAVE</button><button class="stop">E-STOP</button></div></div>`;
+}
+function armTick() {
+  if (armOn && document.getElementById("g0")) {
+    const t = performance.now() / 1000, amp = armMode === 0 ? 2.5 : armMode === 1 ? 9 : 0;
+    JN.forEach((n, i) => {
+      let v = CEN + (i === 5 ? -48 : 0) + Math.sin(t * (.5 + i * .17) + i * 1.3) * amp * (i === 5 ? 1.8 : 1) + (api.state.speaking ? Math.sin(t * 6 + i) * 4 : 0);
+      v = Math.max(15, Math.min(255, v));
+      document.getElementById("g" + i).style.setProperty("--w", (v / 270 * 100) + "%");
+      document.getElementById("v" + i).textContent = v.toFixed(1).padStart(5, " ") + "°";
+    });
+  }
+  requestAnimationFrame(armTick);
+}
+requestAnimationFrame(armTick);
+document.addEventListener("click", (e) => { const c = e.target.closest(".arm .chips span"); if (c) { armMode = +c.dataset.m; paint(); } });
+
+/* ---------- today slips + clock ---------- */
+function paint() {
+  const m = demoNow(); $("mega").textContent = $("big").textContent = fmtMin(m);
+  const sl = $("slips"); sl.innerHTML = "";
+  const now = TODAY.find(e => m >= toMin(e.s) && m < toMin(e.e));
+  if (now) { const p = Math.round((m - toMin(now.s)) / (toMin(now.e) - toMin(now.s)) * 100), left = toMin(now.e) - m;
+    sl.insertAdjacentHTML("beforeend", `<div class="nowcard"><small>● NOW</small><div class="ring" style="--p:${p}"><span>${p}%</span></div><div><h4>${now.t}</h4><p>${now.s} – ${now.e} · ${left} min left</p></div></div>`); }
+  const col = {ne:"#5dff7a", bl:"#5b9fb8", am:"#d9984a", co:"#f08a73", tl:"#2f9d8f", cr:"#f3ecb2"};
+  TODAY.filter(e => e !== now).forEach((e, i) => sl.insertAdjacentHTML("beforeend", `<div class="slip ${m >= toMin(e.e) ? "dn" : ""}" style="background:${col[e.k]};--r:${(i % 2 ? 1 : -1) * (0.5 + i * .2)}deg"><b>${e.s}</b>${e.t}</div>`));
+  sl.insertAdjacentHTML("beforeend", armHTML());
+  const dm = document.getElementById("armdemo"); if (dm) dm.onclick = () => { armOn = true; paint(); toast("Preview: arm connected. When it really is, this panel goes live."); };
+  sl.insertAdjacentHTML("beforeend", `<div class="quick"><div class="lbl">Ask him</div><button>Plan tomorrow with me</button><button>Quiz me on physics</button><button>How's my week looking?</button><button>Mute him for an hour</button></div>`);
+  sl.querySelectorAll(".quick button").forEach(b => b.onclick = () => b.textContent.startsWith("Mute") ? (toast("Muted until 13:14. He'll nap."), api.setMood("sleepy", 20)) : say(b.textContent));
+}
+paint(); setInterval(paint, 15000);
+</script></body></html>

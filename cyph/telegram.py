@@ -38,9 +38,11 @@ PC_INFO = DATA / "bridge_pc.json"      # on the server: where the PC's live Cyph
 LOCK_PORT = 47321                     # held while the service runs: only one copy at a time
 STALE_S = 600                         # messages older than this (sent while the PC was off) are not answered
 IDLE_SAVE_S, IDLE_END_S = 180.0, 600.0
-SERVER_CHAT_MODEL = "gemini-3.5-flash"      # ordinary chat on the server, which has no GPU for a local model
+SERVER_CHAT_MODEL = "gemini-3.8-flash"      # ordinary chat on the server, which has no GPU for a local model
 CURATE_EVERY = 6
 MAX_MSG = 4000
+APP_TURN_TIMEOUT_S = 90                # an app chat turn that takes longer is stopped (Telegram is not limited)
+APP_TIMEOUT_REPLY = "[sad] That took too long, so I stopped. Try again?"
 _TAGS = re.compile(r"\[[^\]]{1,40}\]")
 _THINK = re.compile(r"<think>.*?</think>", re.S)
 REMEMBER = re.compile(r"\b(remember|don'?t forget|forget (that|about)|from now on|call me|my name is|"
@@ -149,11 +151,20 @@ def remote_system_prompt(memory: str = "") -> str:
     return "\n\n".join(parts)
 
 
-def tidy(text: str) -> str:
-    """Strip tags, thinking and markdown stars; keep the line breaks of a longer answer."""
-    text = _TAGS.sub("", _THINK.sub("", text)).replace("*", "")
+def tidy(text: str, keep_tags: bool = False) -> str:
+    """Strip tags, thinking and markdown stars; keep the line breaks of a longer answer. The app keeps its mood tags."""
+    text = _THINK.sub("", text)
+    text = (text if keep_tags else _TAGS.sub("", text)).replace("*", "")
     lines = [" ".join(l.split()) for l in text.splitlines()]
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+
+async def _within(coro, seconds: float) -> str:
+    """An app turn, stopped after `seconds` (a hung Gemini stream must not hold the brain forever)."""
+    try:
+        return await asyncio.wait_for(coro, seconds)
+    except asyncio.TimeoutError:
+        return APP_TIMEOUT_REPLY
 
 
 class Brain:
@@ -161,7 +172,7 @@ class Brain:
 
     def __init__(self, cfg=None, store=None, curator=None, shared=None, log=lambda *_: None,
                  server=None, llm=None, alive=desktop_alive, router=None, big=None, mode=None, agent=None, summary=None,
-                 light_label="Qwen (local)"):
+                 light_label="Qwen (local)", toolbox=None):
         self.cfg = cfg
         self.light_label = light_label                   # what answers ordinary chat: Qwen at home, Gemini Flash on the server
         self.store, self.curator, self.log, self.alive = store, curator, log, alive
@@ -177,6 +188,7 @@ class Brain:
         from .router import BrainMode
         self.mode = mode or BrainMode()
         self.agent, self.approve = agent, None        # file tools for Gemini; approve(text) -> bool asks him
+        self.toolbox = toolbox                        # core.toolbox.ToolBox: the plan tools, used only for channel="app"
         self.summary = summary                        # summary.RollingSummary: older messages, folded down by Flash-Lite
         self.lock = threading.RLock()
         self.transcript: list[tuple[str, str]] = []
@@ -198,16 +210,21 @@ class Brain:
             self.server.start()
             self.llm = LlmClient(self.cfg, self.server.url)
 
-    async def _agent_loop(self, messages) -> str:
-        """Gemini with file tools: up to six rounds of ask, run the tools it called, ask again."""
+    async def _agent_loop(self, messages, toolbox=None, on_text=None, on_event=None) -> str:
+        """Gemini with tools: up to six rounds of ask, run the tools it called, ask again. toolbox (the app's plan
+        tools) replaces the file tools; on_text gets each piece of text as it streams, on_event each finished call."""
         from .agent import openai_tools
         loop = asyncio.get_running_loop()
-        out, tools = "", openai_tools()
+        out = ""
+        tools = toolbox.tools() if toolbox else openai_tools()
+        run = toolbox.run if toolbox else self.agent.run
         for _ in range(6):
             text, calls = "", []
             async for kind, val in self.big.stream(messages, tools):
                 if kind == "text":
                     text += val
+                    if on_text:
+                        on_text(val)
                 else:
                     calls = val
             out += text
@@ -221,26 +238,34 @@ class Brain:
                     args = json.loads(c["arguments"] or "{}")
                 except ValueError:
                     args = {}
-                res = await loop.run_in_executor(None, self.agent.run, c["name"], args, self.approve)
-                self.log("info", f"tool: {c['name']}" + (f" -> {res['error'][:60]}" if "error" in res else ""))
+                res = await loop.run_in_executor(None, run, c["name"], args, self.approve)
+                # only the tool name and the error's type: the error text can echo what the user wrote
+                self.log("info", f"tool: {c['name']}"
+                         + (f" -> {str(res['error']).split(':', 1)[0][:30]}" if "error" in res else ""))
+                if on_event:
+                    on_event({"name": c["name"], "ok": "error" not in res,
+                              "summary": toolbox.describe(c["name"], args, res) if toolbox else c["name"]})
                 messages.append({"role": "tool", "tool_call_id": c["id"], "content": json.dumps(res)[:60000]})
         return out + "\n(I stopped after several steps.)"
 
-    async def _collect(self, messages, use_big: bool = False, needs_gemini: bool = False) -> str:
+    async def _collect(self, messages, use_big: bool = False, needs_gemini: bool = False,
+                       toolbox=None, on_text=None, on_event=None) -> str:
         out = ""
         if use_big:
             try:
-                if self.agent:
-                    out = await self._agent_loop(messages)
+                if self.agent or toolbox:
+                    out = await self._agent_loop(messages, toolbox, on_text, on_event)
                 else:
                     async for kind, val in self.big.stream(messages, None):
                         if kind == "text":
                             out += val
+                            if on_text:
+                                on_text(val)
                 self.last_big_ok = True
                 return out
             except Exception as e:
                 self.log("warn", f"router: Gemini failed ({type(e).__name__})")
-                if out or needs_gemini:
+                if out or needs_gemini or toolbox:
                     return out or "Gemini failed just now, so I could not read that. Try again in a moment."
                 self._ensure()
         self.last_big_ok = False
@@ -249,49 +274,75 @@ class Brain:
                 out += val
         return out
 
-    def reply(self, text: str, attachments=()) -> str:
+    def reply(self, text: str, attachments=(), channel: str = "tg", on_text=None, on_event=None) -> str:
+        """channel "app" (the companion app): always the strong model with the plan tools, the app's system prompt, mood
+        tags kept in the answer, and live on_text / on_event callbacks. Memory, shared chat and curation are shared with
+        Telegram, so it is one conversation."""
         from .attach import to_content
         from .router import BIG_LABEL, Decision, decide_with_mode, log_switch
+        app = channel == "app"
         with self.lock:
+            if app and self.toolbox is None:             # never fall back to the Telegram file tools from the internet
+                return "[sad] The plan tools are not set up, so I cannot answer from the app yet."
             if not self.caught_up and self.curator:
                 self.caught_up = True
                 threading.Thread(target=self._catch_up, daemon=True).start()
             content, images, files = to_content(text, list(attachments))
-            dec = (decide_with_mode(self.router, self.mode.get(), text, images=images, files=files)
-                   if self.router else Decision(False, ""))
+            if app:
+                dec = Decision(True, "app")
+            else:
+                dec = (decide_with_mode(self.router, self.mode.get(), text, images=images, files=files)
+                       if self.router else Decision(False, ""))
             if dec.big and not (self.big and self.big.available()):
                 if any(p.get("type") == "file" for p in (content if isinstance(content, list) else [])):
                     return "I need Gemini to read PDFs and it is not available right now (no key, or today's cap is used)."
+                if app:
+                    return "[sad] I cannot think right now: Gemini is not available (no key, or today's cap is used)."
                 dec = Decision(False, "")
             if dec.big:
-                log_switch("gemini", dec.reason + " (telegram)")
+                if not app:
+                    log_switch("gemini", dec.reason + " (telegram)")
             else:
                 self._ensure()
+            src = "app" if app else "tg"
             note = text + (" [sent " + ("a photo" if images == 1 else f"{images} photos") + "]" if images else "") \
                 + (" [sent a file]" if files else "")
             prev = self.shared.last_time()
-            self.shared.append("user", note, "tg")
+            self.shared.append("user", note, src)
             if not self.transcript:
                 self.started = time.time()
             self.transcript.append(("user", note))
-            system = remote_system_prompt(self.store.snapshot() if self.store else "")
+            memory = self.store.snapshot() if self.store else ""
+            if app:
+                from .core.prompts import app_system_prompt
+                system = app_system_prompt(memory)
+            else:
+                system = remote_system_prompt(memory)
+            recalled = self.store.recall(text) if self.store else ""
+            if recalled:
+                system += "\n\n" + recalled
             earlier = self.summary.get() if self.summary else ""
             if earlier:
                 system += ("\n\nEarlier in this conversation (a summary of messages that are no longer shown; "
                            "treat it as what you already know):\n" + earlier)
-            if dec.big:
+            if dec.big and not app:
                 system += "\n\n" + TELEGRAM_BIG + ("\n\n" + self.agent.prompt() if self.agent else "")
             history = self.shared.load(14)[:-1] + [{"role": "user", "content": content}]
             msgs = stamp([{"role": "system", "content": system}] + history, prev=prev)
-            out = tidy(asyncio.run(self._collect(msgs, dec.big, bool(files)))) or "..."
-            self.shared.append("assistant", out, "tg")
+            turn = self._collect(msgs, dec.big, bool(files), self.toolbox if app else None, on_text, on_event)
+            raw = asyncio.run(_within(turn, APP_TURN_TIMEOUT_S) if app else turn)
+            out = tidy(raw) or "..."
+            self.shared.append("assistant", out, src)
             if self.summary:
                 threading.Thread(target=self.summary.maybe_update, args=(self.shared,), daemon=True).start()
             self.transcript.append(("cyph", out))
             self.turn_at = time.monotonic()
             if REMEMBER.search(text) or self._unsaved() >= CURATE_EVERY:
                 threading.Thread(target=self._curate, daemon=True).start()
-            return out + (f"\n\n(answered by {BIG_LABEL})" if dec.big and self.last_big_ok else "")
+            if app:
+                return tidy(raw, keep_tags=True) or "[confused] ..."
+            return out + (f"\n\n(answered by {BIG_LABEL})"
+                          if dec.big and self.last_big_ok and self.light_label != BIG_LABEL else "")
 
     # ---- memory ------------------------------------------------------------------------------
     def _unsaved(self) -> int:
@@ -614,9 +665,14 @@ class TelegramService:
             elif arg in mode.VALID:
                 mode.set(arg)
             light = self.brain.light_label
-            self.api.send(cid, {"auto": f"Automatic: {light} for chat, Gemini 3.8 Flash for hard questions, photos and files.",
-                                "gemini": "Always Gemini 3.8 Flash.",
-                                "local": f"Always {light}" + (" (no Gemini 3.8 Flash)." if "Gemini" in light else " (no Gemini).")}[mode.get()]
+            from .router import BIG_LABEL
+            same = light == BIG_LABEL                        # the server: one model does chat and the hard jobs
+            self.api.send(cid, {"auto": (f"Automatic: {light} for everything; hard questions, photos and files also get the "
+                                         "long-answer mode with file tools." if same else
+                                         f"Automatic: {light} for chat, Gemini 3.8 Flash for hard questions, photos and files."),
+                                "gemini": "Always Gemini 3.8 Flash" + (" with the long-answer mode and file tools." if same else "."),
+                                "local": (f"Always {light}, chat mode only (no file tools)." if same else
+                                          f"Always {light}" + (" (no Gemini 3.8 Flash)." if "Gemini" in light else " (no Gemini)."))}[mode.get()]
                           + " Change it with /auto, /gemini or /local.")
         elif cmd == "/digest" and self.digest is not None:
             if self._digesting:
@@ -739,7 +795,7 @@ def run_service(a=None, server: bool = False):
     store = MemoryStore()
     model = getattr(a, "memory_model", None) or "gemini-3.5-flash-lite"
     curator = Curator(store, model=model, log=log)
-    from .router import Budget, GeminiClient, Router
+    from .router import BIG_LABEL, Budget, GeminiClient, Router
     from .router import MODE_FILE, BrainMode
     from .agent import Agent
     from .memory import gemini_generate
@@ -747,7 +803,7 @@ def run_service(a=None, server: bool = False):
     budget = Budget()
     extra = {}
     if server:
-        extra = dict(llm=GeminiClient(model=SERVER_CHAT_MODEL, budget=budget, max_tokens=2500), light_label="Gemini 3.5 Flash")
+        extra = dict(llm=GeminiClient(model=SERVER_CHAT_MODEL, budget=budget, max_tokens=2500), light_label=BIG_LABEL)
     else:
         from .local import LocalConfig
         extra = dict(cfg=LocalConfig(llm=getattr(a, "llm", "qwen35"), port=getattr(a, "llm_port", 0) or 0, max_tokens=400))
@@ -760,9 +816,9 @@ def run_service(a=None, server: bool = False):
     except TelegramError as e:
         raise SystemExit(f"Telegram refused the token: {e}")
     from .memory import gemini_generate
-    from .schedule import Schedule
     from .proactive import Proactive
-    sched = Schedule(store.root / "schedule.json")
+    from .core.planner import Planner
+    sched = Planner(store.root / "schedule.json")            # a Schedule with the app's extras; one instance for bot and API
     from .digest import Digester
     link = {}
     if server:                                           # the PC's live Cyph, when its tunnel is up
@@ -772,6 +828,21 @@ def run_service(a=None, server: bool = False):
     svc = TelegramService(api, brain, store, log=log, schedule=sched, threaded=True, digest=Digester(store, curator, log=log),
                           schedule_gen=gemini_generate("gemini-3.5-flash-lite"), **link)
     svc.proactive = Proactive(sched, lambda text: svc.api.send(svc.owner, text), log=log)
+    if server:                                           # the apps' API, in this process, sharing planner/memory/brain
+        from .core import DATA as CORE_DATA, load_config as load_core
+        cfg = load_core()
+        if cfg.enabled:
+            try:
+                from .core.run import start as start_core
+                from .core.toolbox import ToolBox
+                from .core.proposals import Proposals
+                props = Proposals(store.root / "proposals.json")
+                brain.toolbox = ToolBox(sched, proposals=props)
+                start_core(cfg, store=store, brain=brain, planner=sched, log=log, folder=CORE_DATA / "core",
+                           shared=brain.shared, proactive=svc.proactive, proposals=props,
+                           notify=lambda text: svc.api.send(svc.owner, text))
+            except Exception as e:                       # the bot must keep working whatever the API does
+                log("error", f"core API did not start: {type(e).__name__}: {e}")
     STOP_FILE.unlink(missing_ok=True)
 
     def watch_stop():                                  # the tray's "turn off": save everything, then exit

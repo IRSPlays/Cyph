@@ -28,6 +28,7 @@ HOST = Path(__file__).resolve().parents[2] / "vectorm-arm" / "host"
 if str(HOST) not in sys.path:
     sys.path.insert(0, str(HOST))
 
+from . import debuglog                                     # noqa: E402
 import expressions as ex                                   # noqa: E402
 from arm_client import ArmClient, ProtocolError, TimeoutError_   # noqa: E402
 
@@ -35,7 +36,7 @@ TAU = 2 * math.pi
 DT = ex.DT_MS / 1000.0
 CENTER = list(ex.CENTER)
 JOINT_NAMES = ["base", "shoulder", "elbow", "wrist", "pivot", "grabber"]
-LIMITS = [(15.0, 255.0)] * 6          # conservative software joint limits
+LIMITS = [(15.0, 225.0)] + [(15.0, 255.0)] * 5   # conservative software joint limits (the base only reaches 225)
 MAX_STEP = 8.0                         # deg/frame hard guard (servo ~7.5)
 BUFFER_FRAMES = 3                      # frames kept queued in the STM32
 STREAM_SLOTS = 32
@@ -49,7 +50,7 @@ JOINT_INDEX = {name: i for i, name in enumerate(JOINT_NAMES)}
 # Direct control (tools, tracking). Shoulder/elbow are kept tighter than the
 # global LIMITS so a wrong tool call cannot drive the arm into the table; widen
 # them once the real reach is known.
-TASK_LIMITS = [(15.0, 255.0), (80.0, 190.0), (80.0, 190.0),
+TASK_LIMITS = [(15.0, 225.0), (80.0, 190.0), (80.0, 190.0),
                (15.0, 255.0), (15.0, 255.0), (15.0, 255.0)]
 TASK_SPEED = 60.0       # deg/s for a move with no duration given
 MAX_TASK_SPEED = 120.0  # deg/s ceiling (servo ~375, but keep it gentle)
@@ -157,6 +158,9 @@ class SimBackend:
     def torque(self, on):
         pass
 
+    def read(self):
+        return None                      # there is no controller to ask
+
     def close(self):
         pass
 
@@ -172,6 +176,10 @@ class SerialBackend:
         self.resets = 0
         self._uptime = 0
         self._io = threading.Lock()      # one serial request at a time (stream loop vs. report)
+        self.ok = True                   # False while the arm is unplugged / not answering and we are trying to get it back
+        self.reconnected = False         # set when a lost arm came back; the Body turns torque on and clears it
+        self.RETRY_S = 2.0
+        self._last_try = 0.0
         self._connect()
 
     def report(self):
@@ -183,9 +191,24 @@ class SerialBackend:
             cal = [self.arm.get_calibration(j) for j in range(1, 7)]
         return {"info": info, "status": st, "calib": cal}
 
-    def _connect(self):
+    def read(self):
+        """What the controller says right now: the position it is driving each servo to (it has no feedback from
+        the servos themselves), its current target, the torque flag, free stream slots, uptime. None when the
+        port is busy streaming or the read fails: the caller just skips that sample."""
+        if self.arm is None or not self._io.acquire(timeout=0.05):
+            return None
+        try:
+            st = self.arm.status()
+        except Exception:
+            return None
+        finally:
+            self._io.release()
+        return {"pos": [round(v, 1) for v in st.positions_deg], "tgt": [round(v, 1) for v in st.targets_deg],
+                "torque": st.outputs_enabled, "moving": st.moving, "free": st.stream_free, "uptime_ms": st.uptime_ms}
+
+    def _connect(self, tries=10):
         last = None
-        for _ in range(10):
+        for _ in range(tries):
             try:
                 self.arm = ArmClient(self.port)
                 self.arm.ping()
@@ -205,7 +228,30 @@ class SerialBackend:
     def uptime_ms(self):
         return self._uptime
 
+    def _lost(self, e):
+        """The port went away (USB pulled, a glitch, the controller rebooting): drop the handle and say so. The next sends
+        try to open it again, every RETRY_S, until it answers."""
+        try:
+            if self.arm is not None:
+                self.arm.close()
+        except Exception:
+            pass
+        self.arm, self.ok, self.queued = None, False, 0
+        self._last_try = time.monotonic()
+        debuglog.warn("serial %s LOST: %s: %s", self.port, type(e).__name__, e)
+        raise BackendError(f"arm disconnected ({type(e).__name__}): trying to reconnect")
+
+    def _try_reconnect(self):
+        if time.monotonic() - self._last_try < self.RETRY_S:
+            raise BackendError("arm disconnected: waiting to retry")
+        self._last_try = time.monotonic()
+        self._connect(tries=2)                       # BackendError when it is still not there
+        self.ok, self.reconnected = True, True
+        debuglog.info("serial %s reconnected (controller uptime %s ms)", self.port, self._uptime)
+
     def send(self, frame):
+        if self.arm is None:
+            self._try_reconnect()
         while True:
             try:
                 with self._io:
@@ -219,17 +265,26 @@ class SerialBackend:
                 raise BackendError(str(e))
             except TimeoutError_:
                 self.resets += 1
+                debuglog.warn("serial %s: controller timed out (dropout #%d, uptime was %s ms)", self.port, self.resets, self._uptime)
                 self.arm.close()
                 time.sleep(1.5)
                 self._connect()
                 raise BackendError(
                     f"controller dropped out and reconnected "
                     f"(uptime {self._uptime} ms - low means it reset: check supply)")
+            except BackendError:
+                raise
+            except Exception as e:                   # SerialException, PermissionError, a closed handle ...
+                self._lost(e)
 
     def stop(self):
+        if self.arm is None:
+            raise BackendError("arm disconnected")
         self.arm.stop()
 
     def torque(self, on):
+        if self.arm is None:
+            raise BackendError("arm disconnected")
         self.arm.torque(on)
 
     def close(self):
@@ -302,6 +357,8 @@ class Body:
         self.still = False             # calibration: every non-commanded joint holds centre
         self.estopped = False
         self.speaking = False
+        self.base_max = None                   # while a task works: the base never turns past this angle (his bed is that way)
+        self.working = False                   # a task owns the arm: no moods, gestures, glances or speech wobble
         self.listening = False
         self.speech_level = None       # 0..1 from real audio, None = synthetic
         self._sw = 0.0                 # eased overlay weights
@@ -338,6 +395,9 @@ class Body:
         self._grip_relax_at = None     # T at which a "max" squeeze eases to "firm"
         self._grip_firm = None
         self.track_info = None         # (nx, ny, base target) for the UI
+        # where the gripper's tip shows in the camera picture, (x, y) in -1..1 (x right, y down). The camera is bolted to the
+        # arm, so this never changes: from the real picture it is at the lower right, about (620, 615) of 0-1000.
+        self.grip_ref = (0.24, 0.23)
         self.track_mode = "centre"     # "centre": camera rides the arm, keep the face in the middle
         self._track_seen = None        # timestamp of the last detection acted on (centre mode)
         self.track_sign = -1.0         # +x in the image -> base angle DOWN (found on the real arm)
@@ -345,6 +405,7 @@ class Body:
         self._track_lost_at = None
         self.camera_ok = False         # set by the app when a camera is live
 
+        self._last_backend_err, self._last_backend_err_t = "", 0.0
         self.T = 0.0
         self.frame = list(CENTER)
         self.fps = 0.0
@@ -371,17 +432,23 @@ class Body:
 
     def express(self, name, secs=None):
         """Play a mood now, blending from whatever is happening."""
+        if self.working:
+            return
         if name not in ex.EXPRESSIONS:
             raise ValueError(f"unknown mood {name!r}; known: {', '.join(MOODS)}")
         self._cmds.put(lambda: self._start_mood(name, secs))
 
     def pet(self):
         """Head pat: purr + happy wiggle."""
+        if self.working:
+            return
         self._cmds.put(lambda: self._start_mood(
             self.rng.choice(["happy", "purr"]), 5.0, tag="pet"))
 
     def wake(self):
         """'Hey Cyph': perk up and start listening."""
+        if self.working:
+            return
         def go():
             self._start_mood("curious", 2.5, tag="wake")
             self._set_listening(True)
@@ -392,6 +459,8 @@ class Body:
         """Glance somewhere and hold it, then ease back. Non-blocking."""
         if direction not in LOOK:
             raise ValueError(f"direction must be one of {', '.join(LOOK)}")
+        if self.working:
+            return
         db, dp = LOOK[direction]
         secs = max(0.6, min(8.0, float(secs)))
         self._cmds.put(lambda: self._add_gesture(
@@ -399,6 +468,8 @@ class Body:
 
     def gesture(self, kind):
         """'nod' (yes), 'shake' (no), or gripper/tail tricks: 'chomp', 'flap', 'wag'."""
+        if self.working:
+            return
         g = GRIP.sign
         if kind == "chomp":      # three bites
             fn = lambda u: [0, 0, 0, 0, 0, g * 42 * math.sin(math.pi * 3 * u) ** 2]
@@ -416,6 +487,8 @@ class Body:
 
     def demo(self, names=None, secs=None):
         """Play moods back to back (default: all of them) so each can be judged."""
+        if self.working:
+            return
         names = list(names or MOODS)
         bad = [n for n in names if n not in ex.EXPRESSIONS]
         if bad:
@@ -452,6 +525,8 @@ class Body:
                 cur = float(self._task_tgt[j] if self._task_tgt[j] is not None else self.frame[j])
                 tgt = cur + max(-MAX_MOVE, min(MAX_MOVE, deg)) if relative else deg
                 lo, hi = TASK_LIMITS[j]
+                if j == 0 and self.base_max is not None:
+                    hi = min(hi, self.base_max)
                 c = max(lo, min(hi, tgt))
                 if abs(c - tgt) > 1e-6:
                     clamped.append(name)
@@ -574,11 +649,28 @@ class Body:
             wspd = max(10.0, min(TRACK_TILT_SPEED, TRACK_KV * abs(elev)))
         return cur_b, cur_w, bspd, wspd
 
-    def aim_at(self, nx, ny, dist=None):
-        """One-shot: turn the base and tilt the wrist toward image position (nx, ny)."""
-        base, wrist = self.aim_targets(nx, ny, dist)
+    def aim_at(self, nx, ny, dist=None, align="gripper"):
+        """One-shot: turn the base and tilt the wrist so the thing at picture position (nx, ny) ends up where `align` says:
+        "gripper" (default) = under the gripper's tip as the camera sees it (grip_ref), which is what makes the arm POINT at
+        it; "center" = the middle of the picture. The camera rides the arm, so the turn is measured from where the arm
+        points NOW: the same pixel means a different heading at base 35 than at base 135."""
+        if self.track_mode == "centre":
+            half = math.tan(math.radians(self.hfov / 2.0))
+            vhalf = math.tan(math.radians(self.vfov / 2.0))
+            rx, ry = self.grip_ref if align == "gripper" else (0.0, 0.0)
+            bearing = math.degrees(math.atan(nx * half)) - math.degrees(math.atan(rx * half))     # + = right of the reference
+            elev = math.degrees(math.atan(-ny * vhalf)) - math.degrees(math.atan(-ry * vhalf))    # + = above it
+            tilt = max(-TRACK_PITCH, min(TRACK_PITCH, elev))
+            base = float(self.frame[0]) + self.track_sign * self.track_gain * bearing
+            wrist = float(self.frame[3]) + ex.PITCH_UP * tilt
+        else:
+            base, wrist = self.aim_targets(nx, ny, dist)
         res = self.move_joints({"base": base, "wrist": wrist}, relative=False)
         res["aimed_base"], res["aimed_wrist"] = round(base, 1), round(wrist, 1)
+        if "base" in res.get("clamped", []):
+            res["note"] = ("the base cannot turn that far (its limit is "
+                           f"{min(TASK_LIMITS[0][1], self.base_max or 999):g} degrees here), so it stopped at the limit: "
+                           "the target is outside the area you may reach; do not keep trying")
         return res
 
     def motor_report(self):
@@ -643,6 +735,26 @@ class Body:
                                  "distance_cm": round(dist * 100) if dist else None}
         return out
 
+    def set_working(self, on, base_max=None):
+        """A task owns the arm (arm_brain): moods, idle behaviour, gestures, glances and the speaking and listening wobble all
+        stop, so nothing moves the gripper but the task. The held joints stay where the task put them. base_max: the base
+        never turns past this angle meanwhile. The flags are set at once (a move right after this call must see them); the
+        mood clean-up is queued for the body's own thread."""
+        self.working = bool(on)
+        self.base_max = float(base_max) if (on and base_max is not None) else None
+        debuglog.info("body: working=%s base_max=%s", bool(on), base_max)
+
+        def go():
+            if on:
+                self._end_mood()
+                self._gestures = []
+                self.listening = False
+                self._set_idle(False)
+                self._log("info", "task: moods and expressions are off while it works")
+            else:
+                self._set_idle(True)
+        self._cmds.put(go)
+
     def set_idle(self, on):
         self._cmds.put(lambda: self._set_idle(bool(on)))
 
@@ -696,6 +808,7 @@ class Body:
             "queued": self.backend.queued,
             "uptime_ms": self.backend.uptime_ms,
             "resets": getattr(self.backend, "resets", 0),
+            "arm_ok": getattr(self.backend, "ok", True),
             "T": self.T,
         }
 
@@ -799,6 +912,7 @@ class Body:
         self._log("warn", "stop: resting, idle off")
 
     def _do_estop(self):
+        debuglog.warn("body: E-STOP (mood=%s working=%s)", self.mood, self.working)
         with self._tlock:
             self.tracking = False
             self._task_tgt = [None] * 6
@@ -837,7 +951,7 @@ class Body:
                 return
 
     def _idle_tick(self):
-        if not (self.idle and self.mood == "rest" and not self.estopped):
+        if self.working or not (self.idle and self.mood == "rest" and not self.estopped):
             return
         if self.T < self._next_idle_at or self.T < self._convo_until:
             return
@@ -879,7 +993,7 @@ class Body:
             self._grip_relax_at = None
         if self.tracking:
             self._track_update()
-        elif (any(t is not None for t in self._task_tgt)
+        elif (not self.working and any(t is not None for t in self._task_tgt)
               and self.T - self._task_last > TASK_HOLD_S):
             self._task_tgt = [None] * 6
             self._log("info", "held pose timed out, back to moods")
@@ -888,6 +1002,8 @@ class Body:
             off = p[j] - CENTER[j] if j in around else 0.0      # the mood's motion, as an offset
             free = self._home[j] + off if j in around else p[j]  # what the moods want, around where we are
             tgt, w = self._task_tgt[j], self._task_w[j]
+            if tgt is not None and j == 0 and self.base_max is not None:
+                tgt = min(tgt, self.base_max)
             if tgt is not None:
                 if self._task_pos[j] is None:
                     self._task_pos[j] = free                  # start from where we are
@@ -915,19 +1031,23 @@ class Body:
         self._idle_tick()
 
         p = list(self.player.frame())          # a copy: the player's spring state is its own
+        if self.working:
+            p = list(CENTER)                    # no mood, no alive layer: the task's targets hold the pose
+            self._gestures = []
         p[5] = CENTER[5] + (p[5] - CENTER[5]) * GRIP_BOOST      # bolder gripper in every mood
 
         # alive layer fades back while a big mood is playing
         a_target = 1.0 if self.mood in ("rest", *PASSIVE) else 0.25
         self._aw += (a_target - self._aw) * 0.05
         al = self.alive.offset(self.T)
-        p = [v + o * self._aw for v, o in zip(p, al)]
+        if not self.working:
+            p = [v + o * self._aw for v, o in zip(p, al)]
         if self.still:
             p = list(CENTER)
 
         # overlays, eased in and out
-        self._sw += ((1.0 if self.speaking else 0.0) - self._sw) * 0.12
-        self._lw += ((1.0 if self.listening else 0.0) - self._lw) * 0.06
+        self._sw += ((1.0 if self.speaking and not self.working else 0.0) - self._sw) * 0.12
+        self._lw += ((1.0 if self.listening and not self.working else 0.0) - self._lw) * 0.06
         t = self.T
         if self._sw > 0.01 and not self.still:
             if self.speech_level is None:       # synthetic syllable rhythm
@@ -969,20 +1089,51 @@ class Body:
         # pre-roll: fill the STM32 queue a little so jitter never starves it
         next_t = time.perf_counter()
         last_fps_t, n = next_t, 0
+        bugs = 0
         while self._run:
-            self._drain()
+            try:
+                self._drain()
+            except Exception:
+                debuglog.exc("body: a queued command raised")
             if self.estopped:
                 time.sleep(0.05)
                 next_t = time.perf_counter()
                 continue
-            frame = self._compose()
+            try:
+                frame = self._compose()
+            except Exception as e:                  # a bug must not end the thread (the arm would sit there "connected" and dead)
+                bugs += 1
+                if bugs <= 3 or bugs % 100 == 0:
+                    debuglog.exc("body: compose failed (%d so far)", bugs)
+                    self._log("error", f"body error: {type(e).__name__}: {e}")
+                frame = list(self.frame)
             try:
                 self.backend.send(frame)
+                if getattr(self.backend, "reconnected", False):
+                    self.backend.reconnected = False
+                    try:
+                        if not self.estopped:
+                            self.backend.torque(True)       # a controller that came back may have its outputs off
+                    except Exception:
+                        pass
+                    self._log("info", "arm reconnected: torque on")
             except BackendError as e:
-                self._log("error", str(e))
+                msg = str(e)
+                if msg != self._last_backend_err:
+                    debuglog.warn("body: backend error: %s", msg)
+                if msg != self._last_backend_err or time.monotonic() - self._last_backend_err_t > 10:
+                    self._last_backend_err, self._last_backend_err_t = msg, time.monotonic()
+                    self._log("error", msg)            # once, not fifty times a second
                 self.player.reset_to_center()
                 frame = list(CENTER)
                 next_t = time.perf_counter()
+                if not getattr(self.backend, "ok", True):
+                    time.sleep(0.1)
+            except Exception as e:                  # not a BackendError: still never ends the loop
+                debuglog.exc("body: send failed with an unexpected error")
+                self._log("error", f"body error: {type(e).__name__}: {e}")
+                frame = list(self.frame)
+                time.sleep(0.1)
             self.frame = frame
             self.T += DT
             n += 1

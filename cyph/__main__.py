@@ -451,7 +451,7 @@ def main():
     ap = argparse.ArgumentParser(prog="cyph")
     ap.add_argument("command", nargs="?",
                     choices=["devices", "mic-test", "voice-test", "video-test", "key-check", "sfx-test",
-                             "cameras", "cam-test", "local-test", "memory", "memory-import", "telegram"])
+                             "cameras", "cam-test", "local-test", "memory", "memory-import", "telegram", "tui"])
     ap.add_argument("--camera", default="auto",
                     help="webcam index, or auto (default): find the arm's stereo camera, since Windows "
                          f"renumbers cameras (falls back to {DEFAULT_CAMERA}; see `python -m cyph cameras`)")
@@ -564,6 +564,11 @@ def main():
         video_test(a)
         return
 
+    if a.command != "tui":
+        raise SystemExit(
+            "The terminal Cyph is retired: the desktop app is Cyph now, and its arm agent owns the arm, camera and voice\n"
+            "(python -m cyph.arm_agent). Tools here still work: devices, cameras, cam-test, mic-test, key-check, memory ...\n"
+            "To run the old terminal UI anyway: python -m cyph tui")
     from .ui import CyphApp
     if a.sim or not a.port:
         backend = SimBackend()

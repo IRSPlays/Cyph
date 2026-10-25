@@ -1,0 +1,3 @@
+# tauri dev restarts the app when a watched file changes; these never need a rebuild
+tests
+icons

@@ -8,6 +8,7 @@ import sys
 def main():
     if "--check" in sys.argv:                          # imports and config only; never polls Telegram
         from . import agent, digest, memory, proactive, router, schedule, summary, telegram   # noqa: F401
+        from .core import app, devices, limiter, planner, prompts, run, tls, toolbox          # noqa: F401
         from .keys import load_gemini_key
         print("imports ok | gemini key:", "set" if load_gemini_key() else "MISSING",
               "| telegram token:", "set" if telegram.load_token() else "MISSING")

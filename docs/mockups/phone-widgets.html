@@ -1,0 +1,190 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Phone widgets</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+body{overflow:auto}
+.deck{position:relative!important;inset:auto!important;display:block!important;min-height:100%;height:auto!important;overflow:visible!important}
+.wrap{position:relative;z-index:5;max-width:1500px;margin:0 auto;padding:22px 26px 40px}
+h1.big{font:italic 400 44px/1 'Instrument Serif';color:var(--cr)}
+h1.big em{display:block;font:700 12px 'Pixelify Sans';letter-spacing:.24em;color:var(--am);font-style:normal;margin-bottom:6px}
+.intro{font:12px/1.55 'DM Mono';color:#a9b896;max-width:860px;margin:10px 0 26px}
+h2.sec{font:700 12px 'Pixelify Sans';letter-spacing:.24em;color:var(--ne);margin:30px 0 4px;display:flex;gap:12px;align-items:center}
+h2.sec:after{content:"";flex:1;height:1px;background:var(--ln)}
+.cap{font:11px/1.5 'DM Mono';color:var(--dim);margin-bottom:14px}
+.grid{display:flex;flex-wrap:wrap;gap:22px 26px;align-items:flex-start}
+.cell{display:flex;flex-direction:column;gap:7px}
+.cell>h4{font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--am)}
+.cell>p{font:10.5px/1.4 'DM Mono';color:var(--dim);max-width:300px}
+/* a widget lives on a wallpaper, so the rounded card edge and its shadow read properly */
+.paper{padding:14px;border-radius:18px;background:radial-gradient(90% 90% at 20% 0%,#2d4a2a,transparent 60%),radial-gradient(80% 80% at 100% 100%,#3a2a4f,transparent 60%),#10160c;box-shadow:inset 0 0 0 1px #ffffff10}
+/* ===== the widget ===== */
+.wd{position:relative;overflow:hidden;border-radius:24px;background:#0b130d;box-shadow:0 0 0 1px #2c3820,0 8px 22px #000a;color:var(--cr);flex:none}
+.wd.w4{width:304px;height:152px}.wd.w2{width:152px;height:152px}
+.wd:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 70% at 0% 100%,rgba(93,255,122,.14),transparent 70%)}
+.wd.glow{box-shadow:0 0 0 2px var(--ne),0 8px 22px #000a}
+.wd.amber{box-shadow:0 0 0 2px var(--am),0 8px 22px #000a}.wd.amber:before{background:radial-gradient(70% 70% at 0% 100%,rgba(217,152,74,.16),transparent 70%)}
+.wd.teal{box-shadow:0 0 0 2px var(--tl),0 8px 22px #000a}.wd.teal:before{background:radial-gradient(70% 70% at 0% 100%,rgba(47,157,143,.2),transparent 70%)}
+.wd.blue{box-shadow:0 0 0 2px var(--bl),0 8px 22px #000a}.wd.blue:before{background:radial-gradient(70% 70% at 0% 100%,rgba(91,159,184,.2),transparent 70%)}
+.wd.off{filter:saturate(.35) brightness(.8);box-shadow:0 0 0 2px #3b432b,0 8px 22px #000a}
+.wd canvas{image-rendering:pixelated;display:block;filter:drop-shadow(0 0 10px rgba(93,255,122,.28))}
+.wd.off canvas{filter:none}
+.lb{font:700 8.5px 'Pixelify Sans';letter-spacing:.22em;color:var(--am)}
+.lb.g{color:var(--ne)}.lb.b{color:var(--bl)}.lb.t{color:var(--tl)}.lb.c{color:var(--co)}
+.ttl{font:italic 400 22px/1 'Instrument Serif';color:var(--cr);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sm{font:9.5px/1.35 'DM Mono';color:var(--dim)}
+.bar2{height:5px;border-radius:3px;background:#1d2615;overflow:hidden}.bar2 i{display:block;height:100%;background:var(--ne);box-shadow:0 0 8px var(--ne)}
+.chip{display:inline-block;font:700 8.5px 'Pixelify Sans';letter-spacing:.14em;padding:5px 9px;border-radius:9px;background:#1d2615;color:#b9c7a3;box-shadow:inset 0 -2px 0 #0008}
+.chip.go{background:var(--ne);color:#0d120a}.chip.am{background:var(--am);color:#1a1208}.chip.co{background:var(--co);color:#1d0d08}
+/* 4x2 layouts */
+.l4{position:absolute;inset:0;display:grid;grid-template-columns:104px 1fr;padding:12px 14px 12px 8px;gap:8px}
+.l4 .fc{display:grid;place-items:center;border-radius:16px;background:#07100a;box-shadow:inset 0 0 0 1px #1d2815}
+.l4 .tx{display:flex;flex-direction:column;justify-content:center;gap:5px;min-width:0}
+.l4 .nx{display:flex;justify-content:space-between;align-items:baseline;margin-top:2px;font:9px 'DM Mono';color:var(--dim)}
+.l4 .nx b{color:var(--cr);font-weight:500}.l4 .nx em{font-style:normal;color:var(--am);font:700 9px 'Pixelify Sans';letter-spacing:.14em}
+.say{font:italic 17px/1.12 'Instrument Serif';color:var(--cr)}
+.btnrow{display:flex;gap:5px;margin-top:3px}
+.slips2{display:flex;flex-direction:column;gap:4px}
+.sp{display:grid;grid-template-columns:34px 1fr;align-items:center;gap:6px;padding:3px 7px;border-radius:7px;background:#0e150b;font:10px 'DM Mono';color:var(--cr);white-space:nowrap;overflow:hidden}
+.sp small{color:var(--c);font-size:8.5px}.sp.dn{opacity:.4;text-decoration:line-through}
+.cam{height:100%;border-radius:11px;background:linear-gradient(160deg,#1c2e2a,#0b1512);position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px #1d3a32}
+.cam:before{content:"";position:absolute;left:22%;top:38%;width:30%;height:42%;border-radius:4px 4px 8px 8px;background:#3d6fa6;box-shadow:inset -6px 0 0 #2d5683}
+.cam:after{content:"";position:absolute;right:-6%;bottom:-8%;width:44%;height:46%;border-radius:10px;background:#161b14;box-shadow:inset 0 0 0 2px #3a4129}
+.cam i{position:absolute;left:5px;top:5px;font:700 7px 'Pixelify Sans';letter-spacing:.14em;color:var(--am);z-index:2}
+/* 2x2 layouts */
+.l2{position:absolute;inset:0;padding:12px;display:flex;flex-direction:column}
+.l2 .top{display:flex;justify-content:space-between;align-items:flex-start}
+.l2 .big{font:italic 400 38px/1 'Instrument Serif';color:var(--cr)}
+.ring{--p:60;width:64px;height:64px;border-radius:50%;background:conic-gradient(var(--ne) calc(var(--p)*1%),#1b2512 0);display:grid;place-items:center;box-shadow:0 0 12px rgba(93,255,122,.3);position:relative;margin:0 auto}
+.ring:before{content:"";width:48px;height:48px;border-radius:50%;background:#0b130d}.ring span{position:absolute;font:700 13px 'Pixelify Sans';color:var(--ne)}
+.mic{width:64px;height:64px;border-radius:50%;background:var(--am);display:grid;place-items:center;color:#1a1208;font-size:26px;box-shadow:0 0 22px rgba(217,152,74,.5);margin:auto}
+/* ===== the phone ===== */
+.fr{width:312px;height:640px;border-radius:38px;background:#05070a;padding:9px;box-shadow:0 0 0 2px #2b3524,0 0 0 5px #0b0f08,0 22px 50px #000b;flex:none}
+.sc{position:relative;width:100%;height:100%;border-radius:30px;overflow:hidden;background:radial-gradient(90% 50% at 10% 0%,#2d4a2a,transparent 60%),radial-gradient(80% 50% at 100% 70%,#3a2a4f,transparent 65%),#0c120a}
+.sb{display:flex;justify-content:space-between;padding:10px 20px 4px;font:600 10px 'DM Mono';color:var(--cr);position:relative;z-index:2}
+.sb:after{content:"";position:absolute;left:50%;top:8px;width:14px;height:14px;border-radius:50%;background:#000;transform:translateX(-50%)}
+.hs{position:absolute;inset:34px 0 0;padding:8px 14px}
+.cells{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:12px 10px;margin-top:6px}
+.ic{display:flex;flex-direction:column;align-items:center;gap:4px;font:8.5px 'DM Mono';color:var(--cr)}
+.ic i{width:44px;height:44px;border-radius:14px;background:var(--c,#2b3140);display:block;box-shadow:inset 0 -3px 0 #0005}
+/* in the phone the widgets are scaled to the grid: 4 cells = 280px wide */
+.hs .wd.w4{width:100%;height:136px;grid-column:span 4}
+.hs .wd.w2{width:100%;height:136px;grid-column:span 2}
+.dock{position:absolute;left:14px;right:14px;bottom:14px;height:62px;border-radius:24px;background:#10170dcc;display:flex;justify-content:space-around;align-items:center;box-shadow:inset 0 0 0 1px #ffffff12}
+.dock .ic i{width:42px;height:42px}
+.tbl{border-collapse:collapse;font:11px/1.5 'DM Mono';color:#a9b896}
+.tbl td,.tbl th{padding:6px 12px;border-bottom:1px solid var(--ln);text-align:left;vertical-align:top}
+.tbl th{font:700 9.5px 'Pixelify Sans';letter-spacing:.18em;color:var(--am)}
+.tbl b{color:var(--cr);font-weight:500}
+.rules{margin-top:10px;display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:12px}
+.rules div{padding:12px 14px;border-radius:10px;background:#0b130d;box-shadow:0 0 0 1px var(--ln);font:11px/1.55 'DM Mono';color:#a9b896}
+.rules b{display:block;font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne);margin-bottom:4px}
+</style></head><body>
+<div class="deck">
+<div class="wrap">
+ <h1 class="big"><em>CYPH · PHONE · HOME-SCREEN WIDGETS</em>Two sizes, one look.</h1>
+ <p class="intro">Same Corner look as the app: dark panel, one neon outline that says what state he is in, Cyph's real pixel face on the left, serif for what he says, mono for the facts. A widget shows one thing and one tap target. It never shows more than the phone can keep fresh.</p>
+
+ <h2 class="sec">4 × 2 · WIDE</h2>
+ <p class="cap">304 × 152 dp (4 cells wide, 2 high). Left: his face on a dark tile. Right: the single most useful line. Tap anywhere opens the app on the matching page; buttons act without opening it.</p>
+ <div class="grid">
+  <div class="cell"><h4>A · NOW (default)</h4><div class="paper"><div class="wd w4 glow"><div class="l4">
+    <div class="fc"><canvas id="a1"></canvas></div>
+    <div class="tx"><span class="lb g">● NOW · 48%</span><div class="ttl">Planner build</div><span class="sm">12:00 → 13:15 · 61 min left</span>
+     <div class="bar2"><i style="width:48%"></i></div>
+     <div class="nx"><span>NEXT <b>14:00</b></span><em>PARADE</em></div></div></div></div></div>
+   <p>The plan's current block, how long is left, what follows. Outline green = on schedule.</p></div>
+
+  <div class="cell"><h4>B · HE SPEAKS (nudge)</h4><div class="paper"><div class="wd w4 amber"><div class="l4">
+    <div class="fc"><canvas id="a2"></canvas></div>
+    <div class="tx"><span class="lb">NUDGE · 13:44</span><div class="say">Planner ends in 15. Want me to hold the 14:00?</div>
+     <div class="btnrow"><span class="chip go">ON IT</span><span class="chip">SNOOZE 10</span></div></div></div></div></div>
+   <p>Appears only when he has something scheduled to say. Buttons answer him without opening the app. Reverts to NOW after you reply or 30 min.</p></div>
+
+  <div class="cell"><h4>C · TODAY</h4><div class="paper"><div class="wd w4"><div class="l4" style="grid-template-columns:64px 1fr;padding-left:10px">
+    <div class="fc"><canvas id="a3"></canvas></div>
+    <div class="tx" style="gap:3px"><span class="lb g">TODAY · SAT 24</span>
+     <div class="slips2"><div class="sp dn" style="--c:#2f9d8f"><small>09:00</small>Telegram bot polish</div><div class="sp" style="--c:#5dff7a"><small>12:00</small>Planner build</div><div class="sp" style="--c:#5b9fb8"><small>14:00</small>Study: Mamba</div><div class="sp" style="--c:#d9984a"><small>16:00</small>Robotics CCA</div></div></div></div></div></div>
+   <p>The next four blocks, finished ones struck through. Face shrinks to make room.</p></div>
+
+  <div class="cell"><h4>D · ARM TASK RUNNING</h4><div class="paper"><div class="wd w4 teal"><div class="l4" style="grid-template-columns:118px 1fr;padding-left:12px">
+    <div class="cam" style="margin:0"><i>● LIVE</i></div>
+    <div class="tx"><span class="lb t">ARM · STEP 6 / ~9</span><div class="ttl" style="font-size:20px">Pick up the blue cup</div><span class="sm">aligning with the claw · 0:42</span>
+     <div class="btnrow"><span class="chip co">■ STOP</span><span class="chip">WATCH</span></div></div></div></div></div>
+   <p>Replaces the face with what the arm sees, since moods are off during a task. STOP sends <code>task_stop</code> to the server directly.</p></div>
+
+  <div class="cell"><h4>E · OFFLINE / MUTED</h4><div class="paper"><div class="wd w4 off"><div class="l4">
+    <div class="fc"><canvas id="a5"></canvas></div>
+    <div class="tx"><span class="lb" style="color:#8a8f7f">NO LINK · 12:02</span><div class="ttl">Can't reach home</div><span class="sm">Showing the plan from 12:02.<br>Tap to retry.</span>
+     <div class="btnrow"><span class="chip">RETRY</span></div></div></div></div></div>
+   <p>Sleepy and desaturated, never blank. Shows when the server is unreachable or he is muted. Keeps the last known plan.</p></div>
+ </div>
+
+ <h2 class="sec">2 × 2 · SQUARE</h2>
+ <p class="cap">152 × 152 dp. One idea each, big and readable at arm's length. Pick any; stack two side by side to fill a 4-wide row.</p>
+ <div class="grid">
+  <div class="cell"><h4>A · FACE</h4><div class="paper"><div class="wd w2 glow"><div class="l2" style="align-items:center;justify-content:center"><canvas id="b1"></canvas>
+    <span class="lb g" style="margin-top:8px">● HERE</span></div></div></div><p>Just him. Mood follows the day (sleepy late, happy after you finish a block). Tap = open chat.</p></div>
+
+  <div class="cell"><h4>B · NOW RING</h4><div class="paper"><div class="wd w2"><div class="l2"><span class="lb g">NOW</span>
+    <div class="ring" style="--p:48;margin-top:6px"><span>48%</span></div>
+    <div class="ttl" style="font-size:17px;margin-top:9px;text-align:center">Planner build</div><span class="sm" style="text-align:center">61 min left</span></div></div></div><p>Time left as a ring. No face.</p></div>
+
+  <div class="cell"><h4>C · NEXT UP</h4><div class="paper"><div class="wd w2 amber"><div class="l2"><span class="lb">NEXT · IN 61 MIN</span>
+    <div class="big" style="margin-top:6px">14:00</div><div class="ttl" style="font-size:17px;margin-top:2px">Parade</div><span class="sm" style="margin-top:2px">Qaisarah leads</span>
+    <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end"><span class="chip">+10 MIN</span><canvas id="b3"></canvas></div></div></div></div><p>The next block as a big clock time. Small face in the corner, because the bottom-right is his.</p></div>
+
+  <div class="cell"><h4>D · STUDY DUE</h4><div class="paper"><div class="wd w2 blue"><div class="l2"><span class="lb b">STUDY</span>
+    <div class="big" style="margin-top:6px">7</div><div class="ttl" style="font-size:17px">cards due</div><span class="sm" style="margin-top:2px">Mamba · ~4 min</span>
+    <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end"><span class="chip go">START</span><canvas id="b4"></canvas></div></div></div></div><p>One tap starts the quiz in the app. Hidden when nothing is due.</p></div>
+
+  <div class="cell"><h4>E · TALK</h4><div class="paper"><div class="wd w2"><div class="l2" style="align-items:center"><span class="lb" style="align-self:center">TAP TO TALK</span>
+    <div class="mic">●</div><span class="sm" style="text-align:center">or say “Hey Cyph”</span></div></div></div><p>A push-to-talk button. Opens straight into listening.</p></div>
+
+  <div class="cell"><h4>F · MUTED</h4><div class="paper"><div class="wd w2 off"><div class="l2" style="align-items:center;justify-content:center"><canvas id="b6"></canvas>
+    <span class="lb" style="margin-top:8px;color:#8a8f7f">MUTED · 1 H</span></div></div></div><p>Sleepy face, no nudges until it clears.</p></div>
+ </div>
+
+ <h2 class="sec">ON A HOME SCREEN</h2>
+ <p class="cap">How they sit on the launcher. Left: the default pair, one 4×2 on top and the app grid below. Right: a calmer layout with two 2×2 side by side. The dock stays clear so the bottom of the screen is the user's.</p>
+ <div class="grid">
+  <div class="fr"><div class="sc"><div class="sb"><span>12:14</span><span>▮▮▮ 87%</span></div>
+   <div class="hs"><div class="cells">
+     <div class="wd w4 glow" style="grid-column:span 4"><div class="l4" style="padding:10px 12px 10px 6px;grid-template-columns:96px 1fr"><div class="fc"><canvas id="h1"></canvas></div>
+      <div class="tx"><span class="lb g">● NOW · 48%</span><div class="ttl" style="font-size:20px">Planner build</div><span class="sm">61 min left</span><div class="bar2"><i style="width:48%"></i></div><div class="nx"><span>NEXT <b>14:00</b></span><em>PARADE</em></div></div></div></div>
+     <div class="ic"><i style="--c:#3a5f3a"></i>Cyph</div><div class="ic"><i></i>Photos</div><div class="ic"><i style="--c:#5b3a3a"></i>Maps</div><div class="ic"><i style="--c:#3a4a6f"></i>Mail</div>
+     <div class="ic"><i style="--c:#6f5a2b"></i>Clock</div><div class="ic"><i style="--c:#4a3a6f"></i>Music</div><div class="ic"><i></i>Notes</div><div class="ic"><i style="--c:#2b5f5a"></i>Files</div>
+     <div class="ic"><i style="--c:#6f3a4a"></i>Valorant</div><div class="ic"><i style="--c:#3a6f3a"></i>Minecraft</div><div class="ic"><i></i>Roblox</div><div class="ic"><i style="--c:#555"></i>Camera</div>
+   </div></div>
+   <div class="dock"><div class="ic"><i style="--c:#3a5f3a"></i></div><div class="ic"><i></i></div><div class="ic"><i style="--c:#3a4a6f"></i></div><div class="ic"><i style="--c:#5b3a3a"></i></div></div></div></div>
+
+  <div class="fr"><div class="sc"><div class="sb"><span>12:14</span><span>▮▮▮ 87%</span></div>
+   <div class="hs"><div class="cells">
+     <div class="wd w2 amber"><div class="l2" style="padding:10px"><span class="lb">NEXT · 61 MIN</span><div class="big" style="font-size:34px;margin-top:4px">14:00</div><div class="ttl" style="font-size:16px">Parade</div>
+       <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end"><span class="chip">+10 MIN</span><canvas id="h2"></canvas></div></div></div>
+     <div class="wd w2 blue"><div class="l2" style="padding:10px"><span class="lb b">STUDY</span><div class="big" style="font-size:34px;margin-top:4px">7</div><div class="ttl" style="font-size:16px">cards due</div>
+       <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end"><span class="chip go">START</span><canvas id="h3"></canvas></div></div></div>
+     <div class="ic"><i style="--c:#3a5f3a"></i>Cyph</div><div class="ic"><i></i>Photos</div><div class="ic"><i style="--c:#5b3a3a"></i>Maps</div><div class="ic"><i style="--c:#3a4a6f"></i>Mail</div>
+     <div class="ic"><i style="--c:#6f5a2b"></i>Clock</div><div class="ic"><i style="--c:#4a3a6f"></i>Music</div><div class="ic"><i></i>Notes</div><div class="ic"><i style="--c:#2b5f5a"></i>Files</div>
+   </div></div>
+   <div class="dock"><div class="ic"><i style="--c:#3a5f3a"></i></div><div class="ic"><i></i></div><div class="ic"><i style="--c:#3a4a6f"></i></div><div class="ic"><i style="--c:#5b3a3a"></i></div></div></div></div>
+ </div>
+
+ <h2 class="sec">WHAT A WIDGET CAN AND CANNOT DO</h2>
+ <p class="cap">Honest limits, so the design matches what Android allows.</p>
+ <div class="rules">
+  <div><b>NO LIVE FACE</b>A widget is a static picture the launcher redraws, not a running canvas. Each mood is a pre-rendered PNG of the same sprite (the pixel grid scaled up crisp). No blinking, no idle life. The face changes when the widget refreshes.</div>
+  <div><b>REFRESH IS SLOW</b>Android limits how often a widget updates by itself. Plan changes, nudges, task steps and mute arrive as a push from the server (the same channel as the notifications), so they update at once. A clock tick is the only thing on a timer, once a minute at most.</div>
+  <div><b>BUTTONS ARE TAPS</b>Chips are real tap targets that send one command (snooze, stop, start) in the background. Nothing scrolls, no text entry. Talk and anything longer opens the app.</div>
+  <div><b>COLOUR = STATE</b>Green on schedule, amber a nudge or the next thing, teal the arm, blue study, grey offline. Same outline colours as the notifications so the two read as one system.</div>
+  <div><b>SAFE-BY-DEFAULT</b>The widget never shows message text, the pairing link or the Telegram content. Only plan titles and times, which the lock screen can hide.</div>
+  <div><b>NOT ANIMATED</b>No Lottie, no GIF. If a size is wrong on someone's launcher, the same layout flexes: 4×2 collapses to the left tile plus one line.</div>
+ </div>
+</div>
+</div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script>
+<script>
+// Widgets are still pictures: build each face once, freeze it, no idle life.
+const face = (id, scale, mood) => { const el = document.getElementById(id); const a = Cyph.create(el, {scale}); a.idle(false); a.setMood(mood, 9999); return a; };
+face("a1", 3, "happy"); face("a2", 3, "smug"); face("a3", 1, "rest"); face("a5", 3, "sleepy");
+face("b1", 3, "happy"); face("b3", 1, "smug"); face("b4", 1, "curious"); face("b6", 3, "sleepy");
+face("h1", 2, "happy"); face("h2", 1, "smug"); face("h3", 1, "curious");
+</script></body></html>

@@ -1,0 +1,122 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Settings</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+.page{grid-template-columns:210px minmax(0,1fr) 360px}
+.vnav{display:flex;flex-direction:column;gap:7px}
+.vnav button{border:0;cursor:pointer;text-align:left;padding:12px 14px;border-radius:9px;background:#10170b;color:#b9c7a3;font:700 11px 'Pixelify Sans';letter-spacing:.16em;box-shadow:inset 0 0 0 1px #1d2815;transition:.12s;display:flex;justify-content:space-between}
+.vnav button small{font:10px 'DM Mono';letter-spacing:0;color:var(--dim)}
+.vnav button:hover{background:#162010}.vnav button.on{background:#16241a;color:var(--cr);box-shadow:inset 0 0 0 2px var(--ne)}
+.tab{display:none;flex-direction:column;gap:14px}.tab.on{display:flex}
+.dev{display:grid;grid-template-columns:54px 1fr auto;gap:14px;align-items:center;padding:12px 14px;border-radius:11px;background:#10170b;box-shadow:inset 0 0 0 1px #1d2815}
+.dev.me{box-shadow:inset 0 0 0 2px var(--ne),0 0 20px rgba(93,255,122,.12)}
+.dev.gone{opacity:.45}.dev.gone h5{text-decoration:line-through}
+.dev .ic{width:54px;height:54px;border-radius:12px;display:grid;place-items:center;font:700 20px 'Pixelify Sans';color:#10150e}
+.dev h5{font:italic 26px/1 'Instrument Serif';color:var(--cr)}
+.dev p{font:11px 'DM Mono';color:var(--dim);margin-top:5px}
+.dev .r{display:flex;gap:7px;align-items:center}
+.kv{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:9px 0;border-bottom:1px dashed #1b2613;font:12.5px 'DM Mono'}
+.kv span:first-child{color:var(--dim)}.kv b{font-weight:500;color:var(--cr);word-break:break-all}
+.pairbox{text-align:center}
+.code{font:700 54px/1 'Pixelify Sans';letter-spacing:.08em;color:var(--cr);text-shadow:0 0 26px rgba(93,255,122,.45),0 4px 0 #000;margin:6px 0 4px}
+.code.hid{filter:blur(9px);user-select:none}
+.cd{font:700 12px 'Pixelify Sans';letter-spacing:.24em;color:var(--am)}
+.qr{width:150px;height:150px;margin:12px auto;border-radius:8px;background:#f3ecb2;padding:9px;display:grid;grid-template-columns:repeat(21,1fr);gap:0}
+.qr i{background:#10150e}.qr i.w{background:transparent}
+.steps2{text-align:left;font:12px/1.65 'DM Mono';color:#a9b896;padding-left:18px;margin-top:8px}
+.warn2{margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(217,152,74,.12);box-shadow:inset 0 0 0 1px rgba(217,152,74,.45);font:11.5px/1.45 'DM Mono';color:var(--am);text-align:left}
+.row2{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px dashed #1b2613}
+.row2>div{flex:1}.row2 h6{font:500 13px 'DM Mono'}.row2 p{font:italic 16px/1.1 'Instrument Serif';color:#8d9d78;margin-top:2px}
+.sw{width:42px;height:22px;border-radius:11px;background:#2a3320;position:relative;cursor:pointer;transition:.15s;flex:none}.sw:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#7d8d6c;transition:.15s}
+.sw.on{background:var(--ne)}.sw.on:after{left:23px;background:#0d120a}
+input[type=range]{accent-color:#5dff7a;width:200px}
+.val{font:700 13px 'Pixelify Sans';letter-spacing:.08em;color:var(--ne);min-width:60px;text-align:right}
+.tl{position:relative;height:74px;border-radius:9px;background:#05080a;box-shadow:inset 0 2px 5px #000;overflow:hidden;margin-top:6px}
+.tl .hr{position:absolute;top:0;bottom:0;border-left:1px solid #1b2613;font:9px 'DM Mono';color:#4d5c40;padding:3px 0 0 3px}
+.tl .ev{position:absolute;top:26px;height:34px;padding:0 8px;font:500 10.5px/34px 'DM Mono';color:#10150e;border-radius:2px 6px 6px 2px;white-space:nowrap}
+.tl .say{position:absolute;top:8px;width:14px;height:14px;border-radius:50%;background:var(--am);box-shadow:0 0 10px var(--am);transform:translateX(-7px);cursor:help}
+.seg{display:flex;gap:6px}.seg button{border:0;cursor:pointer;padding:7px 14px;border-radius:6px;background:#1d2615;color:#b9c7a3;font:700 10px 'Pixelify Sans';letter-spacing:.12em}.seg button.on{background:var(--ne);color:#0d120a}
+.swatch{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}.swatch.on{border-color:var(--cr);box-shadow:0 0 14px currentColor}
+.toast{position:fixed;left:50%;top:76px;transform:translate(-50%,-20px);z-index:60;background:#12170d;color:var(--cr);padding:9px 16px;border-radius:8px;font:12px 'DM Mono';box-shadow:0 0 0 1px var(--ne),0 10px 30px #000a;opacity:0;transition:.3s;pointer-events:none}.toast.on{opacity:1;transform:translate(-50%,0)}
+</style></head><body>
+<div class="deck"><div id="bar" class="bar"></div>
+ <div class="page">
+  <div class="vnav" id="vnav"><div class="cp" style="padding:10px;display:flex;flex-direction:column;gap:7px"><button class="on" data-t="dev">DEVICES<small>4</small></button><button data-t="sch">SCHEDULE<small>proactive</small></button><button data-t="voi">VOICE<small>cloud</small></button><button data-t="look">LOOK<small>companion</small></button></div></div>
+  <div style="min-height:0;overflow:auto;padding-right:4px">
+   <div class="tab on" id="t-dev">
+    <h1 class="t"><em>SETTINGS · DEVICES</em>Who can talk to him</h1>
+    <div class="cp" style="display:flex;flex-direction:column;gap:10px" id="devs"></div>
+    <div class="cp"><div class="lbl">The server <b>hazserver · always on</b></div>
+     <div class="kv"><span>Address</span><b>your-tunnel.playit.gg:4821</b><button class="btn sm" data-copy>COPY</button></div>
+     <div class="kv"><span>Pinned certificate</span><b>E5:61:06:97:48:C6:7B:EB · · · · sha-256</b><button class="btn sm" data-copy>COPY</button></div>
+     <div class="kv"><span>Link</span><b><span class="ledi"></span>pinned TLS · 48 ms · Gemini ok</b><span></span></div>
+     <div class="kv"><span>Telegram</span><b><span class="ledi"></span>owner only · message text never logged</b><span></span></div>
+     <div class="kv"><span>Security log</span><b>0 failed pairings today · 0 lockouts this week</b><button class="btn sm">OPEN</button></div></div>
+   </div>
+   <div class="tab" id="t-sch">
+    <h1 class="t"><em>SETTINGS · SCHEDULE</em>When he speaks first</h1><div class="sub">He only speaks on this schedule. No random chatter. You can silence him anytime.</div>
+    <div class="cp"><div class="lbl">Today's preview <b>the amber dots are the moments he'd speak</b></div><div class="tl" id="tl"></div></div>
+    <div class="cp">
+     <div class="row2"><div><h6>Morning ritual</h6><p>"What do you want to do today?" once, at your wake time</p></div><input type="range" min="5" max="11" step=".5" value="7.5" id="wk"><span class="val" id="wkv">07:30</span><div class="sw on"></div></div>
+     <div class="row2"><div><h6>Heads-up before a block</h6><p>A short nudge before something starts</p></div><div class="seg" id="hu"><button>5 MIN</button><button class="on">15 MIN</button><button>30 MIN</button></div><div class="sw on"></div></div>
+     <div class="row2"><div><h6>Check-in after a block</h6><p>Only when it ended and you didn't mark it done</p></div><div class="sw on"></div></div>
+     <div class="row2"><div><h6>Evening "plan tomorrow?"</h6><p>One nudge, then he leaves it alone</p></div><input type="range" min="19" max="23" step=".5" value="21" id="ev"><span class="val" id="evv">21:00</span><div class="sw on"></div></div>
+     <div class="row2"><div><h6>Quiet hours</h6><p>Nothing at all between these times</p></div><span class="val" style="min-width:130px">22:30 → 06:30</span><div class="sw on"></div></div>
+     <div class="row2" style="border:0"><div><h6>Where he says it</h6><p>The device you used most recently, else Telegram</p></div><div class="seg"><button class="on">LAST ACTIVE</button><button>TELEGRAM ONLY</button><button>THIS PC</button></div></div></div>
+   </div>
+   <div class="tab" id="t-voi">
+    <h1 class="t"><em>SETTINGS · VOICE</em>How he sounds</h1><div class="sub">Cloud voice, the same on every device. If it fails, he types instead.</div>
+    <div class="cp"><div class="row2"><div><h6>Talk to him</h6><p>Hold to talk, release to send. Works on all devices.</p></div><span class="chip ne" style="font-size:13px;padding:6px 14px">HOLD SPACE</span><button class="btn sm">CHANGE</button></div>
+     <div class="row2"><div><h6>Voice</h6><p>Cartesia · "Cyph" · fallback Gemini TTS</p></div><button class="btn go" id="tv">▶ TEST VOICE</button></div>
+     <div class="row2"><div><h6>Speed</h6><p>A little quicker than default suits him</p></div><input type="range" min=".8" max="1.4" step=".05" value="1.1"><span class="val">1.1×</span></div>
+     <div class="row2"><div><h6>Listening language</h6><p>English (Singapore), with Malay and Mandarin words understood</p></div><span class="chip">EN-SG</span></div>
+     <div class="row2" style="border:0"><div><h6>Speak his replies aloud</h6><p>Off = text only, even when you used voice</p></div><div class="sw on"></div></div></div>
+   </div>
+   <div class="tab" id="t-look">
+    <h1 class="t"><em>SETTINGS · LOOK</em>How he lives on your screen</h1>
+    <div class="cp"><div class="row2"><div><h6>Companion size</h6><p>The bottom-right Cyph on your desktop</p></div><div class="seg"><button>S</button><button class="on">M</button><button>L</button></div></div>
+     <div class="row2"><div><h6>Idle life</h6><p>Random sniffs, yawns and stretches when you're quiet</p></div><div class="sw on"></div></div>
+     <div class="row2"><div><h6>Calm after</h6><p>Smaller, quieter moves when nothing happens for a while</p></div><input type="range" min="1" max="10" value="3"><span class="val">3 MIN</span></div>
+     <div class="row2"><div><h6>Follow my cursor with his eyes</h6><p>On the desktop only</p></div><div class="sw on"></div></div>
+     <div class="row2"><div><h6>Hide when I'm fullscreen</h6><p>Games, videos, presentations</p></div><div class="sw on"></div></div>
+     <div class="row2" style="border:0"><div><h6>Accent</h6><p>The glow colour of the app</p></div><div style="display:flex;gap:10px"><div class="swatch on" style="background:#5dff7a;color:#5dff7a"></div><div class="swatch" style="background:#d9984a;color:#d9984a"></div><div class="swatch" style="background:#5b9fb8;color:#5b9fb8"></div><div class="swatch" style="background:#f08a73;color:#f08a73"></div></div></div></div>
+   </div>
+  </div>
+  <div class="cp glow pairbox"><div class="lbl" style="justify-content:center">Pair a new device</div>
+   <div class="cd" id="cd">VALID FOR 09:58</div><div class="code" id="code">7KQ2-M9XA</div>
+   <div class="qr" id="qr"></div>
+   <div style="display:flex;gap:7px;justify-content:center"><button class="btn sm" id="reveal">SHOW CODE</button><button class="btn sm go" id="newc">NEW CODE</button><button class="btn sm" data-copy>COPY LINK</button></div>
+   <ol class="steps2"><li>On the new device, open Cyph.</li><li>Scan this, or paste the link.</li><li>It pairs once. The code then dies.</li></ol>
+   <div class="warn2">⚠ Treat this like a key. Anyone with the link can pair until it expires. Cyph never writes it to a file or a log.</div></div>
+ </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script><script src="corner.js"></script>
+<script>
+const $ = (id) => document.getElementById(id); shell("SETTINGS"); const api = buddy(5);
+const toast = (t) => { $("toast").textContent = t; $("toast").classList.add("on"); setTimeout(() => $("toast").classList.remove("on"), 2000); };
+const DEV = [["Haziq's PC","W","#5dff7a","Windows · Tauri app · this device","online now",true,"me"],["Pixel 8","P","#5b9fb8","Android · Tauri app · paired Oct 21","last seen 2 min ago",true],["Telegram","T","#d9984a","Owner-only bot · reads and writes the same plan","last message 1 h ago",true],["PC arm agent","A","#6b7a5e","Not connected · VectorM on COM15","never seen",false],["Old laptop","L","#3b432b","Revoked Oct 19","",false,"gone"]];
+function devs() { $("devs").innerHTML = `<div class="lbl">Paired devices <b>${DEV.filter(d => d[6] !== "gone").length} active · each has its own revocable key</b></div>` + DEV.map((d, i) => `<div class="dev ${d[6] || ""}"><div class="ic" style="background:${d[2]}">${d[1]}</div><div><h5>${d[0]}</h5><p>${d[3]}${d[4] ? " · " : ""}<span style="color:${d[5] ? "var(--ne)" : "var(--dim)"}">${d[4]}</span></p></div><div class="r">${d[6] === "gone" ? '<span class="chip co">REVOKED</span>' : d[6] === "me" ? '<span class="chip ne">THIS DEVICE</span>' : `<button class="btn sm red" data-r="${i}">REVOKE</button>`}</div></div>`).join(""); document.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { const d = DEV[+b.dataset.r]; if (b.dataset.sure) { d[6] = "gone"; d[4] = ""; d[3] = "Revoked just now"; devs(); toast("Revoked. Its key stops working on its next message."); api.say("Done. That device can't talk to me anymore.", "grumpy"); } else { b.dataset.sure = 1; b.textContent = "SURE? TAP AGAIN"; setTimeout(() => { b.dataset.sure = ""; b.textContent = "REVOKE"; }, 2500); } }); }
+devs();
+document.querySelectorAll("#vnav [data-t]").forEach(b => b.onclick = () => { document.querySelectorAll("#vnav button").forEach(x => x.classList.toggle("on", x === b)); document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.id === "t-" + b.dataset.t)); });
+document.querySelectorAll(".sw").forEach(s => s.onclick = () => s.classList.toggle("on"));
+document.querySelectorAll(".seg").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => g.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b))));
+document.querySelectorAll(".swatch").forEach(s => s.onclick = () => document.querySelectorAll(".swatch").forEach(x => x.classList.toggle("on", x === s)));
+document.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => toast("Copied. It stays on your clipboard only."));
+/* pair code */
+const CH = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let secs = 598, shown = false;
+function qr() { let h = ""; for (let i = 0; i < 441; i++) { const x = i % 21, y = Math.floor(i / 21), fin = (x < 7 && y < 7) || (x > 13 && y < 7) || (x < 7 && y > 13); const on = fin ? !(x % 6 && y % 6 && ![2,3,4].includes(x % 7 === 0 ? 2 : x) && 0) && (x === 0 || x === 6 || y === 0 || y === 6 || (x >= 2 && x <= 4 && y >= 2 && y <= 4) || (x > 13 && (x === 14 || x === 20 || y === 0 || y === 6 || (x >= 16 && x <= 18 && y >= 2 && y <= 4))) || (y > 13 && (y === 14 || y === 20 || x === 0 || x === 6 || (y >= 16 && y <= 18 && x >= 2 && x <= 4)))) : ((i * 2654435761 >>> 0) % 7 < 3); h += `<i class="${on ? "" : "w"}"></i>`; } $("qr").innerHTML = h; }
+function newCode() { $("code").textContent = [0, 1].map(() => [...Array(4)].map(() => CH[Math.floor(Math.random() * CH.length)]).join("")).join("-"); secs = 599; qr(); $("code").classList.toggle("hid", !shown); }
+$("reveal").onclick = () => { shown = !shown; $("code").classList.toggle("hid", !shown); $("reveal").textContent = shown ? "HIDE CODE" : "SHOW CODE"; };
+$("newc").onclick = () => { newCode(); toast("New code. The old one is dead."); api.say("Fresh code. Ten minutes, one use. Don't screenshot it.", "smug"); };
+shown = false; $("code").classList.add("hid"); qr();
+setInterval(() => { secs = Math.max(0, secs - 1); $("cd").textContent = secs ? `VALID FOR ${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}` : "EXPIRED"; }, 1000);
+/* schedule preview */
+const col = {ne:"#5dff7a", bl:"#5b9fb8", am:"#d9984a", co:"#f08a73", tl:"#2f9d8f", cr:"#f3ecb2"};
+function tl() { const A = 6 * 60, B = 23 * 60, pos = x => ((x - A) / (B - A) * 100) + "%", wk = +$("wk").value * 60, ev = +$("ev").value * 60, hu = +(document.querySelector("#hu .on").textContent.split(" ")[0]);
+  $("tl").innerHTML = [6, 9, 12, 15, 18, 21].map(h => `<div class="hr" style="left:${pos(h * 60)}">${String(h).padStart(2, "0")}</div>`).join("") + TODAY.map(e => `<div class="ev c-${e.k}" style="left:${pos(toMin(e.s))};width:calc(${pos(toMin(e.e))} - ${pos(toMin(e.s))})">${e.t}</div>`).join("")
+   + [[wk, "Morning ritual: 'what do you want to do today?'"], ...TODAY.filter(e => !e.fixed || true).slice(2).map(e => [toMin(e.s) - hu, `Heads-up: ${e.t} in ${hu} min`]), [toMin("13:15") + 5, "Check-in: did the planner build finish?"], [ev, "Evening: plan tomorrow?"]].map(([m, t]) => `<div class="say" style="left:${pos(m)}" title="${fmtMin(Math.round(m))} · ${t}"></div>`).join(""); }
+$("wk").oninput = () => { $("wkv").textContent = fmtMin(Math.round(+$("wk").value * 60)); tl(); }; $("ev").oninput = () => { $("evv").textContent = fmtMin(Math.round(+$("ev").value * 60)); tl(); };
+document.querySelectorAll("#hu button").forEach(b => b.addEventListener("click", tl)); tl();
+$("tv").onclick = () => { api.say("This is my voice. It's the same on your phone, your laptop and your PC. Slightly smug on all three.", "smug"); };
+setTimeout(() => api.say("Anyone with a key can talk to me. You decide who gets one.", "curious"), 700);
+</script></body></html>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="cy_panel">#0B130D</color>
+    <color name="cy_tile">#07100A</color>
+    <color name="cy_cream">#F3ECB2</color>
+    <color name="cy_text">#E6EFD8</color>
+    <color name="cy_dim">#8A9A78</color>
+    <color name="cy_neon">#5DFF7A</color>
+    <color name="cy_amber">#D9984A</color>
+    <color name="cy_teal">#2F9D8F</color>
+    <color name="cy_blue">#5B9FB8</color>
+    <color name="cy_coral">#F08A73</color>
+    <color name="cy_quiet">#5A6650</color>
+    <color name="cy_track">#1D2615</color>
+</resources>

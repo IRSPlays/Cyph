@@ -37,6 +37,14 @@ def _t(s: str) -> dtime:
     return dtime(int(h), int(m))
 
 
+def _clock(v) -> str:
+    try:
+        t = _t(str(v))
+    except (ValueError, TypeError):
+        raise ValueError(f"{v!r} is not a time like 07:30")
+    return f"{t.hour:02d}:{t.minute:02d}"
+
+
 def _between(now: datetime, a: dtime, b: dtime) -> bool:
     t = now.time()
     return a <= t < b if a <= b else (t >= a or t < b)
@@ -55,6 +63,31 @@ class Proactive:
             return {**DEFAULTS, **json.loads(self.config_path.read_text(encoding="utf-8"))}
         except (OSError, ValueError):
             return dict(DEFAULTS)
+
+    def update(self, patch: dict) -> dict:
+        """Change settings from the app. Unknown keys are ignored; anything unusable raises ValueError."""
+        cfg = self.config()
+        for k, v in (patch or {}).items():
+            if k not in DEFAULTS:
+                continue
+            if k == "enabled":
+                cfg[k] = bool(v)
+            elif k in ("morning_brief", "evening_nudge"):
+                cfg[k] = _clock(v)
+            elif k in ("quiet", "school"):
+                if not (isinstance(v, (list, tuple)) and len(v) == 2):
+                    raise ValueError(f"{k} needs two times")
+                cfg[k] = [_clock(v[0]), _clock(v[1])]
+            elif k in ("heads_up_min", "max_unanswered"):
+                n = int(v)
+                if not 0 <= n <= (180 if k == "heads_up_min" else 10):
+                    raise ValueError(f"{k} out of range")
+                cfg[k] = n
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.config_path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(cfg, indent=1), encoding="utf-8")
+        tmp.replace(self.config_path)
+        return cfg
 
     def set_enabled(self, on: bool):
         cfg = self.config()

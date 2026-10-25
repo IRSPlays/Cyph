@@ -1,0 +1,113 @@
+
+.pg-calendar .page{grid-template-columns:318px minmax(0,1fr) 340px}
+.pg-calendar .rail{overflow:auto}
+.pg-calendar .pn.cal{padding:14px 16px 12px}
+.pg-calendar .dayhead .big{font-size:64px}
+
+.pg-calendar .rail{display:flex;flex-direction:column;gap:10px;min-height:0}
+.pg-calendar .mini{padding:12px}
+.pg-calendar .mh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font:italic 21px 'Instrument Serif';color:var(--cr)}
+.pg-calendar .mh span{font:11px 'DM Mono';color:var(--dim);font-style:normal;cursor:pointer}
+.pg-calendar .mg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:10.5px}
+.pg-calendar .mg i{font-style:normal;color:var(--dim);font-size:9px;padding-bottom:3px}
+.pg-calendar .mg b{font-weight:400;padding:4px 0;border-radius:4px;cursor:pointer;color:#a9b896;position:relative}
+.pg-calendar .mg b:hover{background:#1d2615}.pg-calendar .mg b.o{color:#44523a}
+.pg-calendar .mg b.t{color:var(--ne);box-shadow:inset 0 0 0 1px var(--ne)}
+.pg-calendar .mg b.s{background:var(--am);color:#1a1405}
+.pg-calendar .mg b.d:after{content:"";position:absolute;left:50%;bottom:1px;width:3px;height:3px;border-radius:50%;background:var(--tl);transform:translateX(-50%)}
+.pg-calendar .cyp{flex:1;min-height:0;padding:0;overflow:hidden;display:flex;flex-direction:column;background:#0d120a}
+.pg-calendar .cyp .st{position:relative;flex:1;min-height:0;display:flex;align-items:flex-end;justify-content:center;background:radial-gradient(90% 80% at 50% 100%,rgba(217,152,74,.38),transparent 70%)}
+.pg-calendar .cyp .st:before{content:"";position:absolute;left:-20%;right:-20%;bottom:0;height:38%;background:repeating-linear-gradient(90deg,rgba(93,255,122,.25) 0 1px,transparent 1px 24px),repeating-linear-gradient(0deg,rgba(93,255,122,.25) 0 1px,transparent 1px 12px);transform:perspective(160px) rotateX(58deg);transform-origin:bottom}
+.pg-calendar .cyp canvas{position:relative;filter:drop-shadow(0 8px 0 #0006)}
+.pg-calendar .take{margin:0;padding:11px 13px 12px;background:#07100a;border-top:2px solid var(--ne);font:italic 18px/1.18 'Instrument Serif';color:var(--cr)}
+.pg-calendar .take small{display:block;font:600 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne);font-style:normal;margin-bottom:4px}
+.pg-calendar .take .key{margin-top:8px;display:inline-block}
+
+.pg-calendar .cal{display:flex;flex-direction:column;min-height:0;padding:14px 16px 12px}
+.pg-calendar .ch{display:flex;align-items:flex-end;gap:16px;margin-bottom:12px}
+.pg-calendar .ch h1{font:italic 400 clamp(38px,3.6vw,60px)/.9 'Instrument Serif';color:var(--cr);letter-spacing:-.01em}
+.pg-calendar .ch h1 em{font-style:normal;font:600 14px 'Pixelify Sans';letter-spacing:.3em;color:var(--am);display:block;margin-bottom:6px}
+.pg-calendar .vw{margin-left:auto;display:flex;gap:6px;align-items:center}
+.pg-calendar .vw .key.on{background:var(--ne);color:#0d120a;box-shadow:0 0 14px rgba(93,255,122,.5)}
+.pg-calendar .view{flex:1;min-height:0;position:relative;overflow:hidden;border-radius:6px;background:#0b0f08;box-shadow:inset 0 2px 6px #000}
+
+.pg-calendar .tg{position:absolute;inset:0;display:grid;grid-template-rows:auto 1fr}
+.pg-calendar .tgh{display:grid;grid-template-columns:44px repeat(var(--n),1fr);border-bottom:1px solid var(--ln)}
+.pg-calendar .tgh div{padding:7px 6px 6px;text-align:center;cursor:pointer;border-left:1px solid #162011}
+.pg-calendar .tgh div:first-child{border:0;cursor:default}
+.pg-calendar .tgh small{display:block;font:600 10px 'Pixelify Sans';letter-spacing:.18em;color:var(--dim)}
+.pg-calendar .tgh b{font:italic 400 26px/1 'Instrument Serif';color:#c4d1ae}
+.pg-calendar .tgh .t b{color:var(--ne);text-shadow:0 0 12px rgba(93,255,122,.6)}.pg-calendar .tgh .s{background:#161e10}
+.pg-calendar .tgh .cf small:after{content:" ⚠";color:var(--am)}
+.pg-calendar .tgb{overflow:auto;position:relative}
+.pg-calendar .tgi{position:relative;display:grid;grid-template-columns:44px repeat(var(--n),1fr);height:calc(var(--hh)*17)}
+.pg-calendar .hrs{position:relative}
+.pg-calendar .hrs span{position:absolute;right:6px;font:9.5px 'DM Mono';color:#4d5c40;transform:translateY(-6px)}
+.pg-calendar .col{position:relative;border-left:1px solid #162011;background:repeating-linear-gradient(transparent 0 calc(var(--hh) - 1px),#141c0e calc(var(--hh) - 1px) var(--hh))}
+.pg-calendar .col.t{background-color:#0e150a}
+.pg-calendar .ev2{position:absolute;left:3px;right:7px;padding:3px 8px 3px 6px;overflow:hidden;color:#10150e;font:500 11px/1.2 'DM Mono';cursor:pointer;border-radius:3px 6px 6px 3px;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%);transition:filter .12s,transform .12s}
+.pg-calendar .ev2:hover{filter:brightness(1.12);transform:translateX(2px);z-index:3}
+.pg-calendar .ev2 b{display:block;font:700 9.5px 'Pixelify Sans';letter-spacing:.08em;opacity:.7}
+.pg-calendar .ev2.dn{opacity:.4}.pg-calendar .ev2.dn:after{content:"✓";position:absolute;right:12px;top:2px;font-weight:700}
+.pg-calendar .ev2.cf{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.28) 0 5px,transparent 5px 10px)}
+.pg-calendar .ev2.dl{background:none!important;border-top:2px solid var(--co);color:var(--co);clip-path:none;padding:1px 4px;font-weight:700}
+.pg-calendar .ev2.dl:before{content:"◆ ";}
+.pg-calendar .nowl{position:absolute;left:0;right:0;height:2px;background:var(--am);box-shadow:0 0 10px var(--am);z-index:4;pointer-events:none}
+.pg-calendar .nowl:before{content:"NOW";position:absolute;left:3px;top:-12px;font:700 9px 'Pixelify Sans';letter-spacing:.14em;color:var(--am)}
+
+.pg-calendar .mo{position:absolute;inset:0;display:grid;grid-template-rows:auto repeat(6,minmax(0,1fr))}
+.pg-calendar .moh{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--ln)}
+.pg-calendar .moh div{padding:7px;font:600 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--dim)}
+.pg-calendar .mr{display:grid;grid-template-columns:repeat(7,1fr);min-height:0}
+.pg-calendar .mc{position:relative;border-left:1px solid #162011;border-bottom:1px solid #162011;padding:5px 7px;overflow:hidden;cursor:pointer;transition:background .12s;min-height:0}
+.pg-calendar .mc:hover{background:#121a0c}
+.pg-calendar .mc .n{font:italic 400 24px/1 'Instrument Serif';color:#b9c7a3}
+.pg-calendar .mc.o .n{color:#3d4a33}
+.pg-calendar .mc.t{box-shadow:inset 0 0 0 2px var(--ne),inset 0 0 22px rgba(93,255,122,.12)}.pg-calendar .mc.t .n{color:var(--ne)}
+.pg-calendar .mc.s{background:#171f0f}
+.pg-calendar .mc .dots{position:absolute;right:7px;top:8px;display:flex;gap:3px}
+.pg-calendar .mc .dots i{width:6px;height:6px;border-radius:50%}
+.pg-calendar .mc .tp{font-size:9.5px;padding:1px 5px;margin-top:3px;display:block;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.pg-calendar .mc .cfw{position:absolute;left:7px;bottom:4px;font:700 10px 'Pixelify Sans';color:var(--am);animation:bl 1.4s steps(1) infinite}
+.pg-calendar .mc .load{position:absolute;left:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--tl),var(--ne));box-shadow:0 0 8px var(--ne)}
+
+.pg-calendar .ag{position:absolute;inset:0;overflow:auto;padding:14px 18px;display:flex;flex-direction:column;gap:14px}
+.pg-calendar .ag h3{font:italic 28px 'Instrument Serif';color:var(--cr);display:flex;align-items:baseline;gap:12px}
+.pg-calendar .ag h3 small{font:11px 'DM Mono';color:var(--dim);font-style:normal}
+.pg-calendar .ar{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:center;padding:7px 0;border-bottom:1px dashed #1f2a17}
+.pg-calendar .ar .tm{font:600 12px 'Pixelify Sans';color:var(--am);letter-spacing:.06em}
+.pg-calendar .ar .tt{font:500 13px 'DM Mono'}
+.pg-calendar .ar .kd{font:700 9px 'Pixelify Sans';letter-spacing:.16em;color:var(--dim)}
+
+.pg-calendar .side{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden}
+.pg-calendar .dayhead{display:flex;align-items:flex-end;gap:12px}
+.pg-calendar .dayhead .big{font:italic 400 84px/.8 'Instrument Serif';color:var(--cr);text-shadow:0 0 30px rgba(243,236,178,.14)}
+.pg-calendar .dayhead .meta{padding-bottom:4px}
+.pg-calendar .dayhead .meta b{display:block;font:700 15px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne)}
+.pg-calendar .dayhead .meta small{color:var(--dim);font-size:11px}
+.pg-calendar .ritual{position:relative;padding:13px 14px;border-radius:9px;background:linear-gradient(#18230f,#111a0a);box-shadow:inset 0 0 0 1px #2a3a1c}
+.pg-calendar .ritual:before{content:"MORNING RITUAL";position:absolute;right:12px;top:-8px;font:700 9px 'Pixelify Sans';letter-spacing:.2em;background:var(--am);color:#1a1405;padding:2px 7px;border-radius:3px}
+.pg-calendar .ritual q{display:block;font:italic 24px/1.1 'Instrument Serif';color:var(--cr);quotes:none;margin-bottom:9px}
+.pg-calendar .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.pg-calendar .chips span{font-size:11px;padding:3px 9px;border-radius:12px;background:#1c2614;color:#b6c4a0;box-shadow:inset 0 0 0 1px #2c3820;cursor:pointer;transition:.12s}
+.pg-calendar .chips span:hover{background:var(--ne);color:#0d120a}
+.pg-calendar .sec{padding:11px 12px}
+.pg-calendar textarea{width:100%;height:70px;resize:none;background:#07100a;border:0;border-radius:5px;padding:9px 10px;color:#e8dc90;font:italic 18px/1.18 'Instrument Serif';outline:0;box-shadow:inset 0 2px 5px #000}
+.pg-calendar .nl{display:flex;gap:8px;background:#05080a;border-radius:7px;padding:8px 10px;box-shadow:inset 0 2px 5px #000}
+.pg-calendar .nl .p{color:var(--ne)}.pg-calendar .nl input{flex:1;background:none;border:0;outline:0;color:var(--tx);font:12.5px 'DM Mono'}
+.pg-calendar .pv{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.pg-calendar .pv .tp{display:block}
+.pg-calendar .pv small{font-size:10px;color:var(--dim)}
+.pg-calendar .list{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.pg-calendar .it{display:grid;grid-template-columns:18px 4px 1fr auto;gap:9px;align-items:center;padding:7px 8px;border-radius:5px;background:#141b0e}
+.pg-calendar .it .cb{width:16px;height:16px;border-radius:4px;border:2px solid #3b4a2c;cursor:pointer;display:grid;place-items:center;font-size:10px;color:#0d120a}
+.pg-calendar .it.dn .cb{background:var(--ne);border-color:var(--ne)}.pg-calendar .it.dn .cb:after{content:"✓"}
+.pg-calendar .it .ib{align-self:stretch;border-radius:2px}
+.pg-calendar .it h6{font:500 12.5px 'DM Mono'}.pg-calendar .it.dn h6{text-decoration:line-through;opacity:.55}
+.pg-calendar .it p{font-size:10.5px;color:var(--dim)}
+.pg-calendar .it .w{font:700 9px 'Pixelify Sans';letter-spacing:.14em;color:var(--am)}
+.pg-calendar .editor{display:flex;flex-direction:column;gap:7px;min-height:0;overflow:auto}
+.pg-calendar .editor .fr{display:flex;gap:6px}.pg-calendar .editor .fr>*{flex:1}
+.pg-calendar .editor select.f{appearance:auto}
+.pg-calendar .ch h1 span{white-space:nowrap}

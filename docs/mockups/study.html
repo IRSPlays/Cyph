@@ -1,0 +1,154 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Study & Architect</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+.head{display:flex;align-items:flex-end;gap:16px;padding:14px 22px 0;position:relative;z-index:5}
+.head .sp{flex:1}
+.page{grid-template-columns:290px minmax(0,1fr) 350px;padding-top:12px}
+.hide{display:none!important}
+.sub2{font:700 9px 'Pixelify Sans';letter-spacing:.24em;color:#58684a;margin:10px 2px 6px}
+.subj{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:9px 10px;border-radius:9px;background:#10170b;cursor:pointer;box-shadow:inset 0 0 0 1px #1d2815;margin-bottom:7px;transition:.12s}
+.subj:hover{background:#162010}.subj.on{background:#16241a;box-shadow:inset 0 0 0 2px var(--ne)}
+.subj .ic{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font:700 16px 'Pixelify Sans';color:#10150e}
+.subj h5{font:500 13px 'DM Mono'}.subj p{font:italic 14px 'Instrument Serif';color:#8d9d78}
+.drop{margin-top:6px;border:2px dashed #2c3820;border-radius:10px;padding:14px;text-align:center;font:italic 18px/1.1 'Instrument Serif';color:#8d9d78;cursor:pointer;transition:.15s}
+.drop:hover{border-color:var(--ne);color:var(--cr);background:rgba(93,255,122,.05)}
+.drop small{display:block;font:10px 'DM Mono';color:var(--dim);margin-top:5px;font-style:normal}
+.note{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:7px;background:#0e150a;font:12px 'DM Mono';color:#9fb08a;margin-bottom:5px}
+.note .e{font:700 9px 'Pixelify Sans';letter-spacing:.14em;color:var(--ne)}
+/* chat */
+.q{display:flex;flex-direction:column;min-height:0}
+.thread{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:14px;padding-right:6px}
+.msg.u{align-self:flex-end;max-width:84%;font:13.5px/1.4 'DM Mono';color:#cfe3f2;background:#15222d;border-radius:12px 12px 2px 12px;padding:8px 13px;box-shadow:inset 0 0 0 1px #20384a}
+.steps{display:flex;flex-direction:column;gap:3px;font:11px 'DM Mono';color:var(--tl);padding-left:2px}
+.steps div:before{content:"▸ ";color:var(--am)}.steps b{color:var(--cr);font-weight:500}
+.ans{font:italic 400 clamp(22px,1.55vw,27px)/1.22 'Instrument Serif';color:#e3dca5}
+.ans .cite{font:600 10px 'DM Mono';font-style:normal;background:var(--tl);color:#06140f;border-radius:3px;padding:1px 5px;margin:0 2px;vertical-align:2px;cursor:pointer}
+.srcs{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
+.srcs span{font:500 11px 'DM Mono';padding:5px 11px;border-radius:3px 7px 7px 3px;color:#10150e;box-shadow:2px 3px 0 #0008}
+.modes{display:flex;gap:6px;margin:8px 0}
+.cmdrow{display:flex;gap:8px;align-items:center;background:#05080aee;border-radius:12px;padding:11px 14px;box-shadow:0 0 0 1px var(--ln)}
+.cmdrow input{flex:1;background:none;border:0;outline:0;color:var(--tx);font:14px 'DM Mono'}
+.cmdrow .p{color:var(--ne)}
+/* right */
+.cam{position:relative;height:150px;border-radius:9px;overflow:hidden;background:linear-gradient(135deg,#1a2410,#0a0f07);box-shadow:inset 0 0 0 1px #1d2815}
+.cam:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(transparent 0 3px,rgba(0,0,0,.25) 3px 4px)}
+.cam .pg{position:absolute;left:14%;right:14%;top:14%;bottom:12%;background:#e7dfc2;transform:perspective(300px) rotateX(10deg) rotateZ(-3deg);box-shadow:0 8px 20px #000a;padding:10px 12px;font:italic 15px/1.2 'Instrument Serif';color:#2a2a24}
+.cam .pg b{display:block;font:500 9px 'DM Mono';letter-spacing:.2em;color:#7a6a3a;margin-bottom:3px}
+.cam .box{position:absolute;left:30%;top:42%;width:34%;height:22%;border:2px solid var(--ne);box-shadow:0 0 14px var(--ne);animation:bl 1.6s steps(1) infinite}
+.cam .lab{position:absolute;left:6px;top:5px;font:700 9px 'Pixelify Sans';letter-spacing:.16em;color:var(--ne);background:#0b0f08cc;padding:2px 6px}
+.vizcard{position:relative;height:130px;border-radius:9px;overflow:hidden;background:linear-gradient(#0c1a20,#08110f);box-shadow:inset 0 0 0 1px #1d3a32;cursor:pointer}
+.vizcard canvas{width:100%;height:100%}
+.vizcard span{position:absolute;right:7px;top:6px;font:700 9px 'Pixelify Sans';letter-spacing:.14em;color:var(--am);background:#1d1608;padding:2px 6px;border-radius:3px}
+.flash{perspective:700px;height:118px;cursor:pointer}
+.flash>div{position:relative;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.flash.flip>div{transform:rotateY(180deg)}
+.flash .f,.flash .b{position:absolute;inset:0;border-radius:10px;display:grid;place-items:center;padding:12px;text-align:center;backface-visibility:hidden;font:italic 21px/1.15 'Instrument Serif'}
+.flash .f{background:#16241a;box-shadow:inset 0 0 0 2px var(--ne);color:var(--cr)}
+.flash .b{background:var(--ne);color:#0d120a;transform:rotateY(180deg)}
+.flash small{position:absolute;left:10px;top:7px;font:700 9px 'Pixelify Sans';letter-spacing:.18em;opacity:.7;font-style:normal}
+.streak{display:flex;gap:5px}.streak i{flex:1;height:30px;border-radius:4px;background:#161d10;position:relative}.streak i b{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(var(--ne),var(--tl));border-radius:4px;height:var(--h)}
+/* architect */
+.tree{font:12px/1.9 'DM Mono';color:#9fb08a}
+.tree div{padding:0 8px;border-radius:5px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.tree div:hover{background:#162010}.tree .on{background:#16241a;color:var(--cr);box-shadow:inset 0 0 0 1px var(--ne)}
+.tree .d{color:var(--am)}.tree .ind{padding-left:22px}.tree .ind2{padding-left:38px}
+.tree input{accent-color:#5dff7a}
+.code{font:12px/1.6 'DM Mono';background:#05080a;border-radius:9px;padding:12px 14px;overflow:auto;color:#cfd8bc;box-shadow:inset 0 2px 6px #000}
+.code .k{color:#b392f0}.code .s{color:#c3e88d}.code .c{color:#5b6e4a}.code .f{color:#6aa6ff}.code .hl{display:block;background:rgba(93,255,122,.1);box-shadow:inset 3px 0 var(--ne);margin:0 -14px;padding:0 14px}
+.anno{margin:10px 0;padding:10px 14px;border-radius:9px;background:#07100a;box-shadow:0 0 0 2px var(--ne);font:italic 21px/1.2 'Instrument Serif';color:var(--cr)}
+.anno small{display:block;font:700 9px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne);font-style:normal;margin-bottom:4px}
+.tok{height:9px;border-radius:5px;background:#05080a;box-shadow:inset 0 1px 3px #000;overflow:hidden;margin:5px 0}.tok i{display:block;height:100%;width:22%;background:linear-gradient(90deg,var(--tl),var(--ne))}
+.diag text{font:600 11px 'DM Mono';fill:#e6efd8}.diag .sm{font:9.5px 'DM Mono';fill:#7d8d6c}
+.diag rect{rx:7}
+.diag .flow{stroke-dasharray:4 5;animation:dash 1.2s linear infinite}@keyframes dash{to{stroke-dashoffset:-18}}
+</style></head><body>
+<div class="deck" id="deck"><div id="bar" class="bar"></div>
+ <div class="head"><h1 class="t"><em id="eyb">STUDY MODE</em><span id="ttl">Ask your notes</span></h1><span class="sub" id="hs">He reads only what he needs, and tells you where it came from.</span><div class="sp"></div><div class="tabs"><button class="on" data-v="study">STUDY</button><button data-v="arch">ARCHITECT</button><button disabled style="opacity:.4">GENERAL</button></div></div>
+ <!-- STUDY -->
+ <div class="page" id="vs">
+  <div class="cp scroll"><div class="lbl">Library <b>embedded on the server</b></div>
+   <div id="subs"></div><div class="drop" id="drop">Drop notes here, or show him a page<small>PDF · photo · markdown · pasted text</small></div>
+   <div class="sub2">IN PHYSICS</div><div id="notes"></div></div>
+  <div class="cp q"><div class="lbl">Conversation <b>agentic search · cites its sources</b></div>
+   <div class="thread" id="thread"></div>
+   <div class="modes"><div class="tabs" id="md"><button class="on">EXPLAIN</button><button>QUIZ ME</button><button>FLASHCARDS</button><button>SUMMARISE</button></div></div>
+   <div class="cmdrow"><span class="p">▸</span><input id="in" placeholder="ask your notes anything…" autocomplete="off"><button class="key mic">● MIC</button><button class="key live" id="send">ASK</button></div></div>
+  <div style="display:flex;flex-direction:column;gap:14px;min-height:0">
+   <div class="cp"><div class="lbl">Show him a page <b>stereo camera</b></div><div class="cam"><span class="lab">● READING</span><div class="pg"><b>PHYSICS · Q7</b>A ball is kicked at 30°. Find the range if v = 20 m/s.</div><div class="box"></div></div></div>
+   <div class="cp"><div class="lbl">Pop-out visual <b>he drew this</b></div><div class="vizcard" id="vc"><span>SANDBOXED</span><canvas id="vcv" width="320" height="130"></canvas></div></div>
+   <div class="cp glow"><div class="lbl">Flashcard <b>3 of 8 · due today</b></div><div class="flash" id="fl"><div><div class="f"><small>QUESTION</small>What angle gives the maximum range on flat ground?</div><div class="b"><small>ANSWER</small>45°. R = v² sin(2θ) / g is biggest when sin 2θ = 1.</div></div></div>
+    <div style="display:flex;gap:6px;margin-top:9px"><button class="btn sm red" style="flex:1">AGAIN</button><button class="btn sm" style="flex:1">HARD</button><button class="btn sm go" style="flex:1">GOT IT</button></div></div>
+   <div class="cp"><div class="lbl">This week <b>4 day streak · 38 min today</b></div><div class="streak"><i><b style="--h:60%"></b></i><i><b style="--h:85%"></b></i><i><b style="--h:30%"></b></i><i><b style="--h:70%"></b></i><i><b style="--h:44%"></b></i><i><b style="--h:0%"></b></i><i><b style="--h:0%"></b></i></div></div>
+  </div>
+ </div>
+ <!-- ARCHITECT -->
+ <div class="page hide" id="va" style="grid-template-columns:290px minmax(0,1fr) 420px">
+  <div class="cp scroll"><div class="lbl">Project <b>cyph/</b></div>
+   <div class="tree" id="tree"></div><div class="sub2">IN HIS CONTEXT</div><div class="tok"><i id="tk"></i></div><div style="font:11px 'DM Mono';color:var(--dim)" id="tkt">3 files · 4.1k of 30k tokens. He loads files by tool, only when he needs them.</div></div>
+  <div class="cp q"><div class="lbl">Architect <b id="afile">cyph/core/app.py</b></div>
+   <pre class="code" id="code" style="flex:none;max-height:44%"></pre>
+   <div class="anno"><small>CYPH · THINKING</small><span id="anno">This is where every device walks in. The token is verified before anything else, so a stolen laptop can't lock out your phone.</span></div>
+   <div class="thread" id="athread" style="flex:1"></div>
+   <div class="cmdrow" style="margin-top:8px"><span class="p">▸</span><input id="ain" placeholder="ask about the design, a bug, or a file…"><button class="key live" id="asend">ASK</button></div></div>
+  <div class="cp" style="display:flex;flex-direction:column"><div class="lbl">How Cyph is built <b>live from the repo</b></div>
+   <svg class="diag" viewBox="0 0 400 560" style="flex:1;width:100%"><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" fill="#5dff7a"/></marker></defs>
+    <g fill="#10170b" stroke="#2c3820"><rect x="20" y="14" width="110" height="50"/><rect x="145" y="14" width="110" height="50"/><rect x="270" y="14" width="110" height="50"/></g>
+    <text x="75" y="36" text-anchor="middle">Desktop</text><text class="sm" x="75" y="52" text-anchor="middle">Tauri · Windows</text><text x="200" y="36" text-anchor="middle">Phone</text><text class="sm" x="200" y="52" text-anchor="middle">Tauri · Android</text><text x="325" y="36" text-anchor="middle">Telegram</text><text class="sm" x="325" y="52" text-anchor="middle">owner only</text>
+    <g stroke="#5dff7a" fill="none" class="flow" marker-end="url(#ar)"><path d="M75 66V116"/><path d="M200 66V116"/><path d="M325 66V116"/></g>
+    <rect x="20" y="118" width="360" height="40" fill="#0f1e14" stroke="#5dff7a"/><text x="200" y="143" text-anchor="middle">TLS · pinned certificate · Playit tunnel</text>
+    <g stroke="#5dff7a" fill="none" class="flow" marker-end="url(#ar)"><path d="M200 160V196"/></g>
+    <rect x="20" y="198" width="360" height="130" fill="#10170b" stroke="#5dff7a" stroke-width="2"/><text x="200" y="220" text-anchor="middle" style="fill:#5dff7a">CYPH CORE · hazserver · FastAPI</text>
+    <g fill="#16241a" stroke="#2c3820"><rect x="34" y="234" width="104" height="38"/><rect x="148" y="234" width="104" height="38"/><rect x="262" y="234" width="104" height="38"/><rect x="34" y="280" width="104" height="38"/><rect x="148" y="280" width="104" height="38"/><rect x="262" y="280" width="104" height="38"/></g>
+    <text x="86" y="258" text-anchor="middle">Auth + pairing</text><text x="200" y="258" text-anchor="middle">Planner</text><text x="314" y="258" text-anchor="middle">Memory</text><text x="86" y="304" text-anchor="middle">Brain</text><text x="200" y="304" text-anchor="middle">Scheduler</text><text x="314" y="304" text-anchor="middle">Study RAG</text>
+    <g stroke="#5dff7a" fill="none" class="flow" marker-end="url(#ar)"><path d="M200 330V366"/></g>
+    <rect x="20" y="368" width="170" height="52" fill="#10170b" stroke="#d9984a"/><text x="105" y="392" text-anchor="middle" style="fill:#d9984a">Gemini 3.8 Flash</text><text class="sm" x="105" y="408" text-anchor="middle">chat · tools · vision</text>
+    <rect x="210" y="368" width="170" height="52" fill="#10170b" stroke="#2f9d8f"/><text x="295" y="392" text-anchor="middle" style="fill:#2f9d8f">Cartesia</text><text class="sm" x="295" y="408" text-anchor="middle">voice in + out</text>
+    <g stroke="#6b7a5e" fill="none" stroke-dasharray="3 5"><path d="M75 328V470"/></g>
+    <rect x="20" y="470" width="170" height="60" fill="#10170b" stroke="#6b7a5e" stroke-dasharray="4 4"/><text x="105" y="494" text-anchor="middle">PC arm agent</text><text class="sm" x="105" y="510" text-anchor="middle">optional · COM15 · VectorM</text>
+    <rect x="210" y="470" width="170" height="60" fill="#10170b" stroke="#6b7a5e"/><text x="295" y="494" text-anchor="middle">Files on disk</text><text class="sm" x="295" y="510" text-anchor="middle">schedule.json · memory .md</text></svg></div>
+ </div>
+</div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script><script src="corner.js"></script>
+<script>
+const $ = (id) => document.getElementById(id); shell("STUDY"); const api = buddy(5);
+const SUBJ = [["Physics","P","#5b9fb8","24 notes"],["Maths","M","#5dff7a","31 notes"],["Chemistry","C","#d9984a","12 notes"],["Cyph + code","{}","#f08a73","9 notes"]];
+$("subs").innerHTML = SUBJ.map((s, i) => `<div class="subj ${i === 0 ? "on" : ""}"><div class="ic" style="background:${s[2]}">${s[1]}</div><div><h5>${s[0]}</h5><p>${s[3]} · embedded</p></div><span class="chip ne">●</span></div>`).join("");
+$("notes").innerHTML = ["Projectile motion.md","Forces and Newton.md","Energy and work.md","Waves intro.md","Past paper 2024 Q1-8.pdf"].map((n, i) => `<div class="note"><span>${n}</span><span class="e">${i < 4 ? "EMBEDDED" : "INDEXING 62%"}</span></div>`).join("");
+const col = {ne:"#5dff7a", bl:"#5b9fb8", am:"#d9984a"};
+const thread = $("thread");
+function userSay(t) { thread.insertAdjacentHTML("beforeend", `<div class="msg u">${t}</div>`); thread.scrollTop = thread.scrollHeight; }
+function cyphAns(steps, text, srcs, mood) {
+  const wrap = document.createElement("div"); wrap.style.cssText = "display:flex;flex-direction:column;gap:6px";
+  wrap.innerHTML = `<div class="steps">${steps.map(s => `<div>${s}</div>`).join("")}</div><div class="ans"></div><div class="srcs">${srcs.map((s, i) => `<span style="background:${[col.bl, col.ne, col.am][i % 3]}">${s}</span>`).join("")}</div>`;
+  thread.appendChild(wrap); const a = wrap.querySelector(".ans"); let i = 0; api.setMood(mood, 8); api.speak(true);
+  const iv = setInterval(() => { i += 2; a.innerHTML = text.slice(0, i).replace(/\[(\d)\]/g, '<span class="cite">$1</span>'); thread.scrollTop = thread.scrollHeight; if (i >= text.length) { clearInterval(iv); a.innerHTML = text.replace(/\[(\d)\]/g, '<span class="cite">$1</span>'); api.speak(false); } }, 22);
+}
+userSay("why is 45° the best angle for range?");
+cyphAns(["search_notes <b>\"projectile range angle\"</b> → 3 notes", "read_note <b>Physics / Projectile motion.md</b> §2", "visual.show <b>projectile_motion</b> (on the right)"], "Because range is v² sin(2θ) / g, and sin(2θ) peaks at 1 when 2θ is 90°, so θ is 45° [1]. Your past paper Q4 is exactly this, and your note on air resistance says the real best angle is a bit lower [2].", ["Projectile motion.md · §2", "Past paper 2024 · Q4"], "curious");
+const DEMOQ = [[/quiz|test/i, ["quiz_from_notes <b>Physics</b> → 5 questions"], "Fine. Question one, no notes: a ball leaves the ground at 30° at 20 m/s. Is the range bigger or smaller than at 60°? Think first. [1]", ["Projectile motion.md"], "smug"], [/.*/, ["search_notes <b>\"" + "your question" + "\"</b> → 2 notes", "read_note <b>Physics / Forces and Newton.md</b> §1"], "Newton's second law says F = ma [1]. In your own words from the note: \"push harder, accelerate more, unless it's heavy\". I like that one. [2]", ["Forces and Newton.md · §1", "Energy and work.md · §3"], "happy"]];
+function ask() { const v = $("in").value.trim(); if (!v) return; $("in").value = ""; api.listen(false); userSay(v); const r = DEMOQ.find(x => x[0].test(v)); api.setMood("think", 3); setTimeout(() => cyphAns(r[1].map(s => s.replace("your question", v.slice(0, 28))), r[2], r[3], r[4]), 900); }
+$("send").onclick = ask; $("in").addEventListener("keydown", e => e.key === "Enter" && ask()); $("in").addEventListener("input", e => api.listen(e.target.value.length > 0));
+$("fl").onclick = () => $("fl").classList.toggle("flip");
+document.querySelectorAll("#md button").forEach(b => b.onclick = () => { document.querySelectorAll("#md button").forEach(x => x.classList.toggle("on", x === b)); if (b.textContent === "QUIZ ME") { $("in").value = "quiz me on projectile motion"; ask(); } });
+$("drop").onclick = () => api.say("Drop a page and I'll read it, embed it, and tell you what's in it. Handwriting is fine. Mostly.", "curious", 5000);
+/* the visual thumb */
+const vx = $("vcv").getContext("2d"), t0 = performance.now();
+(function d() { const c = $("vcv"); vx.clearRect(0, 0, 320, 130); vx.fillStyle = "#1c2a14"; vx.fillRect(0, 112, 320, 18); vx.strokeStyle = "#16322c"; for (let x = 0; x < 320; x += 32) { vx.beginPath(); vx.moveTo(x, 0); vx.lineTo(x, 130); vx.stroke(); }
+  vx.setLineDash([3, 5]); vx.strokeStyle = "#5dff7a"; vx.lineWidth = 2; vx.beginPath(); for (let i = 0; i <= 40; i++) { const x = 20 + i * 7, y = 112 - Math.sin(i / 40 * Math.PI) * 78; i ? vx.lineTo(x, y) : vx.moveTo(x, y); } vx.stroke(); vx.setLineDash([]);
+  const p = ((performance.now() - t0) / 1800) % 1.3, q = Math.min(p, 1); vx.fillStyle = "#f08a73"; vx.beginPath(); vx.arc(20 + q * 280, 112 - Math.sin(q * Math.PI) * 78, 6, 0, 7); vx.fill(); requestAnimationFrame(d); })();
+$("vc").onclick = () => api.say("Opened it as its own window. Slide the angle and watch where it lands.", "excited", 4000);
+/* architect */
+const FILES = [["d","cyph/"],["i","core/"],["f2","app.py"],["f2","planner.py"],["f2","toolbox.py"],["f2","devices.py"],["i","telegram.py"],["i","memory.py"],["i","face.py"],["d","app/"],["i","src-tauri/"],["i","src/"],["d","deploy/"]];
+const SRC = {
+ "app.py": [["c","# every request comes through here"],["k","async def"],"auth(ws, token):",'<span class="hl">    dev = devices.verify(token)   <span class="c"># token first, so valid devices are never locked out</span></span>',"    if not dev: await ws.close(4401)","    return dev"],
+};
+$("tree").innerHTML = FILES.map(([k, n], i) => `<div class="${k === "d" ? "d" : k === "i" ? "ind" : "ind2"} ${n === "app.py" ? "on" : ""}"><input type="checkbox" ${["app.py","planner.py","toolbox.py"].includes(n) ? "checked" : ""}>${n}</div>`).join("");
+$("code").innerHTML = `<span class="c"># cyph/core/app.py</span>\n<span class="k">async def</span> <span class="f">auth</span>(ws, token):\n<span class="hl">    dev = devices.verify(token)   <span class="c"># valid tokens are checked first,</span></span>\n<span class="hl">                                  <span class="c"># so a flood can't lock real devices out</span></span>\n    <span class="k">if not</span> dev:\n        <span class="k">await</span> ws.close(<span class="s">4401</span>)   <span class="c"># 4401 = pair again</span>\n        <span class="k">return None</span>\n    limiter.ok(dev.id)\n    <span class="k">return</span> dev`;
+const ath = $("athread");
+ath.insertAdjacentHTML("beforeend", `<div class="msg u" style="align-self:flex-end;max-width:84%;font:13.5px 'DM Mono';color:#cfe3f2;background:#15222d;border-radius:12px 12px 2px 12px;padding:8px 13px">what breaks if the phone is stolen?</div><div class="steps"><div>read_file <b>core/devices.py</b></div><div>read_file <b>core/limiter.py</b></div></div><div class="ans">Revoke it from the Settings page and its token dies on the next message. The honest gap: a stolen but still-paired phone could plant text in memory before you notice.</div>`);
+function asend() { const v = $("ain").value.trim(); if (!v) return; $("ain").value = ""; ath.insertAdjacentHTML("beforeend", `<div class="msg u" style="align-self:flex-end;max-width:84%;font:13.5px 'DM Mono';color:#cfe3f2;background:#15222d;border-radius:12px 12px 2px 12px;padding:8px 13px">${v}</div>`); api.setMood("think", 3); setTimeout(() => { ath.insertAdjacentHTML("beforeend", `<div class="steps"><div>search_repo <b>"${v.slice(0, 24)}"</b> → 4 hits</div></div><div class="ans">Found it in <b style="font-style:normal;font-family:'DM Mono';font-size:14px;color:var(--ne)">core/toolbox.py</b>. I'd keep that, but split the app and Telegram tools. Want a diff?</div>`); ath.scrollTop = ath.scrollHeight; api.setMood("think", 5); }, 800); }
+$("asend").onclick = asend; $("ain").addEventListener("keydown", e => e.key === "Enter" && asend());
+/* tabs */
+document.querySelectorAll(".tabs [data-v]").forEach(b => b.onclick = () => { const a = b.dataset.v === "arch"; document.querySelectorAll(".tabs [data-v]").forEach(x => x.classList.toggle("on", x === b)); $("vs").classList.toggle("hide", a); $("va").classList.toggle("hide", !a); $("eyb").textContent = a ? "ARCHITECT MODE" : "STUDY MODE"; $("ttl").textContent = a ? "Talk to the code" : "Ask your notes"; $("hs").textContent = a ? "He loads files by tool, only the ones he needs." : "He reads only what he needs, and tells you where it came from."; api.say(a ? "Architect mode: I can read the repo, but only what you point me at. No file gets into my head by accident." : "Back to the notes. Ask me something that'll be on the test.", a ? "think" : "curious", 5000); });
+setTimeout(() => api.say("Ask me about your notes. I'll search them, read the right bit, and show you where I got it.", "curious", 5000), 700);
+</script></body></html>

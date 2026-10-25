@@ -1,0 +1,104 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Phone</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+.page{display:flex;flex-direction:column;gap:10px;margin-bottom:0!important}
+.row{zoom:.8;display:flex;gap:34px;justify-content:center;align-items:flex-start;overflow-x:auto;padding:6px 6px 0}
+.ph{flex:none;width:300px}
+.ph>h4{font:700 11px 'Pixelify Sans';letter-spacing:.22em;color:var(--am);text-align:center;margin-bottom:7px}
+.fr{width:300px;height:590px;border-radius:34px;background:#05070a;padding:9px;box-shadow:0 0 0 2px #2b3524,0 0 0 5px #0b0f08,0 22px 50px #000b}
+.sc{position:relative;width:100%;height:100%;border-radius:26px;overflow:hidden;background:linear-gradient(170deg,#1a2112,#090d07 70%);display:flex;flex-direction:column}
+.sc:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 50% at 70% 100%,rgba(93,255,122,.18),transparent 70%)}
+.sb{display:flex;justify-content:space-between;padding:9px 18px 4px;font:600 10px 'DM Mono';color:var(--cr);position:relative;z-index:2}
+.sb:after{content:"";position:absolute;left:50%;top:7px;width:60px;height:14px;border-radius:8px;background:#000;transform:translateX(-50%)}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;position:relative;z-index:2}
+.hd b{font:700 11px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne)}.hd span{font:9.5px 'DM Mono';color:var(--dim)}
+.body{flex:1;min-height:0;position:relative;z-index:2;overflow:hidden;display:flex;flex-direction:column}
+.tabbar{display:flex;position:relative;z-index:3;background:#080c07f0;border-top:1px solid #1d2815;padding:6px 6px 12px}
+.tabbar div{flex:1;text-align:center;font:700 8.5px 'Pixelify Sans';letter-spacing:.1em;color:#6f7e5f;padding:5px 0;border-radius:7px}
+.tabbar div i{display:block;font-style:normal;font-size:15px;margin-bottom:1px}
+.tabbar .on{color:var(--ne);background:#10190c}
+/* chat */
+.cv{image-rendering:pixelated;filter:drop-shadow(0 0 16px rgba(93,255,122,.25));pointer-events:none;flex:none}
+.cy{margin-top:auto;flex:none;height:122px;display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;padding:0 6px 0 12px;position:relative;z-index:2}
+.cy .m.now{flex:1;margin-bottom:26px;font-size:16px}
+.cy .m.now:after{content:'';position:absolute;right:-9px;bottom:14px;border:6px solid transparent;border-left:9px solid var(--ne);border-right:0}
+.msgs{flex:1;overflow:hidden;padding:6px 14px;display:flex;flex-direction:column;gap:7px;justify-content:flex-end;padding-right:14px}
+.m{font:italic 15px/1.14 'Instrument Serif';color:#a8b695;max-width:100%}
+.m.u{font:11px/1.35 'DM Mono';color:var(--cr);align-self:flex-end;background:#16200f;padding:6px 9px;border-radius:9px 9px 2px 9px}
+.m.t{font:9.5px 'DM Mono';color:var(--dim)}
+.m.now{color:var(--cr);font-size:19px;background:#07100a;border:2px solid var(--ne);border-radius:11px;padding:7px 10px;box-shadow:0 0 18px rgba(93,255,122,.25);position:relative}
+.in{display:flex;gap:6px;padding:8px 10px;position:relative;z-index:3}
+.in div{flex:1;background:#05080a;border-radius:18px;padding:8px 12px;font:11px 'DM Mono';color:var(--dim);box-shadow:inset 0 0 0 1px #1d2815}
+.in b{width:34px;height:34px;border-radius:50%;background:var(--ne);display:grid;place-items:center;color:#0d120a;font-size:15px;box-shadow:0 0 14px rgba(93,255,122,.5)}
+.in .mic{background:var(--am)}
+/* plan */
+.pl{padding:4px 12px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.pl .now{border-radius:10px;padding:10px;background:#0b130d;box-shadow:0 0 0 2px var(--ne),0 0 18px rgba(93,255,122,.2)}
+.pl .now h5{font:italic 22px/1 'Instrument Serif';color:var(--cr)}.pl .now p{font:10px 'DM Mono';color:var(--dim);margin-top:3px}
+.ring{height:5px;border-radius:3px;background:#1d2615;margin-top:7px;overflow:hidden}.ring i{display:block;height:100%;width:62%;background:var(--ne)}
+.sl{display:grid;grid-template-columns:42px 1fr;gap:8px;align-items:center;padding:6px 9px;border-radius:8px;background:#0e150b;font:11px 'DM Mono';color:var(--cr)}
+.sl small{color:var(--c);font-size:9.5px}.sl.done{opacity:.4;text-decoration:line-through}
+/* study */
+.st{padding:4px 12px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
+.card{border-radius:12px;background:#0b130d;box-shadow:0 0 0 1px #1d2815;padding:12px;text-align:center}
+.card h5{font:italic 24px/1.05 'Instrument Serif';color:var(--cr)}.card p{font:10px 'DM Mono';color:var(--dim);margin-top:6px}
+.src{font:9.5px 'DM Mono';padding:3px 8px;border-radius:9px;background:rgba(91,159,184,.14);color:var(--bl);display:inline-block;margin:3px 3px 0 0}
+/* pair */
+.pr{padding:10px 18px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.pr h3{font:italic 30px/1 'Instrument Serif';color:var(--cr)}.pr p{font:11px/1.5 'DM Mono';color:#a9b896}
+.pr .box{width:100%;background:#05080a;border-radius:10px;padding:11px;font:12px 'DM Mono';color:var(--cr);box-shadow:inset 0 0 0 1px #1d2815;letter-spacing:.06em}
+.pr .go{width:100%;background:var(--ne);color:#0d120a;border-radius:10px;padding:11px;font:700 11px 'Pixelify Sans';letter-spacing:.16em;box-shadow:0 0 16px rgba(93,255,122,.5)}
+.pr .tiny{font-size:9.5px;color:var(--am)}
+.note{max-width:900px;margin:2px auto 0;text-align:center;font:italic 18px 'Instrument Serif';color:#8d9d78}
+</style></head><body>
+<div class="deck"><div id="bar" class="bar"></div>
+ <div class="page">
+  <div class="row">
+   <div class="ph"><h4>CHAT</h4><div class="fr"><div class="sc"><div class="sb"><span>12:14</span><span>▮▮▮ 87%</span></div>
+    <div class="hd"><b>CYPH</b><span><span class="ledi"></span>synced</span></div>
+    <div class="body"><div class="msgs">
+      <div class="m t">· earlier today ·</div>
+      <div class="m">Morning. You said the planner build, and Telegram first.</div>
+      <div class="m u">did i finish the build?</div>
+      <div class="m t">⚙ looked at your plan</div></div>
+     <div class="cy"><div class="m now">Not yet. It ends 13:15, you've got an hour. Want me to hold the 14:00?</div><canvas class="cv" id="c1"></canvas></div>
+     <div class="in"><div>Say something to Cyph…</div><b class="mic">●</b></div></div>
+    <div class="tabbar"><div class="on"><i>◉</i>CYPH</div><div><i>▤</i>PLAN</div><div><i>✎</i>STUDY</div><div><i>⚙</i>MORE</div></div></div></div></div>
+   <div class="ph"><h4>PLAN</h4><div class="fr"><div class="sc"><div class="sb"><span>12:14</span><span>▮▮▮ 87%</span></div>
+    <div class="hd"><b>TODAY</b><span>Sat 24 Oct</span></div>
+    <div class="body"><div class="pl">
+      <div class="now"><div class="lbl" style="font-size:9px">NOW</div><h5>Planner build</h5><p>12:00 → 13:15 · 1 h 1 min left</p><div class="ring"><i></i></div></div>
+      <div class="sl done" style="--c:#2f9d8f"><small>09:00</small>Telegram bot polish</div>
+      <div class="sl" style="--c:#5dff7a"><small>13:30</small>Lunch + stretch</div>
+      <div class="sl" style="--c:#5b9fb8"><small>14:00</small>Study: Mamba paper</div>
+      <div class="sl" style="--c:#d9984a"><small>16:00</small>Robotics CCA</div>
+      <div class="sl" style="--c:#f08a73"><small>19:30</small>Minecraft with class</div></div>
+     <div class="cy"><canvas class="cv" id="c2"></canvas></div></div>
+    <div class="tabbar"><div><i>◉</i>CYPH</div><div class="on"><i>▤</i>PLAN</div><div><i>✎</i>STUDY</div><div><i>⚙</i>MORE</div></div></div></div></div>
+   <div class="ph"><h4>STUDY</h4><div class="fr"><div class="sc"><div class="sb"><span>12:14</span><span>▮▮▮ 87%</span></div>
+    <div class="hd"><b>STUDY</b><span>quiz · 4 / 10</span></div>
+    <div class="body"><div class="st">
+      <div class="card"><div class="lbl" style="font-size:9px;justify-content:center">QUESTION</div><h5>Why does Mamba skip attention's O(n²) cost?</h5><p>tap to flip</p></div>
+      <div style="text-align:center"><span class="src">mamba.pdf · p.4</span><span class="src">my notes</span></div>
+      <div style="display:flex;gap:6px"><div class="sl" style="--c:#f08a73;flex:1;justify-content:center;display:flex">AGAIN</div><div class="sl" style="--c:#d9984a;flex:1;display:flex;justify-content:center">HARD</div><div class="sl" style="--c:#5dff7a;flex:1;display:flex;justify-content:center">GOT IT</div></div>
+      <div class="sl" style="--c:#5b9fb8;grid-template-columns:1fr"><span>📷 Show him a page</span></div></div>
+     <div class="cy"><canvas class="cv" id="c3"></canvas></div></div>
+    <div class="tabbar"><div><i>◉</i>CYPH</div><div><i>▤</i>PLAN</div><div class="on"><i>✎</i>STUDY</div><div><i>⚙</i>MORE</div></div></div></div></div>
+   <div class="ph"><h4>PAIR (FIRST RUN)</h4><div class="fr"><div class="sc"><div class="sb"><span>12:14</span><span>▮▮▮ 87%</span></div>
+    <div class="body" style="justify-content:center"><div class="pr">
+      <canvas id="c4" style="image-rendering:pixelated;filter:drop-shadow(0 0 16px rgba(93,255,122,.25))"></canvas>
+      <h3>Hi. I'm Cyph.</h3><p>Paste the pairing link from your PC, or scan its code.</p>
+      <div class="box">cyph://pair?…●●●●●●</div>
+      <div class="go">PAIR</div><div class="go" style="background:#1d2615;color:#b9c7a3;box-shadow:none">SCAN QR</div>
+      <div class="tiny">The link is a key. It's used once and never saved.</div></div></div></div></div></div>
+  </div>
+  <div class="note">Same look as the desktop. On a phone he's smaller and tucked to the bottom-right, the bubble is the latest line, and the proactive nudges arrive as notifications.</div>
+ </div>
+</div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script><script src="corner.js"></script>
+<script>
+shell("PHONE");
+const mk = (id, s, mood) => { const a = Cyph.create(document.getElementById(id), {scale: s}); if (mood) a.setMood(mood, 30); return a; };
+const a1 = mk("c1", 3, "smug"), a2 = mk("c2", 3, "happy"), a3 = mk("c3", 3, "curious"), a4 = mk("c4", 4, "happy");
+addEventListener("mousemove", (e) => [a1, a2, a3, a4].forEach(a => a.lookAt((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1)));
+</script></body></html>

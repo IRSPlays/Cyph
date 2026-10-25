@@ -1,0 +1,153 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Phone notifications</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+body{overflow:auto}
+.deck{position:relative!important;inset:auto!important;display:block!important;min-height:100%;height:auto!important;overflow:visible!important}
+.wrap{position:relative;z-index:5;max-width:1560px;margin:0 auto;padding:22px 26px 40px}
+h1.big{font:italic 400 44px/1 'Instrument Serif';color:var(--cr)}
+h1.big em{display:block;font:700 12px 'Pixelify Sans';letter-spacing:.24em;color:var(--am);font-style:normal;margin-bottom:6px}
+.intro{font:12px/1.55 'DM Mono';color:#a9b896;max-width:880px;margin:10px 0 26px}
+h2.sec{font:700 12px 'Pixelify Sans';letter-spacing:.24em;color:var(--ne);margin:30px 0 4px;display:flex;gap:12px;align-items:center}
+h2.sec:after{content:"";flex:1;height:1px;background:var(--ln)}
+.cap{font:11px/1.5 'DM Mono';color:var(--dim);margin-bottom:14px;max-width:900px}
+.grid{display:flex;flex-wrap:wrap;gap:24px 28px;align-items:flex-start}
+.cell{display:flex;flex-direction:column;gap:8px}
+.cell>h4{font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--am);text-align:center}
+.cell>p{font:10.5px/1.4 'DM Mono';color:var(--dim);max-width:312px;text-align:center;align-self:center}
+canvas{image-rendering:pixelated}
+/* ===== phone ===== */
+.fr{width:312px;height:640px;border-radius:38px;background:#05070a;padding:9px;box-shadow:0 0 0 2px #2b3524,0 0 0 5px #0b0f08,0 22px 50px #000b;flex:none}
+.sc{position:relative;width:100%;height:100%;border-radius:30px;overflow:hidden;background:radial-gradient(90% 50% at 10% 0%,#2d4a2a,transparent 60%),radial-gradient(80% 50% at 100% 70%,#3a2a4f,transparent 65%),#0c120a}
+.sb{display:flex;justify-content:space-between;padding:10px 20px 4px;font:600 10px 'DM Mono';color:var(--cr);position:relative;z-index:3}
+.sb:after{content:"";position:absolute;left:50%;top:8px;width:14px;height:14px;border-radius:50%;background:#000;transform:translateX(-50%)}
+/* ===== a Cyph notification ===== */
+.nt{position:relative;display:grid;grid-template-columns:44px 1fr;gap:10px;padding:10px 12px;border-radius:18px;background:#0b130dee;box-shadow:0 0 0 1px #2c3820,0 6px 16px #0008;overflow:hidden;color:var(--cr)}
+.nt.n{--c:#5dff7a}.nt.r{--c:#d9984a}.nt.a{--c:#2f9d8f}.nt.s{--c:#5b9fb8}.nt.e{--c:#f08a73}.nt.q{--c:#5a6650;filter:saturate(.5)}
+.nt .av{width:44px;height:44px;border-radius:13px;background:#07100a;box-shadow:inset 0 0 0 2px var(--c);display:grid;place-items:center;align-self:start;overflow:hidden}
+.nt .av canvas{display:block;filter:drop-shadow(0 0 6px rgba(93,255,122,.3))}
+.nt.q .av canvas{filter:none}
+.nt .hd{display:flex;gap:6px;align-items:center;font:700 8px 'Pixelify Sans';letter-spacing:.2em;color:var(--c)}
+.nt .hd em{font:9px 'DM Mono';letter-spacing:0;font-style:normal;color:var(--dim);margin-left:auto}
+.nt h5{font:italic 400 19px/1.05 'Instrument Serif';color:var(--cr);margin-top:3px}
+.nt p{font:10.5px/1.4 'DM Mono';color:#a9b896;margin-top:2px}
+.nt .ac{display:flex;gap:6px;margin-top:8px;grid-column:2}
+.chip{display:inline-block;font:700 8.5px 'Pixelify Sans';letter-spacing:.14em;padding:6px 10px;border-radius:9px;background:#1d2615;color:#b9c7a3;box-shadow:inset 0 -2px 0 #0008}
+.chip.go{background:var(--c,#5dff7a);color:#0d120a}.chip.co{background:var(--co);color:#1d0d08}
+.bar2{height:5px;border-radius:3px;background:#1d2615;overflow:hidden;margin-top:7px}.bar2 i{display:block;height:100%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.slp{display:grid;grid-template-columns:36px 1fr;align-items:center;gap:6px;padding:3px 8px;border-radius:7px;background:#0e150b;font:10px 'DM Mono';color:var(--cr);margin-top:4px}
+.slp small{color:var(--k);font-size:9px}
+.cam{height:70px;border-radius:11px;background:linear-gradient(160deg,#1c2e2a,#0b1512);position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px #1d3a32;margin-top:7px}
+.cam:before{content:"";position:absolute;left:24%;top:30%;width:18%;height:52%;border-radius:4px 4px 8px 8px;background:#3d6fa6;box-shadow:inset -6px 0 0 #2d5683}
+.cam:after{content:"";position:absolute;right:-4%;bottom:-10%;width:28%;height:52%;border-radius:10px;background:#161b14;box-shadow:inset 0 0 0 2px #3a4129}
+.cam i{position:absolute;left:6px;top:5px;font:700 7px 'Pixelify Sans';letter-spacing:.14em;color:var(--am);z-index:2}
+.stack{display:flex;flex-direction:column;gap:8px}
+.lbl2{font:700 8.5px 'Pixelify Sans';letter-spacing:.22em;color:#8a9a78;padding:0 4px}
+/* lock */
+.lock{position:absolute;inset:34px 0 0;padding:0 14px;display:flex;flex-direction:column}
+.lock .clk{font:400 66px/1 'Instrument Serif';color:var(--cr);text-align:center;margin-top:20px;letter-spacing:.01em}
+.lock .dt{font:11px 'DM Mono';color:#b9c7a3;text-align:center;margin:2px 0 18px}
+.lock .stack{margin-top:auto;margin-bottom:46px}
+.lock .hint{position:absolute;bottom:14px;left:0;right:0;text-align:center;font:9px 'DM Mono';color:var(--dim)}
+/* heads-up */
+.app{position:absolute;inset:34px 0 0;padding:6px 14px;filter:blur(1.2px) brightness(.6)}
+.app .row{height:44px;border-radius:12px;background:#12190f;margin-bottom:8px}
+.hu{position:absolute;left:10px;right:10px;top:40px;z-index:5}
+/* shade */
+.shade{position:absolute;inset:34px 0 0;padding:6px 12px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
+.shade .qs{display:flex;gap:7px}.shade .qs i{flex:1;height:38px;border-radius:19px;background:#1a2214;display:block}.shade .qs i.on{background:#2d5a36}
+.shade .clr{margin-top:auto;align-self:center;font:700 8.5px 'Pixelify Sans';letter-spacing:.2em;color:#b9c7a3;background:#1d2615;padding:7px 16px;border-radius:12px}
+/* type table */
+.tbl{border-collapse:collapse;font:11px/1.5 'DM Mono';color:#a9b896;width:100%}
+.tbl td,.tbl th{padding:8px 12px;border-bottom:1px solid var(--ln);text-align:left;vertical-align:top}
+.tbl th{font:700 9.5px 'Pixelify Sans';letter-spacing:.18em;color:var(--am)}
+.tbl b{color:var(--cr);font-weight:500}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;background:var(--c);box-shadow:0 0 8px var(--c)}
+.rules{margin-top:10px;display:grid;grid-template-columns:repeat(3,minmax(260px,1fr));gap:12px}
+.rules div{padding:12px 14px;border-radius:10px;background:#0b130d;box-shadow:0 0 0 1px var(--ln);font:11px/1.55 'DM Mono';color:#a9b896}
+.rules b{display:block;font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne);margin-bottom:4px}
+.gal{width:340px;display:flex;flex-direction:column;gap:9px;padding:16px;border-radius:18px;background:radial-gradient(90% 90% at 20% 0%,#2d4a2a,transparent 60%),#10160c;box-shadow:inset 0 0 0 1px #ffffff10}
+</style></head><body>
+<div class="deck"><div class="wrap">
+ <h1 class="big"><em>CYPH · PHONE · NOTIFICATIONS</em>He taps you on the shoulder, he doesn't shout.</h1>
+ <p class="intro">Every notification is a small card in the same dark panel as the app: a coloured edge for what it is, his face as the avatar, serif for what he says, mono for the facts, and chips for the one or two replies that matter. He only speaks on a schedule or when something he did finishes, never at random. Mood on the avatar is the mood he would have in the app at that moment.</p>
+
+ <h2 class="sec">THE SIX KINDS</h2>
+ <p class="cap">One card, six edge colours. The colour matches the widget outlines, so a glance at the shade already tells you the kind.</p>
+ <div class="grid">
+  <div class="gal"><div class="lbl2">COLLAPSED · EVERY KIND</div>
+   <div class="nt n"><div class="av"><canvas id="g1"></canvas></div><div><div class="hd">NUDGE<em>now</em></div><h5>Planner ends in 15 min</h5><p>Want me to hold the 14:00?</p></div></div>
+   <div class="nt r"><div class="av"><canvas id="g2"></canvas></div><div><div class="hd">REMINDER<em>13:50</em></div><h5>Parade at 14:00</h5><p>In 10 min. Qaisarah leads.</p></div></div>
+   <div class="nt a"><div class="av"><canvas id="g3"></canvas></div><div><div class="hd">ARM<em>12:31</em></div><h5>Got the blue cup</h5><p>Done in 52 s, 9 steps.</p></div></div>
+   <div class="nt s"><div class="av"><canvas id="g4"></canvas></div><div><div class="hd">STUDY<em>12:00</em></div><h5>7 cards due</h5><p>Mamba · about 4 min</p></div></div>
+   <div class="nt e"><div class="av"><canvas id="g5"></canvas></div><div><div class="hd">ALERT<em>12:02</em></div><h5>Lost the home link</h5><p>Server unreachable since 12:02.</p></div></div>
+   <div class="nt q"><div class="av"><canvas id="g6"></canvas></div><div><div class="hd">QUIET<em>11:40</em></div><h5>Synced</h5><p>Plan and memory up to date.</p></div></div>
+  </div>
+  <div style="flex:1;min-width:560px;max-width:760px">
+   <table class="tbl"><tr><th>KIND</th><th>CHANNEL / WEIGHT</th><th>WHEN</th><th>ACTIONS</th></tr>
+    <tr><td><span class="dot" style="--c:#5dff7a"></span><b>Nudge</b></td><td>High · heads-up banner + sound off</td><td>Scheduled nudges: block ending, plan conflict, "hold the next one?"</td><td>ON IT · SNOOZE 10</td></tr>
+    <tr><td><span class="dot" style="--c:#d9984a"></span><b>Reminder</b></td><td>High · heads-up, alarm sound only if you set it</td><td>Calendar items and deadlines, 10 min before</td><td>DONE · +10 MIN</td></tr>
+    <tr><td><span class="dot" style="--c:#2f9d8f"></span><b>Arm</b></td><td>Default · ongoing while running, then a result</td><td>A task started: progress and STOP. Finished or failed.</td><td>STOP · WATCH · AGAIN</td></tr>
+    <tr><td><span class="dot" style="--c:#5b9fb8"></span><b>Study</b></td><td>Default · no banner</td><td>Cards due at your usual study time, once a day</td><td>START · LATER</td></tr>
+    <tr><td><span class="dot" style="--c:#f08a73"></span><b>Alert</b></td><td>High · always shown, even in Do Not Disturb exceptions you allow</td><td>Server or arm link lost, E-STOP, pairing expired</td><td>RETRY · OPEN</td></tr>
+    <tr><td><span class="dot" style="--c:#5a6650"></span><b>Quiet</b></td><td>Min · shade only, no sound, no banner</td><td>Sync done, memory saved, update available</td><td>none (tap to open)</td></tr>
+   </table>
+   <p class="cap" style="margin-top:12px">Each kind is its own Android notification channel, so you can silence one (say Study) without touching the others, in the system settings. The Settings page in the app mirrors the same six switches.</p>
+  </div>
+ </div>
+
+ <h2 class="sec">IN USE</h2>
+ <p class="cap">Where they show up. Lock screen hides the details until unlocked. The heads-up banner is a collapsed card for five seconds. The shade groups the rest under one Cyph header. The ongoing arm task stays pinned until it ends.</p>
+ <div class="grid">
+  <div class="cell"><h4>LOCK SCREEN</h4><div class="fr"><div class="sc"><div class="sb"><span></span><span>▮▮▮ 87%</span></div>
+   <div class="lock"><div class="clk">12:14</div><div class="dt">Saturday 24 October</div>
+    <div class="stack"><div class="lbl2">CYPH · 3</div>
+     <div class="nt n"><div class="av"><canvas id="l1"></canvas></div><div><div class="hd">NUDGE<em>now</em></div><h5>Planner ends in 15 min</h5><p>Tap to read</p></div></div>
+     <div class="nt r"><div class="av"><canvas id="l2"></canvas></div><div><div class="hd">REMINDER<em>13:50</em></div><h5>Parade at 14:00</h5><p>Tap to read</p></div></div>
+     <div class="nt s" style="opacity:.8"><div class="av"><canvas id="l3"></canvas></div><div><div class="hd">STUDY<em>12:00</em></div><h5>7 cards due</h5></div></div></div>
+    <div class="hint">swipe up to unlock</div></div></div></div>
+   <p>Titles are private by default: only the kind and “Tap to read” show until unlocked. A setting lets you show the text.</p></div>
+
+  <div class="cell"><h4>HEADS-UP (OVER AN APP)</h4><div class="fr"><div class="sc"><div class="sb"><span>12:14</span><span>▮▮▮ 87%</span></div>
+   <div class="app"><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div></div>
+   <div class="hu"><div class="nt n"><div class="av"><canvas id="u1"></canvas></div><div><div class="hd">NUDGE<em>now</em></div><h5>Planner ends in 15 min</h5><p>Want me to hold the 14:00?</p></div>
+     <div class="ac"><span class="chip go">ON IT</span><span class="chip">SNOOZE 10</span></div></div></div></div></div>
+   <p>Slides in for five seconds, then drops to the shade. The buttons answer him without opening the app.</p></div>
+
+  <div class="cell"><h4>SHADE (EXPANDED + GROUPED)</h4><div class="fr"><div class="sc"><div class="sb"><span>12:14</span><span>▮▮▮ 87%</span></div>
+   <div class="shade"><div class="qs"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    <div class="lbl2" style="margin-top:4px">CYPH</div>
+    <div class="nt r"><div class="av"><canvas id="s1"></canvas></div><div><div class="hd">MORNING BRIEF<em>08:00</em></div><h5>Three things today</h5>
+      <div class="slp" style="--k:#2f9d8f"><small>09:00</small>Telegram bot polish</div><div class="slp" style="--k:#5dff7a"><small>12:00</small>Planner build</div><div class="slp" style="--k:#d9984a"><small>16:00</small>Robotics CCA</div></div></div>
+    <div class="nt s"><div class="av"><canvas id="s2"></canvas></div><div><div class="hd">STUDY<em>12:00</em></div><h5>7 cards due</h5><p>Mamba · about 4 min</p></div><div class="ac"><span class="chip go">START</span><span class="chip">LATER</span></div></div>
+    <div class="nt q"><div class="av"><canvas id="s3"></canvas></div><div><div class="hd">QUIET<em>11:40</em></div><h5>Synced</h5></div></div>
+    <div class="clr">CLEAR ALL</div></div></div></div>
+   <p>One expanded card (the morning brief shows three slips), the rest collapsed. Quiet ones go to the bottom.</p></div>
+
+  <div class="cell"><h4>ONGOING · ARM TASK</h4><div class="fr"><div class="sc"><div class="sb"><span>12:31</span><span>▮▮▮ 85%</span></div>
+   <div class="app"><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div></div>
+   <div class="shade" style="top:34px"><div class="lbl2" style="margin-top:8px">CYPH · RUNNING</div>
+    <div class="nt a"><div class="av"><canvas id="o1"></canvas></div><div><div class="hd">ARM · STEP 6 / ~9<em>0:42</em></div><h5>Pick up the blue cup</h5><p>Aligning with the claw…</p>
+      <div class="cam"><i>● LIVE</i></div><div class="bar2"><i style="width:66%"></i></div></div>
+     <div class="ac"><span class="chip co">■ STOP</span><span class="chip">WATCH</span></div></div>
+    <div class="lbl2" style="margin-top:10px">THEN</div>
+    <div class="nt a" style="opacity:.9"><div class="av"><canvas id="o2"></canvas></div><div><div class="hd">ARM · DONE<em>12:32</em></div><h5>Got the blue cup</h5><p>52 s, 9 steps. Holding it.</p></div><div class="ac"><span class="chip go">AGAIN</span><span class="chip">PUT DOWN</span></div></div></div></div></div>
+   <p>Pinned while the arm works, with the live view and a STOP that cannot be swiped away. When it ends, the card turns into the result.</p></div>
+ </div>
+
+ <h2 class="sec">RULES</h2>
+ <div class="rules">
+  <div><b>HE SPEAKS ON SCHEDULE</b>Nudges and reminders come from the plan, not from a timer in the phone. At most one nudge per block, and none while you are in Study or Do Not Disturb.</div>
+  <div><b>ONE FACE, NOT A MOOD PARADE</b>The avatar is a still of the mood he has then: happy after a finished block, smug for a nudge, sleepy for quiet. During an arm task it stays neutral and the card shows the camera, since moods are off while the arm works.</div>
+  <div><b>ANSWERS WITHOUT OPENING</b>Chips send one command to the server and then dismiss the card: snooze, done, stop, start. Nothing needs a keyboard in a notification.</div>
+  <div><b>PRIVATE ON THE LOCK SCREEN</b>Kinds and times only until unlocked. Telegram content and chat text never appear in a notification, only plan titles and task names.</div>
+  <div><b>HONEST ABOUT LIMITS</b>The face is a PNG, not the live canvas. Custom card layouts are limited in height when collapsed, so the long forms (brief, task) only appear expanded. Colours of the edge come from the channel, which is why there are exactly six.</div>
+  <div><b>ONE TAP TARGET</b>Tapping the card body opens the matching page (Plan, Study, Arm). Nothing else on the card does more than one thing.</div>
+ </div>
+</div></div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script>
+<script>
+// Notification avatars are stills of the mood he would have at that moment (scale 1 = the sprite's own pixel grid).
+const face = (id, mood) => { const a = Cyph.create(document.getElementById(id), {scale: 1}); a.idle(false); a.setMood(mood, 9999); };
+const sets = {g1:"smug",g2:"rest",g3:"proud",g4:"curious",g5:"nervous",g6:"sleepy",l1:"smug",l2:"rest",l3:"curious",u1:"smug",s1:"happy",s2:"curious",s3:"sleepy",o1:"rest",o2:"proud"};
+for (const id in sets) face(id, sets[id]);
+</script></body></html>

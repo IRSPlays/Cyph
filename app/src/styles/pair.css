@@ -1,0 +1,17 @@
+.pg-pair .pairwrap{position:relative;z-index:5;flex:1;display:flex;align-items:center;justify-content:center;gap:48px;padding:24px}
+.pg-pair .pairface{flex:none;filter:drop-shadow(0 0 40px rgba(93,255,122,.22))}
+.pg-pair .paircard{width:min(460px,92vw);display:flex;flex-direction:column;gap:12px;padding:22px}
+.pg-pair .paircard .btn{padding:12px}
+.pg-pair .paircard .btn:disabled{opacity:.4;cursor:default}
+.pg-pair .err{color:var(--co);font:12px 'DM Mono'}
+.pg-pair .tiny{font:10.5px 'DM Mono';color:var(--am)}
+@media (max-width:760px){.pg-pair .pairwrap{flex-direction:column;gap:12px}.pg-pair .pairface{transform:scale(.7);margin:-40px 0}}
+/* phone */
+.pg-pair.mobile .pairwrap{flex-direction:column;gap:6px;justify-content:flex-start;padding:max(env(safe-area-inset-top),34px) 18px max(env(safe-area-inset-bottom),18px);overflow:auto}
+.pg-pair.mobile .pairface{transform:none;margin:0}
+.pg-pair.mobile .paircard{width:100%;box-shadow:none;background:transparent;padding:6px 4px;gap:10px;text-align:center;align-items:stretch}
+.pg-pair.mobile .paircard .logo{display:none}
+.pg-pair.mobile h1.t{font-size:36px}
+.pg-pair.mobile .sub{font:11px/1.5 'DM Mono';color:#a9b896}
+.pg-pair.mobile textarea.f{font-size:12px;text-align:left}
+.pg-pair.mobile .paircard .btn{padding:14px;font-size:11.5px;border-radius:10px}

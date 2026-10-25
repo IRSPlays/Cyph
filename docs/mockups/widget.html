@@ -1,0 +1,218 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Desktop companion (bottom-right)</title>
+<link rel="stylesheet" href="bench2.css">
+<style>
+body{overflow:hidden;background:#05070a}
+/* ---------- a believable desktop ---------- */
+.desk{position:fixed;inset:0;background:radial-gradient(80% 80% at 20% 10%,#25446a,transparent 60%),radial-gradient(70% 70% at 90% 90%,#4a2b5e,transparent 60%),linear-gradient(135deg,#0f2038,#1c1230)}
+.win{position:absolute;border-radius:9px;background:#1b1d23;box-shadow:0 20px 50px #000a,0 0 0 1px #ffffff14;overflow:hidden;font:12px 'DM Mono'}
+.win .tb{height:32px;background:#14161b;display:flex;align-items:center;gap:7px;padding:0 12px;color:#8a909c;font-size:11px}
+.win .tb i{width:10px;height:10px;border-radius:50%;background:#3a3f4a}
+.code{left:3%;top:6%;width:46%;height:72%}
+.code .ln2{display:flex;gap:10px;padding:0 14px;height:19px;align-items:center;color:#59616f;font-size:11px}
+.code .ln2 b{display:block;height:7px;border-radius:3px}
+.web{right:5%;top:8%;width:40%;height:52%;background:#f4f1e8;color:#222}
+.web .tb{background:#e3dfd2;color:#555}.web .tb i{background:#c9c4b4}
+.web h2{font:italic 34px 'Instrument Serif';margin:20px 26px 6px;color:#1d2a22}
+.web p{margin:0 26px 10px;font:13px/1.5 'DM Mono';color:#444}
+.web .eq{margin:12px 26px;padding:14px;background:#e9e3d0;border-radius:6px;font:italic 26px 'Instrument Serif';text-align:center}
+.task{position:absolute;left:0;right:0;bottom:0;height:46px;background:#10131ae6;backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 -1px 0 #ffffff12;z-index:50}
+.task .ic{width:28px;height:28px;border-radius:7px;background:#2b3140}
+.task .tray{position:absolute;right:14px;display:flex;gap:12px;align-items:center;font:11px 'DM Mono';color:#cfd6e4}
+.task .tray .cy{width:18px;height:18px;border-radius:4px;background:var(--ne);box-shadow:0 0 8px var(--ne)}
+
+/* ---------- the companion ---------- */
+.w{position:fixed;right:14px;bottom:50px;z-index:60;display:flex;align-items:flex-end;gap:14px;pointer-events:none}
+.w>*{pointer-events:none}.w .hit{pointer-events:auto}
+.float{display:flex;flex-direction:column;gap:12px;align-items:flex-end;width:350px;margin-bottom:var(--lift,150px)}
+.cycol{position:relative;display:flex;flex-direction:column;align-items:center}
+.cyw{position:relative;line-height:0;margin-bottom:-26px;z-index:1;transition:filter .5s}
+.plinth,.peek,.bub{zoom:.86}
+.float{width:310px}
+.cyw canvas{image-rendering:pixelated;filter:drop-shadow(0 0 30px rgba(93,255,122,.22)) drop-shadow(0 14px 0 rgba(0,0,0,.4));cursor:pointer}
+.cyw:after{content:"";position:absolute;left:8%;right:8%;bottom:6px;height:16px;background:radial-gradient(ellipse,rgba(0,0,0,.6),transparent 70%);z-index:-1}
+.zzz{position:absolute;right:6%;top:6%;font:italic 30px 'Instrument Serif';color:var(--cr);opacity:0}
+.w.muted .zzz{opacity:1;animation:zz 3s ease-in-out infinite}
+@keyframes zz{0%{transform:translate(0,10px);opacity:0}30%{opacity:1}100%{transform:translate(12px,-26px);opacity:0}}
+.w.muted .cyw{filter:saturate(.45) brightness(.72)}
+.grip{position:absolute;left:50%;top:-18px;transform:translateX(-50%);font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:#9aa889;background:#0b0f08d9;padding:3px 10px;border-radius:10px;opacity:0;transition:.2s;white-space:nowrap}
+.cycol:hover .grip{opacity:1}
+/* plinth: the "now" card he stands behind */
+.plinth{position:relative;z-index:2;width:calc(100% + 36px);min-width:340px;padding:11px 14px 12px;border-radius:12px;background:#0b130d;box-shadow:0 0 0 2px var(--ne),0 0 30px rgba(93,255,122,.2),0 12px 30px #000c;transition:.3s}
+.pr1{display:flex;gap:12px;align-items:center}
+.ring{--p:60;width:50px;height:50px;border-radius:50%;flex:none;background:conic-gradient(var(--ne) calc(var(--p)*1%),#1b2512 0);display:grid;place-items:center;box-shadow:0 0 12px rgba(93,255,122,.35);position:relative}
+.ring:before{content:"";width:37px;height:37px;border-radius:50%;background:#0b130d}
+.ring span{position:absolute;font:700 11px 'Pixelify Sans';color:var(--ne)}
+.pr1 h4{font:italic 25px/1 'Instrument Serif';color:var(--cr);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr1 p{font:11px 'DM Mono';color:var(--dim);margin-top:4px}
+.pr1 small{margin-left:auto;align-self:flex-start;font:700 9px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne);animation:bl 1.4s steps(1) infinite}
+.rl{position:relative;height:20px;margin-top:10px;background:#070a05;border-radius:5px;box-shadow:inset 0 1px 4px #000;overflow:hidden}
+.rl .bk{position:absolute;top:6px;height:10px;border-radius:2px 5px 5px 2px}
+.rl .nw{position:absolute;top:0;bottom:0;width:2px;background:var(--am);box-shadow:0 0 8px var(--am);z-index:2}
+.rl .hr{position:absolute;top:0;height:100%;font:7.5px 'DM Mono';color:#4d5c40;padding-left:2px;border-left:1px solid #1f2a17}
+.pr3{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font:700 10px 'Pixelify Sans';letter-spacing:.16em;color:var(--dim)}
+.pr3 b{color:var(--cr);font-weight:600}.pr3 em{font-style:normal;color:var(--am);font-size:13px}
+.pr3 .l{display:flex;gap:10px;font:600 9px 'Pixelify Sans'}
+.pr3 .l i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:var(--ne);box-shadow:0 0 6px var(--ne)}.pr3 .l i.x{background:#3b432b;box-shadow:none}.pr3 .l i.o{background:var(--am);box-shadow:0 0 6px var(--am)}
+.w.muted .plinth{box-shadow:0 0 0 2px #3b432b,0 12px 30px #000c;filter:saturate(.4)}
+.w.muted .pr1 small{animation:none;color:var(--dim)}
+.w.muted .ring{background:conic-gradient(#3b432b calc(var(--p)*1%),#1b2512 0);box-shadow:none}
+/* sizes */
+.w.sz-s .plinth{min-width:300px}
+/* bubble */
+.bub{position:relative;width:100%;border:2px solid var(--ne);border-radius:12px;background:#07100a;box-shadow:0 0 0 4px #07100a,0 12px 40px #000c,0 0 36px rgba(93,255,122,.28);display:none}
+.w.bub-on .bub{display:block;pointer-events:auto;animation:pop .4s cubic-bezier(.3,1.5,.5,1)}
+@keyframes pop{from{transform:translateX(18px) scale(.94);opacity:0}}
+.bub:after{content:"";position:absolute;right:-22px;bottom:28px;border:11px solid transparent;border-left:20px solid var(--ne);border-right:0}
+.bub .hd{display:flex;align-items:center;gap:6px;padding:6px 11px;background:#0f1e14;border-bottom:1px solid #1d3a26;font:600 10px 'Pixelify Sans';letter-spacing:.16em;color:var(--ne);border-radius:10px 10px 0 0}
+.bub .hd i{width:8px;height:8px;border-radius:50%;background:#2b3d30}.bub .hd i:first-child{background:var(--co)}.bub .hd i:nth-child(2){background:var(--am)}.bub .hd i:nth-child(3){background:var(--ne)}
+.bub .hd b{margin-left:auto;color:var(--dim);font:400 10px 'DM Mono';letter-spacing:.04em}
+.bub .bd{padding:11px 16px 6px;font:italic 400 26px/1.16 'Instrument Serif';color:var(--cr)}
+.bub .bd:before{content:"$ cyph says";display:block;font:400 10px 'DM Mono';color:var(--dim);font-style:normal;margin-bottom:5px}
+.bub .btns{display:flex;gap:6px;padding:4px 14px 13px}
+.caret{display:inline-block;width:.45em;height:.85em;background:var(--ne);margin-left:3px;vertical-align:-.1em;animation:bl .8s steps(1) infinite}
+/* peek */
+.peek{width:100%;display:none;border-radius:12px;background:#0b130d;box-shadow:0 0 0 1px var(--ln),0 14px 40px #000c;padding:12px 13px 13px}
+.w.peek-on .peek{display:block;pointer-events:auto;animation:pop .35s cubic-bezier(.3,1.5,.5,1)}
+.peek .lbl{margin-bottom:8px}
+.slips{display:flex;flex-direction:column;gap:7px;margin-bottom:11px}
+.slip{display:flex;align-items:center;gap:10px;font:500 12px 'DM Mono';padding:6px 12px;border-radius:3px 7px 7px 3px;color:#10150e;box-shadow:2px 3px 0 #0008;position:relative;margin-right:12px;transform:rotate(var(--r,0deg))}
+.slip b{font:700 11px 'Pixelify Sans';letter-spacing:.1em;min-width:44px}
+.slip:after{content:"";position:absolute;right:-9px;top:0;bottom:0;width:18px;background:inherit;clip-path:polygon(0 0,50% 0,100% 50%,50% 100%,0 100%)}
+.slip.dn{opacity:.4;filter:saturate(.4)}
+.moodk{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:10px}
+.moodk button{border:0;cursor:pointer;padding:5px 0 3px;border-radius:6px;background:#12170dcc;font:600 12px 'Pixelify Sans';color:#b9c7a3;box-shadow:inset 0 -3px 0 #0008}
+.moodk button small{display:block;font:400 8px 'DM Mono';color:var(--dim)}
+.moodk button.on{background:var(--ne);color:#0d120a}.moodk button.on small{color:#0d120a}
+.armline{display:flex;justify-content:space-between;font:11px 'DM Mono';color:var(--dim);margin-bottom:9px;padding:6px 9px;border-radius:6px;background:#10170b}
+.armline b{color:var(--am);font-weight:500}
+.cmd2{display:flex;gap:6px;align-items:center;background:#05080aee;border-radius:9px;padding:8px 10px;box-shadow:0 0 0 1px var(--ln)}
+.cmd2 input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--tx);font:12px 'DM Mono'}
+.cmd2 input::placeholder{color:var(--dim)}
+.cmd2 .key{padding:5px 8px;font-size:9px}
+.acts2{display:flex;gap:6px;margin-top:8px}.acts2 .key{flex:1;text-align:center;font-size:9.5px;padding:7px 0}
+/* visual window */
+.vis{position:fixed;left:6%;top:14%;width:640px;z-index:55;border-radius:12px;background:#0b130d;box-shadow:0 24px 60px #000c,0 0 0 2px var(--ne),0 0 44px rgba(93,255,122,.2);display:none;overflow:hidden}
+.vis.on{display:block;animation:pop .5s cubic-bezier(.3,1.5,.5,1)}
+.vis .tb{display:flex;align-items:center;gap:7px;padding:7px 12px;background:#0f1e14;font:600 10px 'Pixelify Sans';letter-spacing:.16em;color:var(--ne);cursor:move}
+.vis .tb i{width:8px;height:8px;border-radius:50%;background:#2b3d30}.vis .tb i:first-child{background:var(--co)}.vis .tb i:nth-child(2){background:var(--am)}.vis .tb i:nth-child(3){background:var(--ne)}
+.vis .tb em{margin-left:auto;font:700 9px 'Pixelify Sans';letter-spacing:.14em;font-style:normal;color:var(--am);background:#1d1608;padding:3px 7px;border-radius:3px}
+.vis .bd{padding:14px;display:grid;grid-template-columns:1fr 190px;gap:14px}
+.vis canvas{width:100%;border-radius:8px;background:linear-gradient(#0c1a20,#08110f);box-shadow:inset 0 0 0 1px #1d3a32}
+.vis .nf{font:12px/1.5 'DM Mono';color:#a9b896}
+.vis h3{font:italic 30px/1 'Instrument Serif';color:var(--cr);margin-bottom:8px}
+.vis .nf label{display:block;margin-top:12px;font:700 9px 'Pixelify Sans';letter-spacing:.2em;color:var(--am)}
+.vis input[type=range]{width:100%;accent-color:#5dff7a}
+.vis .eq{margin-top:12px;font:italic 22px 'Instrument Serif';color:var(--cr);background:#12170d;padding:8px 10px;border-radius:6px}
+.vis .ft{padding:8px 14px;background:#07100a;font:10px 'DM Mono';color:#667859;display:flex;justify-content:space-between}
+/* context menu */
+.ctx{position:fixed;z-index:80;min-width:240px;display:none;background:#0b130d;border-radius:10px;padding:5px;box-shadow:0 0 0 1px var(--ne),0 16px 40px #000c;font:12px 'DM Mono'}
+.ctx.on{display:block}
+.ctx div{padding:7px 12px;border-radius:5px;cursor:pointer;display:flex;justify-content:space-between;gap:20px;color:#c8d4b4}
+.ctx div:hover{background:var(--ne);color:#0d120a}.ctx div small{opacity:.55}
+.ctx hr{border:0;border-top:1px solid #243019;margin:4px 6px}
+/* demo remote */
+.remote{position:fixed;left:14px;top:12px;z-index:90;display:flex;gap:6px;align-items:center;background:#0b0f08e6;padding:8px 10px;border-radius:9px;box-shadow:0 0 0 1px #243019;flex-wrap:wrap}
+.remote b{font:700 10px 'Pixelify Sans';letter-spacing:.2em;color:var(--am);margin:0 4px 0 2px}
+.remote .key.on{background:var(--ne);color:#0d120a}
+.remote .sep{width:10px}
+</style></head><body>
+<div class="desk">
+ <div class="win code"><div class="tb"><i></i><i></i><i></i>&nbsp;planner.py — Cyph</div><div id="codelines" style="padding-top:8px"></div></div>
+ <div class="win web"><div class="tb"><i></i><i></i><i></i>&nbsp;physics-notes.org/projectile</div>
+  <h2>Projectile motion</h2><p>Range depends on launch speed and the angle. At 45° on flat ground it is maximal. Cannonballs and football kicks follow the same parabola.</p><div class="eq">R = v² sin(2θ) / g</div><p>Questions 4 to 9 for Monday.</p></div>
+ <div class="task"><div class="ic"></div><div class="ic"></div><div class="ic"></div><div class="ic" style="background:#3a5f3a"></div><div class="ic"></div><div class="tray"><span>ENG</span><div class="cy"></div><span id="tclock">12:14</span></div></div>
+</div>
+
+<div class="vis" id="vis"><div class="tb"><i></i><i></i><i></i>&nbsp;CYPH ─ VISUAL · PROJECTILE MOTION<em>SANDBOXED · NO NETWORK</em></div>
+ <div class="bd"><canvas id="vc" width="560" height="330"></canvas><div class="nf"><h3>Why 45°?</h3>Drawn from your notes. Move the sliders: the longest throw is at 45°.<label>ANGLE <span id="av">45</span>°</label><input id="ang" type="range" min="10" max="80" value="45"><label>SPEED</label><input id="spd" type="range" min="10" max="30" value="22"><div class="eq">R = <span id="rg">49</span> m</div></div></div>
+ <div class="ft"><span>made by Cyph · visual.show · 2.1 KB</span><span>close: ✕ or "thanks Cyph"</span></div></div>
+
+<div class="w sz-m" id="w">
+ <div class="float" id="float">
+  <div class="bub"><div class="hd"><i></i><i></i><i></i>CYPH ─ <span id="bm">EXCITED</span><b id="bts">13:44</b></div><div class="bd" id="bt"></div>
+   <div class="btns"><button class="key live" id="b1">ON IT</button><button class="key" id="b2">SNOOZE 10</button><button class="key" id="b3">OPEN HOME</button></div></div>
+  <div class="peek hit" id="peek"><div class="lbl">Today <b id="pleft"></b></div><div class="slips" id="pl"></div>
+   <div class="lbl">Mood him</div><div class="moodk" id="mk"></div>
+   <div class="armline"><span>VECTORM ARM</span><b>not connected</b></div>
+   <div class="cmd2"><span style="color:var(--ne)">▸</span><input id="pin" placeholder="a quick word with Cyph…"><button class="key mic">● MIC</button><button class="key live">GO</button></div>
+   <div class="acts2"><button class="key">OPEN HOME</button><button class="key">MUTE 1H</button><button class="key">PLAN</button></div></div>
+ </div>
+ <div class="cycol hit" id="cycol"><div class="grip">⠿ DRAG · RIGHT-CLICK FOR MENU</div>
+  <div class="cyw"><canvas id="cv"></canvas><div class="zzz">zzz</div></div>
+  <div class="plinth"><div class="pr1"><div class="ring" id="rg2" style="--p:48"><span id="rp">48%</span></div><div style="min-width:0"><h4 id="st">Cyph planner build</h4><p id="sr">11:30 – 13:15 · 61 min left</p></div><small id="sk">● NOW</small></div>
+   <div class="rl" id="rl"></div>
+   <div class="pr3"><span>NEXT <b id="sn">14:00</b> <em id="sx">PARADE</em></span><span class="l"><span><i></i>SERVER</span><span><i class="x"></i>ARM</span><span><i class="o"></i>MIC</span></span></div></div>
+ </div>
+</div>
+<div class="ctx" id="ctx"><div>Open Cyph <small>Ctrl+Alt+C</small></div><div>Quick chat <small>Ctrl+Alt+Space</small></div><hr><div data-sz="s">Size: small</div><div data-sz="m">Size: medium</div><div data-sz="l">Size: large</div><hr><div data-m="1">Mute for 1 hour</div><div data-m="0">Mute until tomorrow</div><div data-m="idle">Passive only (no speech)</div><hr><div>Hide companion</div><div>Quit Cyph</div></div>
+<div class="remote"><b>STATE</b><button class="key on" data-s="strip">IDLE</button><button class="key" data-s="peek">PEEK</button><button class="key" data-s="speak">HE SPEAKS</button><button class="key" data-s="visual">VISUAL</button><button class="key" data-s="muted">MUTED</button><span class="sep"></span><b>SIZE</b><button class="key" data-z="s">S</button><button class="key on" data-z="m">M</button><button class="key" data-z="l">L</button></div>
+<div class="dbg" id="dbg">engine…</div>
+<div class="hint">hover him: Peek · click him: boop · right-click: menu · speaks only on schedule, never at random</div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id), w = $("w");
+const SIZES = {s: 5, m: 7, l: 9};
+const api = Cyph.create($("cv"), {scale: SIZES.m});
+let mt; addEventListener("mousemove", e => { const r = $("cv").getBoundingClientRect(); api.lookAt(Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (innerWidth * .3))), Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height * .4)) / (innerHeight * .3)))); clearTimeout(mt); mt = setTimeout(() => api.lookAt(null), 4500); });
+$("cv").addEventListener("click", () => api.poke());
+api.onMood = (m, why) => { document.querySelectorAll("#mk button").forEach(b => b.classList.toggle("on", b.dataset.m === m)); $("dbg").innerHTML = `engine · mood <b>${m}</b> (${why})`; };
+function setSize(z) { api.setScale(SIZES[z]); w.className = w.className.replace(/sz-\w/, "sz-" + z); document.querySelectorAll("[data-z]").forEach(b => b.classList.toggle("on", b.dataset.z === z)); w.style.setProperty("--lift", (40 * SIZES[z] * .5 + 20) + "px"); }
+document.querySelectorAll("[data-z]").forEach(b => b.onclick = () => setSize(b.dataset.z)); setSize("m");
+/* fake code window */
+const colors = ["#6aa6ff","#c3e88d","#f08a73","#d9984a","#b392f0","#5dff7a"];
+for (let i = 0; i < 28; i++) $("codelines").insertAdjacentHTML("beforeend", `<div class="ln2"><span>${String(i + 1).padStart(2, " ")}</span><b style="margin-left:${(i % 4) * 14}px;width:${20 + (i * 53) % 220}px;background:${colors[i % 6]}55"></b><b style="width:${30 + (i * 31) % 90}px;background:#ffffff1a"></b></div>`);
+/* mood keys */
+const mk = $("mk"); ["happy","curious","love","smug","sleepy","dance"].forEach(n => { const b = document.createElement("button"); b.dataset.m = n; b.innerHTML = `${Cyph.info[n].glyph.replace(/</g, "&lt;")}<small>${n}</small>`; b.onclick = () => api.setMood(n, 6); mk.appendChild(b); });
+/* day data */
+const col = {ne:"#5dff7a", bl:"#5b9fb8", am:"#d9984a", co:"#f08a73", tl:"#2f9d8f", cr:"#f3ecb2"};
+function paint() {
+  const m = demoNow(); $("tclock").textContent = fmtMin(m);
+  const A = 6 * 60, B = 23 * 60, pos = (x) => ((x - A) / (B - A) * 100) + "%";
+  $("rl").innerHTML = [8, 12, 16, 20].map(h => `<div class="hr" style="left:${pos(h * 60)}">${pad(h)}</div>`).join("") + TODAY.map(e => `<div class="bk" style="left:${pos(toMin(e.s))};width:calc(${pos(toMin(e.e))} - ${pos(toMin(e.s))});background:${col[e.k]};opacity:${m >= toMin(e.e) ? .35 : 1}"></div>`).join("") + `<div class="nw" style="left:${pos(m)}"></div>`;
+  const now = TODAY.find(e => m >= toMin(e.s) && m < toMin(e.e)), nxt = TODAY.find(e => toMin(e.s) > m);
+  if (now && !w.classList.contains("muted")) { const p = Math.round((m - toMin(now.s)) / (toMin(now.e) - toMin(now.s)) * 100); $("st").textContent = now.t; $("sk").textContent = "● NOW"; $("sr").textContent = `${now.s} – ${now.e} · ${toMin(now.e) - m} min left`; $("rg2").style.setProperty("--p", p); $("rp").textContent = p + "%"; }
+  if (nxt) { $("sn").textContent = nxt.s; $("sx").textContent = nxt.t.toUpperCase().slice(0, 14); }
+  $("pleft").textContent = TODAY.filter(e => toMin(e.e) > m).length + " left";
+  $("pl").innerHTML = TODAY.map((e, i) => `<div class="slip ${m >= toMin(e.e) ? "dn" : ""}" style="background:${col[e.k]};--r:${(i % 2 ? 1 : -1) * (.4 + i * .15)}deg"><b>${e.s}</b>${e.t}</div>`).join("");
+}
+paint(); setInterval(paint, 15000);
+/* states */
+let state = "idle", hoverT, bubTxt = "";
+function typeBubble(txt) { const el = $("bt"); let i = 0; bubTxt = txt; el.textContent = ""; api.speak(true); const iv = setInterval(() => { i += 2; el.innerHTML = txt.slice(0, i) + (i < txt.length ? '<span class="caret"></span>' : ""); if (i >= txt.length) { clearInterval(iv); api.speak(false); } }, 28); }
+function setState(s) {
+  state = s; document.querySelectorAll("[data-s]").forEach(b => b.classList.toggle("on", b.dataset.s === s));
+  w.classList.remove("peek-on", "bub-on", "muted"); $("vis").classList.remove("on");
+  if (s === "peek") { w.classList.add("peek-on"); api.setMood("curious", 8); }
+  if (s === "speak") { w.classList.add("bub-on"); api.setMood("excited", 10); $("bm").textContent = "EXCITED"; $("btns") ; typeBubble("Heads-up: parade is in 30 minutes. The build ends at 13:15, so you've got the gap to eat. Want me to move on?"); }
+  if (s === "visual") { $("vis").classList.add("on"); w.classList.add("bub-on"); api.setMood("happy", 10); $("bm").textContent = "HAPPY"; typeBubble("I drew it from your notes. Slide the angle: 45 degrees throws farthest."); drawVis(); }
+  if (s === "muted") { w.classList.add("muted"); api.setMood("sleepy", 90); $("sk").textContent = "■ MUTED"; $("st").textContent = "Cyph is napping"; $("sr").textContent = "quiet until 15:00 · tap him to wake"; }
+  if (s !== "muted") paint();
+}
+document.querySelectorAll("[data-s]").forEach(b => b.onclick = () => setState(b.dataset.s));
+$("cycol").addEventListener("mouseenter", () => { if (state === "idle") hoverT = setTimeout(() => { w.classList.add("peek-on"); api.setMood("curious", 6); }, 220); });
+w.addEventListener("mouseleave", () => { clearTimeout(hoverT); if (state === "idle") w.classList.remove("peek-on"); });
+$("b1").onclick = $("b2").onclick = () => setState("idle"); $("b3").onclick = () => location.href = "home-c2-corner.html";
+$("pin").addEventListener("input", e => api.listen(e.target.value.length > 0));
+/* menu */
+$("cycol").addEventListener("contextmenu", e => { e.preventDefault(); const c = $("ctx"); c.classList.add("on"); c.style.left = Math.min(e.clientX, innerWidth - 260) + "px"; c.style.top = Math.max(60, e.clientY - 300) + "px"; });
+addEventListener("click", () => $("ctx").classList.remove("on"));
+$("ctx").querySelectorAll("[data-m]").forEach(d => d.onclick = () => setState("muted"));
+$("ctx").querySelectorAll("[data-sz]").forEach(d => d.onclick = () => setSize(d.dataset.sz));
+/* the visual Cyph made */
+const vc = $("vc"), vx = vc.getContext("2d"), t0 = performance.now();
+function drawVis() {
+  if (!$("vis").classList.contains("on")) return;
+  const ang = +$("ang").value, v = +$("spd").value, g = 9.8, th = ang * Math.PI / 180, R = v * v * Math.sin(2 * th) / g;
+  $("av").textContent = ang; $("rg").textContent = R.toFixed(1);
+  vx.clearRect(0, 0, 560, 330); vx.strokeStyle = "#16322c"; vx.lineWidth = 1;
+  for (let x = 0; x < 560; x += 40) { vx.beginPath(); vx.moveTo(x, 0); vx.lineTo(x, 330); vx.stroke(); } for (let y = 0; y < 330; y += 40) { vx.beginPath(); vx.moveTo(0, y); vx.lineTo(560, y); vx.stroke(); }
+  vx.fillStyle = "#1c2a14"; vx.fillRect(0, 290, 560, 40);
+  const sx = 520 / 60, x0 = 30, y0 = 290; vx.setLineDash([4, 6]); vx.strokeStyle = "#5dff7a"; vx.lineWidth = 2; vx.beginPath();
+  const T = 2 * v * Math.sin(th) / g; for (let i = 0; i <= 60; i++) { const tt = T * i / 60, x = v * Math.cos(th) * tt, y = v * Math.sin(th) * tt - .5 * g * tt * tt; i ? vx.lineTo(x0 + x * sx, y0 - y * sx) : vx.moveTo(x0 + x * sx, y0 - y * sx); } vx.stroke(); vx.setLineDash([]);
+  vx.fillStyle = "#d9984a"; vx.fillRect(x0 + R * sx - 2, 286, 4, 10); vx.fillStyle = "#f3ecb2"; vx.font = "11px DM Mono"; vx.fillText(R.toFixed(1) + " m", x0 + R * sx - 18, 282);
+  const tt = ((performance.now() - t0) / 1000 * 1.4) % (T + .8), tc = Math.min(tt, T), bx = v * Math.cos(th) * tc, by = v * Math.sin(th) * tc - .5 * g * tc * tc;
+  vx.fillStyle = "#f08a73"; vx.beginPath(); vx.arc(x0 + bx * sx, y0 - by * sx, 8, 0, 7); vx.fill();
+  vx.save(); vx.translate(x0, y0); vx.rotate(-th); vx.fillStyle = "#4a5035"; vx.fillRect(-4, -6, 34, 12); vx.restore(); vx.fillStyle = "#8be37a"; vx.beginPath(); vx.arc(x0, y0, 9, 0, 7); vx.fill();
+  requestAnimationFrame(drawVis);
+}
+</script></body></html>

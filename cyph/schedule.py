@@ -21,7 +21,7 @@ from .clock import TZ, describe
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "user"
 FILE = DATA / "schedule.json"
-KINDS = ("test", "class", "deadline", "event", "task", "reminder")
+KINDS = ("test", "class", "deadline", "event", "task", "reminder", "block")
 HINT = re.compile(
     r"(\b(mon|tues?|wed(nes)?|thu(rs?)?|fri|sat(ur)?|sun)(day)?\b|\btomorrow\b|\btonight\b|\btoday\b|\bnext (week|month)\b|"
     r"\bthis (week|weekend)\b|\b\d{1,2}(:\d\d)?\s?(am|pm)\b|\bat \d|\b\d{1,2}[/-]\d{1,2}\b|"
@@ -272,6 +272,7 @@ def apply(sched: Schedule, parsed: dict, now: datetime | None = None) -> dict:
             sched.remove(hits[0]["id"])
             return {"reply": "✓ Cancelled: " + fmt_event(hits[0]), "added": []}
         if parsed["events"]:
-            sched.replace(hits[0]["id"], parsed["events"][0])
+            keep = {k: v for k, v in hits[0].items() if k in ("status", "notes", "project")}   # the app's fields
+            sched.replace(hits[0]["id"], {**keep, **parsed["events"][0]})
             return {"reply": "✓ Moved: " + fmt_event(hits[0]) + "\n   to: " + fmt_event(parsed["events"][0]), "added": []}
     return {"reply": "", "added": []}

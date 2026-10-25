@@ -24,7 +24,13 @@ from .memory import FILES, RULES, Curator, MemoryStore, _files_block, parse_json
 DIGEST = """NIGHTLY REVIEW. Today is {today}. You are not looking at one conversation: you are looking at the last
 few days. Promote to long-term memory only what is durable and not already there: habits and routines that
 repeat, projects he keeps working on, preferences and corrections he stated more than once or very clearly,
-people who keep coming up. Replace entries that changed; remove entries he contradicted. Do NOT record: one-off
+people who keep coming up. PEOPLE RULE: any person he names in two or more daily notes or conversations who is not
+in people.md yet MUST get a people entry (name, who they are to him, how he knows them, and what he has said about
+them, kept neutral and factual, e.g. "Adam: a classmate, once a close friend; Haziq says he crossed his boundaries
+and finds him draining"). Feelings about a person belong in that entry; they are not a mood to skip. Replace
+entries that changed; remove entries he contradicted. MAKE VAGUE ENTRIES SPECIFIC: when an existing entry is thin
+("likes games", "has a friend named X") and WHAT HE SAID gives details (which games, ranks, versions, parts, dates,
+what the friend did), replace it with a more specific entry using only those details. Do NOT record: one-off
 events, plans and deadlines (those live in his schedule), moods, jokes, or anything Cyph said. The daily notes
 below were written by Cyph, so use them only as hints about where to look; the lines under WHAT HE SAID are the
 evidence. Prefer no edit to a doubtful edit; an empty ops list is a fine answer. Output ONLY the same JSON.

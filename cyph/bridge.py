@@ -26,7 +26,7 @@ MAX_BODY = 14 * 1024 * 1024        # a few phone photos, base64
 
 
 class SharedChat:
-    def __init__(self, path=None, keep: int = 40, max_age_s: float = 3 * 3600):
+    def __init__(self, path=None, keep: int = 200, max_age_s: float = 3 * 3600):
         self.path, self.keep, self.max_age_s = Path(path) if path else SHARED, keep, max_age_s
         self.lock = threading.Lock()
 
@@ -43,6 +43,11 @@ class SharedChat:
         now = time.time()
         recent = [m for m in self._read() if now - float(m.get("t", 0)) <= self.max_age_s]
         return [{"role": m["role"], "content": m["content"]} for m in recent[-n:]]
+
+    def history(self, n: int = 60) -> list[dict]:
+        """The last n messages with who said them (src) and when (t), for the apps' transcript."""
+        return [{"role": m["role"], "text": m["content"], "src": m.get("src", ""), "t": float(m.get("t", 0))}
+                for m in self._read()[-n:]]
 
     def last_time(self, role: str = "user") -> float:
         """When the newest message from that role was written (0 if none)."""

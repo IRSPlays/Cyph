@@ -5,3 +5,5 @@ __pycache__/
 models/
 data/
 *.zip
+
+.cyph_voice.json
