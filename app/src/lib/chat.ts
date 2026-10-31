@@ -65,10 +65,28 @@ function setReply(s: ChatState, text: string, streaming: boolean): ChatState {
 }
 
 /** The server's transcript replaces ours, unless a turn is in flight (its own events are the live truth then). */
+/** True when `text` is the message we just sent ourselves and are still waiting on an answer for. */
+function echoOfOwn(s: ChatState, text: string): boolean {
+  for (let i = s.messages.length - 1; i >= 0; i--) {
+    const m = s.messages[i];
+    if (m.role === "user") return !m.src && m.text === text && (s.busy || i === s.messages.length - 1);
+    if (m.role === "cyph" && !m.streaming) return false;
+  }
+  return false;
+}
+
+/** The same message twice in a row from the same moment is one message sent over two paths. */
+function dedupe(list: HistoryMessage[]): HistoryMessage[] {
+  return list.filter((m, i) => {
+    const p = list[i - 1];
+    return !(p && m.role === "user" && p.role === "user" && p.text === m.text && Math.abs((m.t ?? 0) - (p.t ?? 0)) < 5);
+  });
+}
+
 function fromHistory(s: ChatState, list: HistoryMessage[]): ChatState {
   if (s.busy || s.messages.some((m) => m.streaming)) return s;
   let id = s.nextId;
-  const messages: Message[] = list.map((m) => ({
+  const messages: Message[] = dedupe(list).map((m) => ({
     id: id++, role: m.role === "user" ? "user" : "cyph", text: m.text, src: m.src, t: m.t,
   }));
   const last = [...list].reverse().find((m) => m.role === "assistant");
@@ -78,6 +96,11 @@ function fromHistory(s: ChatState, list: HistoryMessage[]): ChatState {
 export function chatReducer(s: ChatState, a: Action): ChatState {
   if (a.kind === "history") return fromHistory(s, a.messages);
   if (a.kind === "relay") {
+    if (a.ev.type === "user") {
+      // our own turn echoed back (the events feed can arrive before it knows who we are): not a second message
+      const own = echoOfOwn(s, a.ev.text);
+      if (own) return s;
+    }
     if (a.ev.type === "user") return push(s, { role: "user", text: a.ev.text, src: a.device, imgs: a.ev.images || undefined });
     return { ...chatReducer(s, { kind: "server", msg: a.ev }), busy: s.busy };
   }

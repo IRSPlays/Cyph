@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { startChat, stopChat } from "../lib/chatStore";
+import { startChat, stopChat, watchLink } from "../lib/chatStore";
 import { ipc } from "../lib/ipc";
 import { useRoute } from "../lib/route";
-import { onUnpaired, startSync, stopSync } from "../lib/sync";
+import { onUnpaired, reconnectSync, startSync, stopSync, syncLooksDead } from "../lib/sync";
 import { useTalkKey } from "../lib/voiceStore";
 import { Arm } from "../pages/Arm";
 import { Calendar } from "../pages/Calendar";
@@ -30,7 +30,11 @@ export default function App() {
     onUnpaired.add(drop);
     void startSync();
     void startChat();
+    const unwatch = watchLink(async () => void (await reconnectSync()));
+    const syncTick = setInterval(() => syncLooksDead() && void reconnectSync(), 15_000);
     return () => {
+      unwatch();
+      clearInterval(syncTick);
       onUnpaired.delete(drop);
       void stopSync();
       void stopChat();

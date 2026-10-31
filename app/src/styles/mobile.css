@@ -24,11 +24,11 @@
 .m.t{font:10.5px 'DM Mono';color:var(--dim)}.m.t.bad{color:var(--co)}
 .m .up{display:block;max-width:100%;max-height:160px;border-radius:8px;margin-bottom:6px}
 .cy{flex:none;min-height:124px;display:flex;align-items:flex-end;justify-content:flex-end;gap:10px;padding:0 6px 0 14px;position:relative}
-.cy .m.now{flex:1;margin-bottom:28px;font:italic 20px/1.16 'Instrument Serif';color:var(--cr);background:#07100a;border:2px solid var(--ne);border-radius:12px;padding:8px 12px;
+.cy .m.now{flex:1;min-width:0;margin-bottom:28px;font:italic 20px/1.16 'Instrument Serif';color:var(--cr);background:#07100a;border:2px solid var(--ne);border-radius:12px;padding:8px 12px;
   box-shadow:0 0 18px rgba(93,255,122,.25);position:relative;max-height:42vh;overflow-x:hidden;overflow-y:auto}
 .cy .m.now:after{content:'';position:absolute;right:-9px;bottom:14px;border:6px solid transparent;border-left:9px solid var(--ne);border-right:0}
 .cy .m.now.quiet{visibility:hidden}
-.cyface{flex:none;line-height:0;margin-bottom:-4px}
+.cyface{flex:none;order:2;line-height:0;margin-bottom:-4px}
 .cyface canvas{image-rendering:pixelated;filter:drop-shadow(0 0 16px rgba(93,255,122,.25))}
 .mob .caret{display:inline-block;width:.45em;height:.8em;background:var(--ne);margin-left:3px;vertical-align:-.1em;animation:bl .8s steps(1) infinite}
 .mob .dots{display:inline-flex;gap:5px}.mob .dots i{width:7px;height:7px;border-radius:50%;background:var(--ne);animation:bl 1s steps(1) infinite}
