@@ -98,6 +98,10 @@ big face in the corner of the chat, and a plan that fits the screen without scro
 </tr>
 </table>
 
+- **Chat** keeps the original look: your messages are small mono bubbles on the right, his older replies are plain
+  italic serif lines in the log, and his newest reply sits in a green speech bubble next to his face (the first
+  picture above). The link to home is watched: if it goes quiet for a minute, or the phone wakes up or changes network,
+  the app reconnects by itself, and a message echoed back from the server never shows twice.
 - **Pairing**: paste the one-time link (or use the paste button). The link carries the server address, the certificate
   fingerprint to pin and a code that works once for 10 minutes.
 - **Plan** has Day, Month and Agenda views, a lane per kind of item, a day-notes sheet Cyph reads, and quick add.

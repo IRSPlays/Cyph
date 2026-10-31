@@ -88,3 +88,20 @@ describe("chatReducer", () => {
     expect(s.messages[0].pics).toEqual(["data:image/jpeg;base64,AA"]);
   });
 });
+
+describe("duplicate messages", () => {
+  it("ignores our own turn echoed back by the events feed", () => {
+    let s = chatReducer(initialChat, { kind: "user", text: "hi" });
+    s = chatReducer(s, { kind: "relay", device: "Phone", ev: { type: "user", text: "hi", images: 0 } });
+    expect(s.messages.filter((m) => m.role === "user")).toHaveLength(1);
+  });
+  it("still shows another device's identical message", () => {
+    let s = chatReducer(initialChat, { kind: "server", msg: { type: "final", text: "ok" } });
+    s = chatReducer(s, { kind: "relay", device: "PC", ev: { type: "user", text: "hi", images: 0 } });
+    expect(s.messages.filter((m) => m.role === "user")).toHaveLength(1);
+  });
+  it("collapses a doubled message in the server history", () => {
+    const h = [{ role: "user", text: "yo", t: 100 }, { role: "user", text: "yo", t: 101 }, { role: "assistant", text: "hey", t: 102 }] as never;
+    expect(chatReducer(initialChat, { kind: "history", messages: h }).messages).toHaveLength(2);
+  });
+});

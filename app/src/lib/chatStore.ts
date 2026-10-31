@@ -34,6 +34,10 @@ export function relay(device: string, ev: ChatRelay) {
 }
 
 let off: (() => void) | null = null;
+/** When the last frame (a reply, an event or a pong to our ping) came in: a socket that went quiet is dead. */
+let lastFrame = Date.now();
+/** The pings go out every 25 s and the server answers each one, so a minute of silence means the link is gone. */
+export const STALE_MS = 60_000;
 
 // start/stop are async (the listener is registered over IPC), so they are queued: a quick stop-then-start (React
 // StrictMode, or a fast remount) must not run start twice before the first listener is stored, which would
@@ -44,7 +48,9 @@ const enqueue = (job: () => Promise<void>) => (queue = queue.then(job, job));
 export const startChat = () =>
   enqueue(async () => {
     if (off) return;
+    lastFrame = Date.now();
     off = await ipc.onChat((msg) => {
+      lastFrame = Date.now();
       dispatch({ kind: "server", msg });
       onServerMessage.forEach((f) => f(msg));
       if (msg.type === "ready") void reloadHistory();
@@ -65,6 +71,33 @@ export const stopChat = () =>
     await ipc.chatDisconnect();
   });
 
+/** Drops the chat socket and opens a fresh one. For a link that died without telling anyone (phone slept, Wi-Fi to data). */
+export async function reconnectChat() {
+  dispatch({ kind: "server", msg: { type: "disconnected", reason: "stale" } });
+  await stopChat();
+  await startChat();
+}
+
+const linkLooksDead = () => state.connected && Date.now() - lastFrame > STALE_MS;
+
+/** Wakes the link when the app comes back to the front or the network returns. Returns the cleanup. */
+export function watchLink(extra?: () => Promise<void>): () => void {
+  const wake = () => {
+    if (document.visibilityState === "hidden") return;
+    if (!state.connected || linkLooksDead()) void reconnectChat().then(extra);
+  };
+  const tick = setInterval(() => linkLooksDead() && void reconnectChat().then(extra), 15_000);
+  document.addEventListener("visibilitychange", wake);
+  window.addEventListener("online", wake);
+  window.addEventListener("focus", wake);
+  return () => {
+    clearInterval(tick);
+    document.removeEventListener("visibilitychange", wake);
+    window.removeEventListener("online", wake);
+    window.removeEventListener("focus", wake);
+  };
+}
+
 const fail = (message: string) => {
   const msg: ClientEvent = { type: "error", message };
   dispatch({ kind: "server", msg });
@@ -72,11 +105,16 @@ const fail = (message: string) => {
 };
 
 /** Sends a message. Returns false when it was not sent (offline, or he is still answering), so callers keep the text. */
+let lastSent = { text: "", at: 0 };
+
 export async function say(text: string, pics: Pic[] = []): Promise<boolean> {
   const t = text.trim() || (pics.length ? "What do you make of this?" : "");
   if (!t) return false;
+  if (linkLooksDead()) await reconnectChat().then(() => new Promise((r) => setTimeout(r, 1200)));
   if (!state.connected) return fail("Cyph is offline. Nothing was sent."), false;
   if (state.busy) return fail("Cyph is still answering the last thing."), false;
+  if (t === lastSent.text && Date.now() - lastSent.at < 2000) return false; // a double tap is one message
+  lastSent = { text: t, at: Date.now() };
   dispatch({ kind: "user", text: t, pics: pics.map((p) => p.url) });
   try {
     await ipc.chatSay(t, pics);

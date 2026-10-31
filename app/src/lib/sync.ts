@@ -26,7 +26,10 @@ export const useSync = () => useSyncExternalStore(subscribe, () => state);
 export const onChanged = new Set<(what: string) => void>();
 export const onUnpaired = new Set<() => void>();
 
+let lastFrame = Date.now();
+
 export function handleSync(e: SyncEvent) {
+  lastFrame = Date.now();
   switch (e.type) {
     case "ready":
       set({ connected: true, deviceId: e.id });
@@ -62,6 +65,14 @@ export function handleSync(e: SyncEvent) {
 let off: (() => void) | null = null;
 let queue: Promise<void> = Promise.resolve();
 const enqueue = (job: () => Promise<void>) => (queue = queue.then(job, job));
+
+/** True when the change feed has been silent for over a minute although it claims to be connected. */
+export const syncLooksDead = () => state.connected && Date.now() - lastFrame > 60_000;
+
+export async function reconnectSync() {
+  await stopSync();
+  await startSync();
+}
 
 export const startSync = () =>
   enqueue(async () => {
