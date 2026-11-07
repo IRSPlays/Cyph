@@ -41,3 +41,10 @@ describe("plain", () => {
     expect(plain("Mass of $\\ce{H2O}$ is $18\\text{ g}$")).toBe("Mass of H2O is 18 g");
   });
 });
+
+describe("money is not maths", () => {
+  it("leaves dollar prices alone but still renders maths", () => {
+    expect(renderRich("It costs $5 and $10 today")).toContain("$5 and $10");
+    expect(renderRich("Solve $2x+1=5$")).toContain("katex");
+  });
+});

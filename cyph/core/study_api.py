@@ -65,10 +65,11 @@ class ReviewIn(BaseModel):
 
 
 class TutorIn(BaseModel):
-    question: str
+    question: str = ""
     subject: Optional[str] = None
     step: int = 0
     history: str = ""
+    images: list[dict] = []
 
 
 class PracticeIn(BaseModel):
@@ -210,10 +211,7 @@ def add_study_routes(app, d, auth, changed):
 
     @app.post("/study/sources/{rid}/retry")
     def source_retry(rid: str, dev: dict = Depends(auth)):
-        guard(lambda: svc().store.source(rid))
-        svc().store.run("UPDATE sources SET status='processing', error='' WHERE id=?", (rid,))
-        guard(lambda: svc().process(rid))
-        return svc().store.source(rid)
+        return guard(lambda: svc().retry(rid))
 
     @app.delete("/study/sources/{rid}")
     def source_del(rid: str, dev: dict = Depends(auth)):
@@ -345,7 +343,7 @@ def add_study_routes(app, d, auth, changed):
     # ---- tutor, practice, papers ----------------------------------------------------------------------
     @app.post("/study/tutor")
     def tutor(body: TutorIn, dev: dict = Depends(auth)):
-        return guard(lambda: svc().tutor(body.question, body.subject, body.step, body.history))
+        return guard(lambda: svc().tutor(body.question, body.subject, body.step, body.history, pics(body.images)))
 
     @app.post("/study/practice")
     def practice(body: PracticeIn, dev: dict = Depends(auth)):

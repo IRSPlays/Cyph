@@ -13,6 +13,7 @@ import re
 import secrets
 import sqlite3
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -139,6 +140,7 @@ CREATE TABLE IF NOT EXISTS cards(id TEXT PRIMARY KEY, subject_id TEXT, topic_id 
   reps INTEGER DEFAULT 0, lapses INTEGER DEFAULT 0, created TEXT);
 CREATE TABLE IF NOT EXISTS reviews(id INTEGER PRIMARY KEY AUTOINCREMENT, card_id TEXT, grade INTEGER, at TEXT,
   interval INTEGER);
+CREATE TABLE IF NOT EXISTS practice(id TEXT PRIMARY KEY, body TEXT, created TEXT);
 CREATE TABLE IF NOT EXISTS attempts(id TEXT PRIMARY KEY, subject_id TEXT, topic_id TEXT, kind TEXT, prompt TEXT,
   answer TEXT, score REAL, max REAL, feedback TEXT, scheme TEXT, at TEXT);
 CREATE TABLE IF NOT EXISTS tests(id TEXT PRIMARY KEY, subject_id TEXT, title TEXT, date TEXT, plan_event_id TEXT,
@@ -193,6 +195,18 @@ class StudyStore:
             cur = self.db.execute(sql, args)
             self.db.commit()
             return cur
+
+    # -- practice questions waiting for an answer (kept on disk so a restart does not expire them)
+    def put_practice(self, item: dict):
+        self.run("INSERT OR REPLACE INTO practice VALUES(?,?,?)", (item["id"], json.dumps(item), now_iso()))
+        self.run("DELETE FROM practice WHERE id NOT IN (SELECT id FROM practice ORDER BY created DESC, rowid DESC LIMIT 200)")
+
+    def get_practice(self, pid: str):
+        row = self.one("SELECT body FROM practice WHERE id=?", (pid,))
+        return json.loads(row["body"]) if row else None
+
+    def drop_practice(self, pid: str):
+        self.run("DELETE FROM practice WHERE id=?", (pid,))
 
     # -- subjects
     def subjects(self):
@@ -719,7 +733,8 @@ class StudyService:
         self.store, self.ai, self.planner = store, ai, planner
         self.changed = changed or (lambda what: None)
         self.background = background
-        self.practice_items: dict[str, dict] = {}
+        self._active: set[str] = set()                  # sources being read right now: one read at a time per source
+        self._pool = ThreadPoolExecutor(max_workers=2)  # at most two model reads at once, the rest wait
 
     # -- import
     def import_source(self, subject_ref, title, mime, data: bytes | None = None, text: str = ""):
@@ -735,13 +750,37 @@ class StudyService:
         fid = self.store.put_file(title or "upload", mime, data)
         kind = "pdf" if mime == "application/pdf" else "text" if mime == "text/plain" else "photo"
         src = self.store.add_source(subj["id"], title or "Untitled source", kind, fid)
-        if self.background:
-            threading.Thread(target=self.process, args=(src["id"],), daemon=True).start()
-        else:
-            self.process(src["id"])
+        self._start(src["id"])
         return self.store.source(src["id"])
 
+    def _start(self, sid: str):
+        if self.background:
+            self._pool.submit(self.process, sid)
+        else:
+            self.process(sid)
+
+    def retry(self, sid: str):
+        """Read a failed (or finished) source again. A source already being read is left alone."""
+        self.store.source(sid)
+        with self.store.lock:
+            if sid in self._active:
+                raise StudyError("that one is still being read", 409)
+            self.store.run("UPDATE sources SET status='processing', error='' WHERE id=?", (sid,))
+        self.changed("study")
+        self._start(sid)
+        return self.store.source(sid)
+
     def process(self, sid: str):
+        with self.store.lock:
+            if sid in self._active:
+                return None
+            self._active.add(sid)
+        try:
+            return self._process(sid)
+        finally:
+            self._active.discard(sid)
+
+    def _process(self, sid: str):
         st = self.store
         src = st.source(sid)
         try:
@@ -851,11 +890,13 @@ class StudyService:
         return out
 
     # -- tutoring: the hint ladder
-    def tutor(self, question, subject_ref=None, step=0, history=""):
+    def tutor(self, question, subject_ref=None, step=0, history="", images=()):
         step = max(0, min(int(step), len(HINT_STEPS) - 1))
         question = str(question or "").strip()
-        if not question:
+        if not question and not images:
             raise StudyError("ask a question")
+        if not question:
+            question = "(the question is in the attached photo: read it first)"
         subj = self.store.subject(subject_ref)
         cites = self.search(question, subject_ref, 3) if self.store.q("SELECT 1 FROM chunks LIMIT 1") else []
         ctx = "\n\n".join(f"[{i + 1}] {c['title']}: {c['text']}" for i, c in enumerate(cites))
@@ -865,7 +906,7 @@ class StudyService:
                  "solution": "Give the full worked solution, step by step, and name the topic."}[HINT_STEPS[step]]
         prompt = (f"Question from the student: {question}\n" + (f"Earlier hints:\n{history}\n" if history else "") +
                   (f"His own notes (cite as [n] when used):\n{ctx}\n" if ctx else "") + f"\nStage: {stage}\nKeep it under 120 words unless it is the solution.")
-        reply = self.ai.generate(SYSTEM + (f" Subject: {subj['name']}." if subj else ""), prompt)
+        reply = self.ai.generate(SYSTEM + (f" Subject: {subj['name']}." if subj else ""), prompt, list(images))
         return {"step": step, "stage": HINT_STEPS[step], "text": reply, "last": step == len(HINT_STEPS) - 1,
                 "cites": [{"n": i + 1, "note_id": c["note_id"], "title": c["title"]} for i, c in enumerate(cites)]}
 
@@ -896,13 +937,11 @@ class StudyService:
         item = {"id": pid, "subject_id": subj["id"], "kind": kind, "question": str(got["question"]),
                 "marks": max(1, min(100, _int(got.get("marks"), 4))), "scheme": str(got.get("scheme") or ""),
                 "topic": str(got.get("topic") or topic or "General")}
-        self.practice_items[pid] = item
-        if len(self.practice_items) > 200:
-            self.practice_items.pop(next(iter(self.practice_items)))
+        self.store.put_practice(item)
         return {k: v for k, v in item.items() if k != "scheme"}
 
     def mark(self, pid, answer, images=(), scheme_override=""):
-        item = self.practice_items.get(pid)
+        item = self.store.get_practice(pid)
         if not item:
             raise StudyError("that question has expired; ask for a new one", 404)
         answer = str(answer or "").strip()
@@ -917,7 +956,7 @@ class StudyService:
         score = max(0.0, min(float(got["score"]), float(item["marks"])))
         att = self.store.add_attempt(item["subject_id"], item["topic"], item["kind"], item["question"], answer,
                                      score, item["marks"], str(got.get("feedback") or ""), scheme)
-        self.practice_items.pop(pid, None)
+        self.store.drop_practice(pid)
         self.changed("study")
         return {"attempt": att, "score": score, "marks": item["marks"], "feedback": att["feedback"], "next": str(got.get("next") or "")}
 
@@ -927,9 +966,9 @@ class StudyService:
         if not subj:
             raise StudyError("pick a subject")
         pid = new_id("q")
-        self.practice_items[pid] = {"id": pid, "subject_id": subj["id"], "kind": "paper", "question": str(question)[:4000],
+        self.store.put_practice({"id": pid, "subject_id": subj["id"], "kind": "paper", "question": str(question)[:4000],
                                     "marks": max(1, int(marks)), "scheme": str(scheme or "Use the usual O-Level scheme for this question."),
-                                    "topic": topic or "General"}
+                                    "topic": topic or "General"})
         return self.mark(pid, answer, images)
 
     # -- tests and revision blocks

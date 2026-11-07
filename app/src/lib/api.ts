@@ -81,7 +81,7 @@ export const api = {
   studyDue: (subject?: string, limit = 30) => ipc.api<{ cards: StudyCard[] }>("GET", `/study/due?${q({ ...(subject ? { subject } : {}), limit })}`),
   studyReview: (id: string, grade: 0 | 1 | 2) => ipc.api<StudyCard>("POST", `/study/cards/${id}/review`, { grade }),
   studyStats: (subject?: string) => ipc.api<StudyStats>("GET", `/study/stats${subject ? "?" + q({ subject }) : ""}`),
-  studyTutor: (question: string, subject: string | undefined, step: number, history = "") => ipc.api<StudyHint>("POST", "/study/tutor", { question, subject, step, history }),
+  studyTutor: (question: string, subject: string | undefined, step: number, history = "", images: { mime: string; data: string }[] = []) => ipc.api<StudyHint>("POST", "/study/tutor", { question, subject, step, history, images }),
   studyPractice: (subject: string, kind: string, topic?: string) => ipc.api<StudyQuestion>("POST", "/study/practice", { subject, kind, topic }),
   studyAnswer: (id: string, answer: string, images: { mime: string; data: string }[] = []) => ipc.api<StudyMarked>("POST", `/study/practice/${id}/answer`, { answer, images }),
   studyMarkPaper: (b: { subject: string; question: string; answer: string; scheme: string; marks: number; topic?: string; images?: { mime: string; data: string }[] }) => ipc.api<{ score: number; marks: number; feedback: string; next: string }>("POST", "/study/papers/mark", b),

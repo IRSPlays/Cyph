@@ -20,10 +20,10 @@ const readAsDataUrl = (f: Blob) =>
   });
 
 /** A picked or pasted image, shrunk and re-encoded as JPEG (transparent areas become white). */
-export async function toPic(file: Blob): Promise<Pic> {
+export async function toPic(file: Blob, side = SIDE, quality = 0.85): Promise<Pic> {
   if (!file.type.startsWith("image/")) throw new Error("That is not a picture.");
   const im = await load(await readAsDataUrl(file));
-  const k = Math.min(1, SIDE / Math.max(im.naturalWidth, im.naturalHeight));
+  const k = Math.min(1, side / Math.max(im.naturalWidth, im.naturalHeight));
   const c = document.createElement("canvas");
   c.width = Math.max(1, Math.round(im.naturalWidth * k));
   c.height = Math.max(1, Math.round(im.naturalHeight * k));
@@ -32,6 +32,6 @@ export async function toPic(file: Blob): Promise<Pic> {
   g.fillStyle = "#fff";
   g.fillRect(0, 0, c.width, c.height);
   g.drawImage(im, 0, 0, c.width, c.height);
-  const url = c.toDataURL("image/jpeg", 0.85);
+  const url = c.toDataURL("image/jpeg", quality);
   return { mime: "image/jpeg", data: url.slice(url.indexOf(",") + 1), url };
 }

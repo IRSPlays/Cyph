@@ -50,7 +50,7 @@
 .pg-study .rd{flex:1;min-height:0;overflow:auto;padding:4px 6px 20px 2px}
 .pg-study .rd h2{font:italic 34px/1 'Instrument Serif';color:var(--cr);margin:2px 0 4px}
 .pg-study .rd h3{font:700 11px 'Pixelify Sans';letter-spacing:.22em;color:var(--am);margin:18px 0 6px}
-.pg-study .rd p,.pg-study .rd li{font:italic 22px/1.3 'Instrument Serif';color:#d6d09a}
+.pg-study .rd p,.pg-study .rd li{font:15px/1.65 'DM Mono';color:#d9d6c0}
 .pg-study .rd ul{margin:4px 0 0 20px}
 .pg-study .rd .meta{font:11px 'DM Mono';color:var(--dim)}
 .pg-study .math{display:inline-flex;align-items:center;gap:6px;font:italic 20px 'Instrument Serif';color:#fff3b8;background:#0f1b13;border-radius:6px;padding:1px 9px;box-shadow:inset 0 0 0 1px #20382a;vertical-align:middle}
@@ -140,7 +140,7 @@
 .pg-study .rd{flex:1;min-height:0;overflow:auto;padding:4px 6px 20px 2px}
 .pg-study .rd h2{font:italic 34px/1 'Instrument Serif';color:var(--cr);margin:2px 0 8px}
 .pg-study .rd h3{font:700 11px 'Pixelify Sans';letter-spacing:.22em;color:var(--am);margin:20px 0 6px}
-.pg-study .rd p{font:italic 22px/1.3 'Instrument Serif';color:#d6d09a;margin:0 0 6px}
+.pg-study .rd p{font:15px/1.65 'DM Mono';color:#d9d6c0;margin:0 0 8px}
 .pg-study .eq{display:flex;justify-content:center;font:italic 27px 'Instrument Serif';color:#fff3b8;background:#0f1b13;border-radius:9px;padding:10px;margin:8px 0;box-shadow:inset 0 0 0 1px #20382a}
 .pg-study .eq sub,.pg-study .eq sup{font-size:.62em}
 .pg-study .ph2{display:flex;gap:6px;margin-bottom:10px}
@@ -211,3 +211,15 @@
   .pg-study .fl,.pg-study .subj{min-height:44px}
   .pg-study .cmdrow input{min-height:36px}
 }
+
+.pg-study .cmdrow textarea{flex:1;background:none;border:0;outline:0;color:var(--tx);font:14px/1.4 'DM Mono';resize:none;max-height:120px;field-sizing:content}
+.pg-study .turn{display:flex;flex-direction:column;gap:10px}
+.pg-study .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.pg-study .thumbs img{height:64px;border-radius:6px}
+.pg-study .thumbs .th{position:relative}
+.pg-study .thumbs .th button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:#05080a;color:var(--tx);cursor:pointer}
+.pg-study .err{color:var(--co);font:12.5px/1.4 'DM Mono';display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+.pg-study .startbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;padding:12px 16px;border-radius:12px;background:#0b1015;box-shadow:inset 0 0 0 1px var(--ln)}
+.pg-study .startbar b{font:700 30px 'Pixelify Sans';color:var(--ne);margin-right:10px}
+.pg-study .startbar span{font:12px 'DM Mono';color:var(--dim)}

@@ -25,6 +25,7 @@ function inline(s: string): string {
 /** Pulls maths out first (so `*` and `_` inside it are safe), formats the rest, then puts the rendered maths back. */
 function line(s: string, hold: string[]): string {
   const withHolds = s.replace(/\$\$([^$]+)\$\$|\$([^$\n]+)\$/g, (_m, d, i) => {
+    if (i !== undefined && (/^\s|\s$/.test(i) || /^\d[\d,.]*\s/.test(i))) return _m;      // "$5 and $10" is money, not maths
     hold.push(d !== undefined ? tex(d.trim(), true) : tex(i.trim(), false));
     return `\u0000${hold.length - 1}\u0000`;
   });

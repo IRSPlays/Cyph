@@ -1,47 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "../lib/api";
 import { studyAttempts, studyToday, studyTopics } from "../lib/resources";
 import { useResource } from "../lib/store";
 import { toast } from "../lib/toast";
-import type { StudySource, StudyToday } from "../lib/types";
+import type { StudySource } from "../lib/types";
 import { Shell } from "../ui/Shell";
 import { Boards } from "../ui/StudyBoard";
 import { Notebooks } from "../ui/StudyInk";
-import { CardList, errText, ImportBox, NoteEditor, NoteList, NewNote, PaperBox, PracticeBox, ReviewDeck, SearchBox, SourceList, SourceView, TutorBox } from "../ui/StudyParts";
+import { CardList, errText, pluralCards, TestForm, ImportBox, NoteEditor, NoteList, NewNote, PaperBox, PracticeBox, ReviewDeck, SearchBox, SourceList, SourceView, TutorBox } from "../ui/StudyParts";
 import "katex/dist/katex.min.css";
 import "../styles/study.css";
 
 type Tab = "today" | "notes" | "tutor" | "cards" | "papers" | "pen" | "boards";
 const TABS: [Tab, string][] = [["today", "TODAY"], ["notes", "NOTES"], ["tutor", "TUTOR"], ["cards", "CARDS"], ["papers", "PRACTICE"], ["pen", "NOTEBOOKS"], ["boards", "BOARDS"]];
 const daysTo = (d: string) => Math.round((new Date(d + "T00:00:00").getTime() - new Date(new Date().toDateString()).getTime()) / 86400000);
-
-function TestForm({ today, subjectId }: { today: StudyToday; subjectId?: string }) {
-  const [open, setOpen] = useState(false);
-  const [subject, setSubject] = useState(today.subjects.find((s) => s.id === subjectId)?.name ?? today.subjects[0]?.name ?? "");
-  useEffect(() => { const n = today.subjects.find((s) => s.id === subjectId)?.name; if (n) setSubject(n); }, [subjectId, today.subjects]);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [topics, setTopics] = useState("");
-  const res = useResource(studyToday());
-  const add = async () => {
-    try {
-      const r = await api.studyAddTest({ subject, title, date, topics: topics.split(",").map((t) => t.trim()).filter(Boolean) });
-      toast(`Test added with ${r.blocks.length} revision blocks in your plan.`);
-      setOpen(false); setTitle(""); setDate(""); setTopics("");
-      void res.refresh();
-    } catch (e) { toast(errText(e)); }
-  };
-  if (!open) return <button className="btn sm am" onClick={() => setOpen(true)}>+ TEST</button>;
-  return (
-    <div className="cd">
-      <select className="f" value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="subject">{today.subjects.map((s) => <option key={s.id}>{s.name}</option>)}</select>
-      <input className="f" placeholder="Title (Ch 5 test)" value={title} onChange={(e) => setTitle(e.target.value)} style={{ marginTop: 6 }} />
-      <input className="f" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="date" style={{ marginTop: 6 }} />
-      <input className="f" placeholder="Topics, comma separated (blank: Cyph picks)" value={topics} onChange={(e) => setTopics(e.target.value)} style={{ marginTop: 6 }} />
-      <div className="row"><button className="btn sm go" disabled={!title.trim() || !date} onClick={() => void add()}>ADD + PLAN REVISION</button><button className="btn sm" onClick={() => setOpen(false)}>CANCEL</button></div>
-    </div>
-  );
-}
 
 export function Study() {
   const today = useResource(studyToday());
@@ -69,12 +41,18 @@ export function Study() {
       case "today":
         return (
           <div className="scroll" style={{ flex: 1 }}>
+            {st && (
+              <div className="startbar">
+                <div><b>{st.due}</b><span>{st.due === 1 ? "card due" : "cards due"}{st.streak > 0 ? ` · ${st.streak} day streak` : ""}</span></div>
+                <button className="btn go" disabled={!st.due} onClick={() => { setSubj(undefined); setCardsTab("review"); setTab("cards"); }}>{st.due ? "START REVIEW" : "ALL CAUGHT UP"}</button>
+              </div>
+            )}
             <div className="grid7">
               {subjects.map((s) => (
                 <div key={s.id} className="tile" style={{ "--c": s.color } as React.CSSProperties} role="button" tabIndex={0}
                   onClick={() => { setSubj(s.id); setTab(s.due ? "cards" : "notes"); setCardsTab("review"); }} onKeyDown={(e) => e.key === "Enter" && setSubj(s.id)}>
                   <div className="top"><div className="ic">{s.name[0]}</div><h5>{s.name}</h5></div>
-                  <p>{s.due} due · {s.approved} cards</p>
+                  <p>{s.due} due · {pluralCards(s.approved)}</p>
                   <div className="edge"><i style={{ "--w": s.approved ? `${Math.max(4, 100 - (s.due / s.approved) * 100)}%` : "0%" } as React.CSSProperties} /></div>
                   {s.drafts > 0 && <div className="chips"><span className="chip am">{s.drafts} drafts</span></div>}
                 </div>

@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { COLORS } from "../lib/ink";
 import { studyBoards } from "../lib/resources";
 import { useResource } from "../lib/store";
+import { toPic } from "../lib/pics";
 import { toast } from "../lib/toast";
 import type { BoardItem, StudyBoard } from "../lib/types";
 
@@ -29,7 +30,7 @@ export function Boards({ subject }: { subject?: string }) {
   const load = () => id ? api.studyBoard(id).then(setBoard).catch(() => setBoard(null)) : setBoard(null);
   useEffect(() => { void load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   // another device changed the board
-  useEffect(() => { if (id) void load(); }, [list.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (id && !drag.current && !live.current) void load(); }, [list.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const items = board?.items ?? [];
   const put = async (it: Partial<BoardItem> & { kind: BoardItem["kind"] }) => {
@@ -94,18 +95,31 @@ export function Boards({ subject }: { subject?: string }) {
     const it = d && board?.items.find((i) => i.id === d.id);
     if (it) void put(it);
   };
+  const pan = useRef<{ x: number; y: number; l: number; t: number } | null>(null);
   const drawDown = (e: React.PointerEvent) => {
     if (mode !== "draw") return setSel(null);
+    if (e.pointerType === "touch") {                    // a finger moves the sheet; only the pen or mouse draws
+      const sc = sheet.current?.parentElement;
+      if (sc) pan.current = { x: e.clientX, y: e.clientY, l: sc.scrollLeft, t: sc.scrollTop };
+      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      return;
+    }
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     live.current = [pos(e)];
     setLiveD([...live.current]);
   };
   const drawMove = (e: React.PointerEvent) => {
+    if (pan.current) {
+      const sc = sheet.current?.parentElement;
+      if (sc) { sc.scrollLeft = pan.current.l - (e.clientX - pan.current.x); sc.scrollTop = pan.current.t - (e.clientY - pan.current.y); }
+      return;
+    }
     if (mode !== "draw" || !live.current) return;
     live.current.push(pos(e));
     setLiveD([...live.current]);
   };
   const drawUp = () => {
+    if (pan.current) { pan.current = null; return; }
     const pts = live.current;
     live.current = null;
     setLiveD(null);
@@ -113,9 +127,18 @@ export function Boards({ subject }: { subject?: string }) {
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
     void put({ kind: "stroke", x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), data: { pts, color, width: 3 } });
   };
-  const pic = (file: File | undefined, kind: "image" | "pdf_page") => {
+  const pic = async (file: File | undefined, kind: "image" | "pdf_page") => {
     if (!file) return;
-    if (file.size > 250_000) return toast("Pictures on a board must be under 250 KB. Crop or shrink it first.");
+    if (file.type.startsWith("image/")) {                // shrink instead of refusing: a phone photo is several MB
+      try {
+        for (const [side, q] of [[1100, 0.75], [800, 0.65], [600, 0.55]] as const) {
+          const p = await toPic(file, side, q);
+          if (p.url.length < 330_000) return void add(kind, { src: p.url, name: file.name });
+        }
+        return toast("That picture is too detailed for a board. Crop it first.");
+      } catch (e) { return toast((e as Error).message); }
+    }
+    if (file.size > 250_000) return toast("Files on a board must be under 250 KB.");
     const r = new FileReader();
     r.onload = () => add(kind, { src: String(r.result), name: file.name });
     r.readAsDataURL(file);
@@ -140,7 +163,7 @@ export function Boards({ subject }: { subject?: string }) {
             <button className="btn sm" onClick={() => add("shape", { text: "", round: false, color })}>BOX</button>
             <button className="btn sm" onClick={() => add("shape", { text: "", round: true, color })}>OVAL</button>
             <button className="btn sm" onClick={() => { const t = prompt("Link to which note or card? Type its title.")?.trim(); if (t) add("link", { text: t }); }}>LINK</button>
-            <label className="btn sm">PICTURE<input type="file" accept="image/*" hidden onChange={(e) => pic(e.target.files?.[0], "image")} /></label>
+            <label className="btn sm">PICTURE<input type="file" accept="image/*" hidden onChange={(e) => void pic(e.target.files?.[0], "image")} /></label>
             {COLORS.map((c) => <button key={c} className={"dot" + (c === color ? " on" : "")} style={{ background: c }} aria-label={"colour " + c} onClick={() => setColor(c)} />)}
             {sel && <button className="btn sm red" onClick={() => void remove()}>DELETE</button>}
             {from && <span className="mini">now tap the second item</span>}

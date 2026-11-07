@@ -11,8 +11,9 @@ import { toast, useToast } from "../lib/toast";
 import type { Pic } from "../lib/types";
 import { CyphCanvas } from "./CyphCanvas";
 import { MobilePlan } from "./MobilePlan";
-import { CardList, ImportBox, NewNote, NoteEditor, NoteList, PaperBox, PracticeBox, ReviewDeck, SearchBox, SourceList, SourceView, TutorBox } from "./StudyParts";
+import { CardList, ImportBox, NewNote, NoteEditor, NoteList, PaperBox, PracticeBox, ReviewDeck, SearchBox, SourceList, SourceView, TestForm, TutorBox } from "./StudyParts";
 import { Notebooks } from "./StudyInk";
+import { Boards } from "./StudyBoard";
 import { studyToday } from "../lib/resources";
 import { useResource } from "../lib/store";
 import type { StudySource } from "../lib/types";
@@ -206,8 +207,8 @@ function Chat() {
 }
 
 /** The Study page is not built on the desktop either; this says so instead of faking a quiz. */
-type StudyTab = "today" | "review" | "tutor" | "notes" | "practice" | "add" | "cards" | "pen";
-const STABS: [StudyTab, string][] = [["today", "TODAY"], ["review", "REVIEW"], ["tutor", "TUTOR"], ["notes", "NOTES"], ["practice", "PRACTICE"], ["add", "ADD"], ["cards", "CARDS"], ["pen", "PEN"]];
+type StudyTab = "today" | "review" | "tutor" | "notes" | "practice" | "add" | "cards" | "pen" | "boards";
+const STABS: [StudyTab, string][] = [["today", "TODAY"], ["review", "REVIEW"], ["tutor", "TUTOR"], ["notes", "NOTES"], ["practice", "PRACTICE"], ["add", "ADD"], ["cards", "CARDS"], ["pen", "PEN"], ["boards", "BOARDS"]];
 
 function MNotes({ subj, subjects }: { subj?: string; subjects: { id: string; name: string }[] }) {
   const [id, setId] = useState<string | undefined>(undefined);
@@ -231,6 +232,7 @@ function Study() {
   const subjects = today.data?.subjects ?? [];
   const cur = subjects.find((s) => s.id === subj);
   const st = today.data?.stats;
+  const [cardsTab, setCardsTab] = useState<"draft" | "all">("draft");
   return (
     <div className="mpage pg-study mstudy">
       <div className="tabs" style={{ overflowX: "auto", flex: "none" }}>
@@ -253,7 +255,11 @@ function Study() {
               <div className="ic" style={{ background: s.color }}>{s.name[0]}</div><h5>{s.name}</h5><span className="n">{s.due || ""}</span>
             </div>
           ))}
-          {(today.data?.tests ?? []).slice(0, 3).map((t) => <div className="mcard" key={t.id}><div className="lbl">TEST · {t.date}</div><p>{t.title}</p></div>)}
+          {(today.data?.tests ?? []).slice(0, 5).map((t) => {
+            const sj = subjects.find((x) => x.id === t.subject_id);
+            return <div className="mcard" key={t.id}><div className="lbl">TEST · {t.date}</div><p>{t.title}{sj ? ` · ${sj.name}` : ""}{t.topics.length ? ` · ${t.topics.slice(0, 2).join(", ")}` : ""}</p></div>;
+          })}
+          {today.data && <TestForm today={today.data} subjectId={subj} />}
           {(today.data?.weak ?? []).length > 0 && <div className="mcard"><div className="lbl">WEAK</div>{today.data!.weak.slice(0, 3).map((w) => <div key={w.id} className="weak"><span>{w.name}</span><i>{Math.round(w.weakness * 100)}%</i></div>)}</div>}
         </>
       )}
@@ -275,8 +281,17 @@ function Study() {
           <SourceList subject={subj} cur={source?.id} onOpen={setSource} />
         </div>
       )}
-      {tab === "cards" && <div className="mcard"><CardList subject={subj} state="draft" /></div>}
+      {tab === "cards" && (
+        <div className="mcard">
+          <div className="tabs" style={{ marginBottom: 10 }}>
+            <button className={cardsTab === "draft" ? "on" : ""} onClick={() => setCardsTab("draft")}>DRAFTS{st?.drafts ? ` ${st.drafts}` : ""}</button>
+            <button className={cardsTab === "all" ? "on" : ""} onClick={() => setCardsTab("all")}>ALL</button>
+          </div>
+          <CardList subject={subj} state={cardsTab} />
+        </div>
+      )}
       {tab === "pen" && <div className="mcard"><Notebooks subject={subj} /></div>}
+      {tab === "boards" && <div className="mcard"><Boards subject={subj} /></div>}
     </div>
   );
 }

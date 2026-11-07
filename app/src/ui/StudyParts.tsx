@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { say } from "../lib/chatStore";
-import { toPic } from "../lib/pics";
-import { studyCards, studyDue, studyNotes, studySources, studyTopics } from "../lib/resources";
+import { MAX_PICS, toPic } from "../lib/pics";
+import { studyCards, studyDue, studyNotes, studySources, studyToday, studyTopics } from "../lib/resources";
 import { useResource } from "../lib/store";
 import { toast } from "../lib/toast";
-import type { StudyCard, StudyHint, StudyMarked, StudyNote, StudyOutputs, StudyQuestion, StudySource } from "../lib/types";
+import type { Pic, StudyToday, StudyCard, StudyHint, StudyMarked, StudyNote, StudyOutputs, StudyQuestion, StudySource } from "../lib/types";
 import { Rich } from "./Rich";
 
 export const errText = (e: unknown) => (e as { detail?: string })?.detail ?? "That did not work";
 const b64 = (f: Blob) => new Promise<string>((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = () => no(new Error("Could not read that file.")); r.readAsDataURL(f); });
+
+/** A failed load must not look like an empty list. */
+export function Failed({ res }: { res: { error: string; data: unknown; refresh: () => Promise<void> } }) {
+  if (!res.error || res.data) return null;
+  return <div className="err">Could not load: {res.error} <button className="btn sm" onClick={() => void res.refresh()}>TRY AGAIN</button></div>;
+}
+const pluralCards = (n: number) => `${n} card${n === 1 ? "" : "s"}`;
+export { pluralCards };
 
 /* ---------------------------------------------------------------- review */
 export function ReviewDeck({ subject, compact = false }: { subject?: string; compact?: boolean }) {
@@ -39,6 +46,7 @@ export function ReviewDeck({ subject, compact = false }: { subject?: string; com
     return () => removeEventListener("keydown", key);
   }, [flip, grade]);
   if (!due.ready) return <div className="empty">…</div>;
+  if (due.error && !due.data) return <Failed res={due} />;
   if (!card) return <div className="empty">{done ? `Done. ${done} reviewed.` : "Nothing is due. Nice."} Cyph will tell you when the next ones are.</div>;
   return (
     <div>
@@ -72,6 +80,7 @@ export function CardList({ subject, state }: { subject?: string; state: "draft" 
   const act = async (fn: () => Promise<unknown>) => { try { await fn(); await res.refresh(); } catch (e) { toast(errText(e)); } };
   const start = (c: StudyCard) => { setEditing(c.id); setFront(c.front); setBack(c.back); };
   if (!res.ready) return <div className="empty">…</div>;
+  if (res.error && !res.data) return <Failed res={res} />;
   return (
     <div>
       {state === "draft" && cards.length > 1 && <div className="web"><button className="btn go sm" onClick={() => void act(async () => { for (const c of cards) await api.studyApprove(c.id); toast(`${cards.length} cards approved`); })}>APPROVE ALL {cards.length}</button></div>}
@@ -111,6 +120,15 @@ export function CardList({ subject, state }: { subject?: string; state: "draft" 
 const OUTS: [keyof StudyOutputs, string][] = [["clean_notes", "NOTES"], ["summary", "SUMMARY"], ["key_terms", "KEY TERMS"], ["study_guide", "STUDY GUIDE"], ["likely_questions", "QUESTIONS"]];
 const STEPS = ["uploaded", "reading", "notes ready"];
 
+/** First line of the pasted text, cut at a word, or a plain label. */
+export function pasteTitle(t: string) {
+  const line = t.trim().split("\n")[0].trim();
+  if (!line) return "Pasted text";
+  if (line.length <= 40) return line;
+  const cut = line.slice(0, 40);
+  return (cut.includes(" ") ? cut.slice(0, cut.lastIndexOf(" ")) : cut) + "…";
+}
+
 export function ImportBox({ subject, subjects, onOpen }: { subject?: string; subjects: { id: string; name: string }[]; onOpen?: (s: StudySource) => void }) {
   const file = useRef<HTMLInputElement>(null);
   const cam = useRef<HTMLInputElement>(null);
@@ -134,11 +152,11 @@ export function ImportBox({ subject, subjects, onOpen }: { subject?: string; sub
   const paste = async () => {
     if (!text.trim() || !target) return;
     setBusy(true);
-    try { const s = await api.studyImport({ subject: target, title: text.trim().slice(0, 40), mime: "text/plain", text }); setText(""); onOpen?.(s); } catch (e) { toast(errText(e)); } finally { setBusy(false); }
+    try { const s = await api.studyImport({ subject: target, title: pasteTitle(text), mime: "text/plain", text }); setText(""); onOpen?.(s); } catch (e) { toast(errText(e)); } finally { setBusy(false); }
   };
   return (
     <div>
-      {!subject && <select className="f" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="subject for the upload" style={{ marginBottom: 8 }}>{subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}
+      {!subject && <label className="lbl" style={{ display: "block", marginBottom: 4 }}>ADD TO<select className="f" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="subject for the upload" style={{ marginTop: 4 }}>{subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>}
       <div className="drop" role="button" tabIndex={0} onClick={() => file.current?.click()} onKeyDown={(e) => e.key === "Enter" && file.current?.click()}
         onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void upload(e.dataTransfer.files); }}>
         {busy ? "Uploading…" : "Drop a PDF or photos"}<small>PDF, PNG, JPEG, WebP · up to 25 MB</small>
@@ -164,13 +182,14 @@ export function SourceList({ subject, onOpen, cur }: { subject?: string; onOpen:
   }, [list, res]);
   return (
     <div>
+      <Failed res={res} />
       {list.map((s) => (
         <div key={s.id} className={"fl" + (s.id === cur ? " on" : "")} onClick={() => onOpen(s)} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && onOpen(s)}>
           <span>{s.title}</span>
           <i style={s.status === "failed" ? { color: "var(--co)" } : s.status === "processing" ? { color: "var(--am)" } : undefined}>{s.status === "ready" ? s.kind.toUpperCase() : s.status.toUpperCase()}</i>
         </div>
       ))}
-      {!list.length && <div className="mini" style={{ padding: "6px 2px" }}>Nothing imported yet.</div>}
+      {!list.length && !res.error && <div className="mini" style={{ padding: "6px 2px" }}>Nothing imported yet.</div>}
     </div>
   );
 }
@@ -192,12 +211,16 @@ export function SourceView({ source, onGone }: { source: StudySource; onGone: ()
   const step = source.status === "ready" ? 3 : 1;
   const retry = async () => { try { await api.studyRetry(source.id); await load(); } catch (e) { toast(errText(e)); } };
   const del = async () => { if (!confirm(`Delete "${source.title}" and the notes made from it?`)) return; try { await api.studyDeleteSource(source.id); onGone(); } catch (e) { toast(errText(e)); } };
+  const makeCards = async () => {
+    try { const r = await api.studyDraftCards({ subject: source.subject_id, text: o.clean_notes ?? "" }); toast(`${pluralCards(r.cards.length)} drafted. Approve them in Cards.`); } catch (e) { toast(errText(e)); }
+  };
   const original = async () => {
+    const win = window.open("", "_blank");               // opened now, inside the tap, or Safari blocks it after the await
     try {
       const f = await api.studyFile(source.file_id);
       const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(f.data), (c) => c.charCodeAt(0))], { type: f.mime }));
-      window.open(url, "_blank");
-    } catch (e) { toast(errText(e)); }
+      if (win) win.location.href = url; else window.open(url, "_blank");
+    } catch (e) { win?.close(); toast(errText(e)); }
   };
   if (source.status !== "ready") {
     return (
@@ -221,6 +244,7 @@ export function SourceView({ source, onGone }: { source: StudySource; onGone: ()
     <div className="center">
       <div className="out">
         {OUTS.map(([k, name]) => <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{name}</button>)}
+        <button onClick={() => void makeCards()}>MAKE CARDS</button>
         <button onClick={() => void original()}>ORIGINAL</button>
         <button onClick={() => void del()}>DELETE</button>
       </div>
@@ -266,8 +290,9 @@ export function NoteList({ subject, cur, onOpen, q }: { subject?: string; cur?: 
   const list = (res.data ?? []).filter((n) => !q || `${n.title} ${n.preview} ${n.topic ?? ""}`.toLowerCase().includes(q.toLowerCase()));
   return (
     <div>
+      <Failed res={res} />
       {list.map((n) => <div key={n.id} className={"fl" + (n.id === cur ? " on" : "")} onClick={() => onOpen(n.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && onOpen(n.id)}><span>{n.title}</span><i>{n.kind === "import" ? "IMPORT" : (n.topic ?? "").slice(0, 10).toUpperCase()}</i></div>)}
-      {!list.length && <div className="mini" style={{ padding: "6px 2px" }}>{q ? "No notes match." : "No notes yet."}</div>}
+      {!list.length && !res.error && <div className="mini" style={{ padding: "6px 2px" }}>{q ? "No notes match." : "No notes yet."}</div>}
     </div>
   );
 }
@@ -292,60 +317,119 @@ export function NewNote({ subject, subjects, onMade }: { subject?: string; subje
   );
 }
 
+export function TestForm({ today, subjectId }: { today: StudyToday; subjectId?: string }) {
+  const [open, setOpen] = useState(false);
+  const [subject, setSubject] = useState(today.subjects.find((s) => s.id === subjectId)?.name ?? today.subjects[0]?.name ?? "");
+  useEffect(() => { const n = today.subjects.find((s) => s.id === subjectId)?.name; if (n) setSubject(n); }, [subjectId, today.subjects]);
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [topics, setTopics] = useState("");
+  const res = useResource(studyToday());
+  const add = async () => {
+    try {
+      const r = await api.studyAddTest({ subject, title, date, topics: topics.split(",").map((t) => t.trim()).filter(Boolean) });
+      toast(`Test added. Revise ${r.blocks.map((b) => new Date(b.date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })).join(", ")}.`);
+      setOpen(false); setTitle(""); setDate(""); setTopics("");
+      void res.refresh();
+    } catch (e) { toast(errText(e)); }
+  };
+  if (!open) return <button className="btn sm am" onClick={() => setOpen(true)}>+ TEST</button>;
+  return (
+    <div className="cd">
+      <select className="f" value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="subject">{today.subjects.map((s) => <option key={s.id}>{s.name}</option>)}</select>
+      <input className="f" placeholder="Title (Ch 5 test)" value={title} onChange={(e) => setTitle(e.target.value)} style={{ marginTop: 6 }} />
+      <input className="f" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="date" style={{ marginTop: 6 }} />
+      <input className="f" placeholder="Topics, comma separated (blank: Cyph picks)" value={topics} onChange={(e) => setTopics(e.target.value)} style={{ marginTop: 6 }} />
+      <div className="row"><button className="btn sm go" disabled={!title.trim() || !date} onClick={() => void add()}>ADD + PLAN REVISION</button><button className="btn sm" onClick={() => setOpen(false)}>CANCEL</button></div>
+    </div>
+  );
+}
+
+
 /* ---------------------------------------------------------------- tutor */
 const LADDER = ["restate", "nudge", "first_step", "solution"];
-export function TutorBox({ subject, subjectName }: { subject?: string; subjectName?: string }) {
+interface Turn { q: string; pics: Pic[]; hints: StudyHint[]; error: string }
+/** The conversation outlives the tab: switching to Cards and back keeps it. "NEW" clears it. */
+let kept: Turn[] = [];
+export function resetTutor() { kept = []; }
+
+export function TutorBox({ subject, subjectName: _name }: { subject?: string; subjectName?: string }) {
+  const [turns, setTurns] = useState<Turn[]>(kept);
   const [q, setQ] = useState("");
-  const [asked, setAsked] = useState("");
-  const [hints, setHints] = useState<StudyHint[]>([]);
+  const [pics, setPics] = useState<Pic[]>([]);
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => { end.current?.scrollIntoView?.({ block: "nearest" }); }, [hints]);
-  const step = async (n: number, question = asked) => {
+  const file = useRef<HTMLInputElement>(null);
+  const put = (f: (t: Turn[]) => Turn[]) => setTurns((cur) => (kept = f(cur)));
+  useEffect(() => { end.current?.scrollIntoView?.({ block: "nearest" }); }, [turns]);
+
+  /** What was said so far, so a follow-up ("why is it 2?") is answered in context. */
+  const context = (upto: number) => turns.slice(0, upto).map((t) => `Student: ${t.q || "(photo)"}\n` + t.hints.map((h) => `Cyph: ${h.text}`).join("\n")).join("\n").slice(-1500);
+  const step = async (i: number, n: number) => {
+    const t = turns[i];
     setBusy(true);
+    put((cur) => cur.map((x, k) => (k === i ? { ...x, error: "" } : x)));
     try {
-      const h = await api.studyTutor(question, subject, n, hints.map((x) => x.text).join("\n").slice(-1500));
-      setHints((cur) => [...cur, h]);
-    } catch (e) { toast(errText(e)); } finally { setBusy(false); }
+      const h = await api.studyTutor(t.q, subject, n, context(i) + (t.hints.length ? "\n" + t.hints.map((x) => x.text).join("\n") : ""), t.pics);
+      put((cur) => cur.map((x, k) => (k === i ? { ...x, hints: [...x.hints, h] } : x)));
+    } catch (e) {
+      put((cur) => cur.map((x, k) => (k === i ? { ...x, error: errText(e) } : x)));
+    } finally { setBusy(false); }
   };
   const ask = async () => {
     const t = q.trim();
-    if (!t) return;
-    setAsked(t); setHints([]); setQ("");
-    await step(0, t);
+    if (!t && !pics.length) return;
+    const i = turns.length;
+    put((cur) => [...cur, { q: t, pics, hints: [], error: "" }]);
+    setQ(""); setPics([]);
+    setBusy(true);
+    try {
+      const h = await api.studyTutor(t, subject, 0, context(i), pics);
+      put((cur) => cur.map((x, k) => (k === i ? { ...x, hints: [h] } : x)));
+    } catch (e) {
+      put((cur) => cur.map((x, k) => (k === i ? { ...x, error: errText(e) } : x)));
+    } finally { setBusy(false); }
   };
-  const last = hints[hints.length - 1];
-  const chat = async () => {
-    const t = (asked || q).trim();
-    if (!t) return;
-    if (await say(t, [], { mode: "study", subject: subjectName ?? "" })) toast("Sent to Cyph.");
+  const attach = async (fl: FileList | null) => {
+    try { const got = await Promise.all([...(fl ?? [])].slice(0, MAX_PICS - pics.length).map((f) => toPic(f))); setPics((p) => [...p, ...got].slice(0, MAX_PICS)); } catch (e) { toast((e as Error).message); }
+    if (file.current) file.current.value = "";
   };
+  const lastTurn = turns[turns.length - 1];
+  const last = lastTurn?.hints[lastTurn.hints.length - 1];
+  const idx = turns.length - 1;
   return (
     <div className="center">
       <div className="thread scroll">
-        {!asked && <div className="empty">Ask anything from school. Cyph will not just give the answer: he starts with what the question is really asking, then a nudge, then the first step, then the full solution when you ask.</div>}
-        {asked && <div className="msg u">{asked}</div>}
-        {hints.map((h, i) => (
-          <div key={i}>
-            <div className="ladder">{LADDER.map((s, k) => <i key={s} className={k <= h.step ? "on" : ""} />)}<b>{h.stage.replace("_", " ").toUpperCase()}</b></div>
-            <div className="ans"><Rich text={h.text} /></div>
-            {h.cites.length > 0 && <div className="mini">from your notes: {h.cites.map((c) => c.title).join(", ")}</div>}
+        {!turns.length && <div className="empty">Ask anything from school, or photograph the question. Cyph will not just give the answer: he starts with what the question is really asking, then a nudge, then the first step, then the full solution when you ask. Ask a follow-up any time.</div>}
+        {turns.map((t, i) => (
+          <div key={i} className="turn">
+            <div className="msg u">{t.q || "Photo question"}{t.pics.length > 0 && <div className="thumbs">{t.pics.map((p, k) => <img key={k} alt="" src={`data:${p.mime};base64,${p.data}`} />)}</div>}</div>
+            {t.hints.map((h, k) => (
+              <div key={k}>
+                <div className="ladder">{LADDER.map((s, n) => <i key={s} className={n <= h.step ? "on" : ""} />)}<b>{h.stage.replace("_", " ").toUpperCase()}</b></div>
+                <div className="ans"><Rich text={h.text} /></div>
+                {h.cites.length > 0 && <div className="mini">from your notes: {h.cites.map((c) => c.title).join(", ")}</div>}
+              </div>
+            ))}
+            {t.error && <div className="err">{t.error} <button className="btn sm" disabled={busy} onClick={() => void step(i, t.hints.length ? Math.min(3, t.hints[t.hints.length - 1].step + 1) : 0)}>TRY AGAIN</button></div>}
           </div>
         ))}
         <div ref={end} />
       </div>
-      {last && !last.last && <div className="web"><button className="btn go" disabled={busy} onClick={() => void step(last.step + 1)}>{last.step === 0 ? "GIVE ME A HINT" : last.step === 1 ? "SHOW THE FIRST STEP" : "SHOW THE SOLUTION"}</button><button className="btn" disabled={busy} onClick={() => void step(3)}>JUST SOLVE IT</button></div>}
+      {last && !last.last && !lastTurn.error && <div className="web"><button className="btn go" disabled={busy} onClick={() => void step(idx, last.step + 1)}>{last.step === 0 ? "GIVE ME A HINT" : last.step === 1 ? "SHOW THE FIRST STEP" : "SHOW THE SOLUTION"}</button><button className="btn" disabled={busy} onClick={() => void step(idx, 3)}>JUST SOLVE IT</button></div>}
+      {pics.length > 0 && <div className="thumbs">{pics.map((p, k) => <span key={k} className="th"><img alt="" src={`data:${p.mime};base64,${p.data}`} /><button aria-label="remove picture" onClick={() => setPics((c) => c.filter((_, n) => n !== k))}>✕</button></span>)}</div>}
       <div className="cmdrow">
         <span className="p">▸</span>
-        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void ask()} placeholder="Type the question" aria-label="question" />
-        <button className="btn sm go" onClick={() => void ask()} disabled={busy || !q.trim()}>ASK</button>
-        <button className="btn sm" onClick={() => void chat()} title="Talk it through with Cyph in the chat">CHAT</button>
+        <textarea rows={1} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!busy) void ask(); } }} placeholder={turns.length ? "Ask a follow-up" : "Type the question, or add a photo"} aria-label="question" />
+        <input ref={file} type="file" accept="image/*" multiple hidden onChange={(e) => void attach(e.target.files)} />
+        <button className="btn sm" onClick={() => file.current?.click()} disabled={pics.length >= MAX_PICS} aria-label="add a photo">PHOTO</button>
+        <button className="btn sm go" onClick={() => void ask()} disabled={busy || (!q.trim() && !pics.length)}>ASK</button>
+        {turns.length > 0 && <button className="btn sm" onClick={() => { resetTutor(); setTurns([]); }}>NEW</button>}
       </div>
     </div>
   );
 }
 
-/* ---------------------------------------------------------------- practice and papers */
 const KINDS: [string, string][] = [["structured", "STRUCTURED"], ["worked", "WORKED"], ["sbq", "SOURCE"], ["essay", "ESSAY"]];
 export function PracticeBox({ subject, subjectName }: { subject?: string; subjectName?: string }) {
   const topics = useResource(studyTopics(subject));

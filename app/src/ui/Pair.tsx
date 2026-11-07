@@ -8,7 +8,7 @@ import "../styles/pair.css";
 export function Pair({ onPaired }: { onPaired: () => void }) {
   const [link, setLink] = useState("");
   const mobile = useIsMobile();
-  const [name, setName] = useState(mobile ? "My phone" : "My computer");
+  const [name, setName] = useState(mobile ? "My phone" : /iPad|Macintosh/.test(navigator.userAgent) && "ontouchend" in document ? "My iPad" : "My computer");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const go = async () => {
@@ -41,7 +41,7 @@ export function Pair({ onPaired }: { onPaired: () => void }) {
           <p className="sub">Paste the pairing link from your other device (Settings → Pair a new device) or from the server.</p>
           <textarea className="f" rows={3} value={link} onChange={(e) => setLink(e.target.value)} placeholder={mobile || !("__TAURI_INTERNALS__" in window) ? "pairing code, or the whole link" : "cyph://pair?host=…&fp=…&code=…"} spellCheck={false} />
           {mobile && <button className="btn" onClick={() => void paste()}>PASTE FROM CLIPBOARD</button>}
-          <input className="f" value={name} onChange={(e) => setName(e.target.value)} placeholder="name this device" />
+          <label className="lbl" style={{ display: "block" }}>DEVICE NAME<input className="f" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. my iPad" aria-label="device name" style={{ marginTop: 4 }} /></label>
           <button className="btn go" disabled={busy || !link.trim()} onClick={() => void go()}>{busy ? "PAIRING…" : "PAIR"}</button>
           {err && <div className="err">{err}</div>}
           <div className="tiny">The link is a key. It is used once and never saved.</div>

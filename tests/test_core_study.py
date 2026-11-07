@@ -238,6 +238,10 @@ class TestService(Base):
         self.assertEqual(steps[0]["cites"][0]["title"], "Moles")
         with self.assertRaises(StudyError):
             self.svc.tutor("  ")
+        pic = {"mime": "image/png", "data": b"x"}                    # a photographed question needs no typed text
+        before = len(self.ai.calls)
+        self.assertEqual(self.svc.tutor("", "Chemistry", 0, "", [pic])["stage"], "restate")
+        self.assertEqual(self.ai.calls[before][1], 1)
 
     def test_practice_mark_and_weakness(self):
         q = self.svc.practice("Chemistry", kind="structured")
@@ -383,6 +387,8 @@ class TestApi(Base):
     def test_tutor_practice_tests(self):
         c, h = self.client, self.h
         self.assertEqual(c.post("/study/tutor", headers=h, json={"question": "why", "step": 1}).json()["stage"], "nudge")
+        big = base64.b64encode(b"\0" * 200_000).decode()               # photos are bigger than a normal request
+        self.assertEqual(c.post("/study/tutor", headers=h, json={"images": [{"mime": "image/png", "data": big}]}).status_code, 200)
         q = c.post("/study/practice", headers=h, json={"subject": "Chemistry"}).json()
         r = c.post(f"/study/practice/{q['id']}/answer", headers=h, json={"answer": "36"}).json()
         self.assertEqual(r["score"], 1.0)
@@ -524,3 +530,20 @@ class TestStudyNudge(unittest.TestCase):
             self.assertEqual(p.tick(now), 1)
             self.assertIn("due for review", sent[0])
             self.assertEqual(p.tick(now), 0)
+
+
+class TestDurability(Base):
+    def test_pending_question_survives_a_restart(self):
+        q = self.svc.practice("Chemistry")
+        self.store.close()
+        again = StudyService(StudyStore(self.root / "study"), self.ai, planner=self.planner, background=False)
+        self.assertEqual(again.mark(q["id"], "36")["marks"], 4)
+
+    def test_a_source_being_read_cannot_be_started_twice(self):
+        src = self.svc.import_source("Chemistry", "n", "text/plain", text="A mole is 6.02e23.")
+        self.svc._active.add(src["id"])
+        with self.assertRaises(StudyError) as cm:
+            self.svc.retry(src["id"])
+        self.assertEqual(cm.exception.code, 409)
+        self.svc._active.discard(src["id"])
+        self.assertEqual(self.svc.retry(src["id"])["status"], "ready")
