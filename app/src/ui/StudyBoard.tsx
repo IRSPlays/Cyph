@@ -25,6 +25,9 @@ export function Boards({ subject }: { subject?: string }) {
   const live = useRef<number[][] | null>(null);
   const [liveD, setLiveD] = useState<number[][] | null>(null);
   const sheet = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  const scroller = () => sheet.current?.closest(".board") as HTMLElement | null;
+  const zoomTo = (z: number) => setZoom(Math.round(Math.max(0.4, Math.min(2, z)) * 100) / 100);
   const drag = useRef<{ id: string; ox: number; oy: number; mode: "move" | "size"; sx: number; sy: number } | null>(null);
 
   const load = () => id ? api.studyBoard(id).then(setBoard).catch(() => setBoard(null)) : setBoard(null);
@@ -43,8 +46,8 @@ export function Boards({ subject }: { subject?: string }) {
   };
   const add = (kind: BoardItem["kind"], data: Record<string, unknown> = {}) => {
     const [w, h] = SIZE[kind] ?? [160, 100];
-    const sc = sheet.current?.parentElement;
-    void put({ kind, x: (sc?.scrollLeft ?? 0) + 80 + Math.random() * 60, y: (sc?.scrollTop ?? 0) + 80 + Math.random() * 60, w, h, data }).then((s) => s && setSel(s.id));
+    const sc = scroller();
+    void put({ kind, x: (sc?.scrollLeft ?? 0) / zoom + 80 + Math.random() * 60, y: (sc?.scrollTop ?? 0) / zoom + 80 + Math.random() * 60, w, h, data }).then((s) => s && setSel(s.id));
   };
   const remove = async () => {
     if (!id || !sel) return;
@@ -67,7 +70,7 @@ export function Boards({ subject }: { subject?: string }) {
 
   const pos = (e: React.PointerEvent) => {
     const r = sheet.current!.getBoundingClientRect();
-    return [e.clientX - r.left, e.clientY - r.top];
+    return [(e.clientX - r.left) / zoom, (e.clientY - r.top) / zoom];
   };
   const startItem = (e: React.PointerEvent, it: BoardItem, how: "move" | "size") => {
     e.stopPropagation();
@@ -99,7 +102,7 @@ export function Boards({ subject }: { subject?: string }) {
   const drawDown = (e: React.PointerEvent) => {
     if (mode !== "draw") return setSel(null);
     if (e.pointerType === "touch") {                    // a finger moves the sheet; only the pen or mouse draws
-      const sc = sheet.current?.parentElement;
+      const sc = scroller();
       if (sc) pan.current = { x: e.clientX, y: e.clientY, l: sc.scrollLeft, t: sc.scrollTop };
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
       return;
@@ -110,7 +113,7 @@ export function Boards({ subject }: { subject?: string }) {
   };
   const drawMove = (e: React.PointerEvent) => {
     if (pan.current) {
-      const sc = sheet.current?.parentElement;
+      const sc = scroller();
       if (sc) { sc.scrollLeft = pan.current.l - (e.clientX - pan.current.x); sc.scrollTop = pan.current.t - (e.clientY - pan.current.y); }
       return;
     }
@@ -165,10 +168,15 @@ export function Boards({ subject }: { subject?: string }) {
             <button className="btn sm" onClick={() => { const t = prompt("Link to which note or card? Type its title.")?.trim(); if (t) add("link", { text: t }); }}>LINK</button>
             <label className="btn sm">PICTURE<input type="file" accept="image/*" hidden onChange={(e) => void pic(e.target.files?.[0], "image")} /></label>
             {COLORS.map((c) => <button key={c} className={"dot" + (c === color ? " on" : "")} style={{ background: c }} aria-label={"colour " + c} onClick={() => setColor(c)} />)}
+            <button className="btn sm" aria-label="zoom out" onClick={() => zoomTo(zoom - 0.2)}>−</button>
+            <button className="btn sm" aria-label="reset zoom" onClick={() => zoomTo(1)}>{Math.round(zoom * 100)}%</button>
+            <button className="btn sm" aria-label="zoom in" onClick={() => zoomTo(zoom + 0.2)}>+</button>
             {sel && <button className="btn sm red" onClick={() => void remove()}>DELETE</button>}
             {from && <span className="mini">now tap the second item</span>}
           </div>
-          <div className="board">
+          <div className="board" onWheel={(e) => { if (e.ctrlKey) { e.preventDefault(); zoomTo(zoom - e.deltaY / 500); } }}>
+            <div className="zoomer" style={{ width: 2400 * zoom, height: 1600 * zoom }}>
+            <div style={{ transform: `scale(${zoom})`, transformOrigin: "0 0", width: 2400, height: 1600 }}>
             <div className={"sheet" + (mode === "draw" ? " drawing" : "")} ref={sheet} onPointerDown={drawDown} onPointerMove={(e) => { drawMove(e); moveItem(e); }} onPointerUp={() => { drawUp(); endItem(); }}>
               <svg width="2400" height="1600" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
                 {items.filter((i) => i.kind === "connector").map((c) => {
@@ -192,6 +200,8 @@ export function Boards({ subject }: { subject?: string }) {
                   {it.id === sel && <span className="rz" onPointerDown={(e) => startItem(e, it, "size")} />}
                 </div>
               ))}
+            </div>
+            </div>
             </div>
           </div>
         </>

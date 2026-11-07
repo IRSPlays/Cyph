@@ -106,7 +106,7 @@ export function InkPage({ page, onSaved }: { page: StudyPage; onSaved?: () => vo
   useEffect(() => {
     const pending = pendingPage(page.id);
     if (pending) void send();                                    // a page left unsent last time
-    const online = () => void flushPending((id, s, b) => api.studySavePage(id, s, b)).then((n) => n && setSaved("saved"));
+    const online = () => void flushPending((id, s, b) => api.studySavePage(id, s, b), () => toast("One page could not be saved and was dropped.")).then((n) => n && setSaved("saved"));
     addEventListener("online", online);
     const tick = setInterval(online, 20000);
     return () => {

@@ -173,6 +173,8 @@ class StudyStore:
             if not self.db.execute("SELECT 1 FROM subjects").fetchone():
                 for name, color in SUBJECTS:
                     self.db.execute("INSERT INTO subjects VALUES(?,?,?,?)", (new_id("s"), name, color, now_iso()))
+            if not any(r[1] == 'blocks' for r in self.db.execute("PRAGMA table_info(tests)")):
+                self.db.execute("ALTER TABLE tests ADD COLUMN blocks TEXT DEFAULT '[]'")      # revision blocks made with the test
             # an import cut short by a restart would read "processing" forever
             self.db.execute("UPDATE sources SET status='failed', error='interrupted, try again' WHERE status='processing'")
             self.db.commit()
@@ -477,14 +479,19 @@ class StudyStore:
     # -- tests
     def add_test(self, subject_id, title, day, topics, plan_event_id=None):
         tid = new_id("x")
-        self.run("INSERT INTO tests VALUES(?,?,?,?,?,?,?)", (tid, subject_id, title[:120], day, plan_event_id, json.dumps(topics), now_iso()))
+        self.run("INSERT INTO tests(id,subject_id,title,date,plan_event_id,topics,created) VALUES(?,?,?,?,?,?,?)",
+                 (tid, subject_id, title[:120], day, plan_event_id, json.dumps(topics), now_iso()))
         return self.test(tid)
+
+    def set_test_blocks(self, tid, blocks):
+        self.run("UPDATE tests SET blocks=? WHERE id=?", (json.dumps([{"id": b["id"], "date": b["date"]} for b in blocks]), tid))
 
     def test(self, tid):
         t = self.one("SELECT * FROM tests WHERE id=?", (tid,))
         if not t:
             raise StudyError("no such test", 404)
         t["topics"] = json.loads(t["topics"] or "[]")
+        t["blocks"] = json.loads(t.get("blocks") or "[]")
         return t
 
     def tests(self, subject_id=None):
@@ -995,14 +1002,15 @@ class StudyService:
             res = self.planner.create({"title": f"Revise {subj['name']}: {focus}", "date": d.isoformat(), "time": time,
                                        "duration_min": minutes, "kind": "block", "project": "Study"}, today())
             made.append({"id": res["event"]["id"], "date": d.isoformat(), "conflicts": res["conflicts"]})
+        self.store.set_test_blocks(test["id"], made)
         self.changed("study")
         self.changed("plan")
-        return {"test": test, "blocks": made}
+        return {"test": self.store.test(test["id"]), "blocks": made}
 
     def remove_test(self, tid):
         t = self.store.test(tid)
         if self.planner is not None and t.get("plan_event_id"):
-            self.planner.remove(t["plan_event_id"])
+            self.planner.remove([t["plan_event_id"], *[b["id"] for b in t.get("blocks", [])]])
         self.store.remove_test(tid)
         self.changed("study")
         self.changed("plan")

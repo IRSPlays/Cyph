@@ -145,7 +145,7 @@ export function Study() {
                 return (
                   <div className="test" key={t.id} style={{ "--c": s?.color } as React.CSSProperties}>
                     <div className="d">{n <= 0 ? "0" : n}<small>{n === 1 ? "DAY" : "DAYS"}</small></div>
-                    <div><h6>{t.title}</h6><p>{s?.name} · {t.date}{t.topics.length ? " · " + t.topics.slice(0, 2).join(", ") : ""}</p></div>
+                    <div><h6>{t.title}</h6><p>{s?.name} · {t.date}{t.topics.length ? " · " + t.topics.slice(0, 2).join(", ") : ""}</p>{t.blocks.length > 0 && <p className="rev">revise {t.blocks.map((b) => new Date(b.date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })).join(", ")}</p>}</div>
                     <button className="btn sm red" onClick={async () => { if (confirm("Remove this test and its plan entry?")) { try { await api.studyDeleteTest(t.id); void today.refresh(); } catch (e) { toast(errText(e)); } } }}>✕</button>
                   </div>
                 );

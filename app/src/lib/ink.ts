@@ -103,8 +103,10 @@ export const dequeuePage = (id: string) => {
 };
 export const pendingPage = (id: string) => read()[id];
 export const pendingIds = () => Object.keys(read());
-/** Sends every waiting page; the ones the server refuses with a 4xx are dropped (they would never be accepted). */
-export async function flushPending(save: (id: string, strokes: InkStroke[], bg?: string) => Promise<unknown>): Promise<number> {
+/** Pages the server can never accept (gone, too big, malformed) are dropped and reported; anything that may pass later
+ *  (offline, signed out, rate limited, a 5xx) stays queued so no ink is lost. */
+export const HOPELESS = [404, 410, 413, 422];
+export async function flushPending(save: (id: string, strokes: InkStroke[], bg?: string) => Promise<unknown>, onDrop: (id: string, status: number) => void = () => {}): Promise<number> {
   let sent = 0;
   for (const [id, p] of Object.entries(read())) {
     try {
@@ -113,7 +115,7 @@ export async function flushPending(save: (id: string, strokes: InkStroke[], bg?:
       sent++;
     } catch (e) {
       const st = (e as { status?: number })?.status ?? 0;
-      if (st >= 400 && st < 500) dequeuePage(id);
+      if (HOPELESS.includes(st)) { dequeuePage(id); onDrop(id, st); }
       else break;                                       // offline: keep the rest for next time
     }
   }

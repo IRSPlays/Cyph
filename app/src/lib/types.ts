@@ -290,7 +290,7 @@ export interface StudyNoteRow { id: string; subject_id: string; source_id: strin
 export interface StudyNote extends StudyNoteRow { body: string }
 export interface StudyCard { id: string; subject_id: string; topic_id: string | null; topic: string | null; note_id: string | null; front: string; back: string; image_id: string | null; state: "draft" | "approved" | "suspended"; due: string; interval: number; ease: number; reps: number; lapses: number }
 export interface StudyTopic { id: string; subject_id: string; name: string; cards: number; notes: number; weakness: number }
-export interface StudyTest { id: string; subject_id: string; title: string; date: string; plan_event_id: string | null; topics: string[] }
+export interface StudyTest { id: string; subject_id: string; title: string; date: string; plan_event_id: string | null; topics: string[]; blocks: { id: string; date: string }[] }
 export interface StudyHit { note_id: string; title: string; text: string; score: number }
 export interface StudyHint { step: number; stage: "restate" | "nudge" | "first_step" | "solution"; text: string; last: boolean; cites: { n: number; note_id: string; title: string }[] }
 export interface StudyQuestion { id: string; subject_id: string; kind: string; question: string; marks: number; topic: string }

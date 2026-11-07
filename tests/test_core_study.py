@@ -547,3 +547,13 @@ class TestDurability(Base):
         self.assertEqual(cm.exception.code, 409)
         self.svc._active.discard(src["id"])
         self.assertEqual(self.svc.retry(src["id"])["status"], "ready")
+
+
+class TestTestBlocks(Base):
+    def test_removing_a_test_removes_its_revision_blocks(self):
+        day = (date.today() + timedelta(days=9)).isoformat()
+        r = self.svc.plan_test("Chemistry", "Ch 5", day)
+        self.assertEqual(len(self.store.test(r["test"]["id"])["blocks"]), 3)
+        self.assertEqual(len(self.planner.all()), 4)                  # the test and three blocks
+        self.svc.remove_test(r["test"]["id"])
+        self.assertEqual(self.planner.all(), [])

@@ -252,11 +252,12 @@ export function createMockStudy(changed: (what: string) => void, today: () => st
     if (route === "/study/tests" && method === "POST") {
       const s = sub(String(b.subject));
       if (!s) return fail(404, "no such subject");
-      const t = { id: id("x"), subject_id: s.id, title: String(b.title), date: String(b.date), plan_event_id: null, topics: (b.topics as string[]) ?? [] };
+      const blocks = [7, 3, 1].map((k) => ({ id: id("e"), date: plus(String(b.date), -k) })).filter((x) => x.date >= today());
+      const t = { id: id("x"), subject_id: s.id, title: String(b.title), date: String(b.date), plan_event_id: null, topics: (b.topics as string[]) ?? [], blocks };
       tests.push(t);
       changed("study");
       changed("plan");
-      return { test: t, blocks: [7, 3, 1].map((k) => ({ id: id("e"), date: plus(String(b.date), -k) })).filter((x) => x.date >= today()) };
+      return { test: t, blocks };
     }
     if ((m = route.match(/^\/study\/tests\/([^/]+)$/)) && method === "DELETE") { const i = tests.findIndex((t) => t.id === m![1]); if (i < 0) return fail(404, "no such test"); tests.splice(i, 1); changed("study"); return { ok: true }; }
     const nbView = (nb: Rec) => ({ ...nb, pages: Object.values(pages).filter((p) => p.notebook_id === nb.id).sort((a, c) => a.idx - c.idx).map((p) => ({ id: p.id, idx: p.idx, background: p.background })) });

@@ -64,4 +64,15 @@ describe("offline queue", () => {
     expect(await flushPending(async () => Promise.reject({ status: 404 }))).toBe(0);
     expect(pendingIds()).toEqual([]);
   });
+  it("keeps ink when signed out or rate limited, and reports what it drops", async () => {
+    queuePage("p2", []);
+    for (const status of [401, 408, 429, 503]) {
+      expect(await flushPending(async () => Promise.reject({ status }))).toBe(0);
+      expect(pendingIds()).toEqual(["p2"]);
+    }
+    const dropped: [string, number][] = [];
+    await flushPending(async () => Promise.reject({ status: 413 }), (id, st) => dropped.push([id, st]));
+    expect(dropped).toEqual([["p2", 413]]);
+    expect(pendingIds()).toEqual([]);
+  });
 });
