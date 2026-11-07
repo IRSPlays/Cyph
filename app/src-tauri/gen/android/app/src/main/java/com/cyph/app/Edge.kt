@@ -33,8 +33,8 @@ object Edge {
             val seg = Path()
             pm.getSegment(0f, len * frac, seg, true)
             paint.color = color
-            paint.alpha = 64
-            paint.strokeWidth = sw * 2.8f
+            paint.alpha = 40
+            paint.strokeWidth = sw * 2.2f
             c.drawPath(seg, paint)
             paint.alpha = 255
             paint.strokeWidth = sw

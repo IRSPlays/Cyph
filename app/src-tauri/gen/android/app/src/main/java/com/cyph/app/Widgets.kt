@@ -21,7 +21,7 @@ import java.util.Locale
  *  the minutes left stay right even when the app is not running. */
 class WidgetView(
     val bg: Int, val accent: Int, val label: String, val title: String, val sub: String, val pct: Int, val next: String,
-    val big: String, val mood: String, val endMs: Long = 0,
+    val big: String, val mood: String, val endMs: Long = 0, val edge: Float = 1f,
 )
 
 object Widgets {
@@ -64,12 +64,12 @@ object Widgets {
             val st = cur.getLong("start"); val en = cur.getLong("end")
             val pct = (((now - st) * 100) / maxOf(1L, en - st)).toInt().coerceIn(0, 100)
             val left = ((en - now) / 60_000L).toInt()
-            return WidgetView(R.drawable.wd_bg_g, GREEN, "● NOW · $pct%", cur.optString("title"), hm.format(Date(st)) + " → " + hm.format(Date(en)) + " · " + fmtLeft(left) + " left", pct, nextLine, fmtLeft(left), mood, en)
+            return WidgetView(R.drawable.wd_bg_g, GREEN, "● NOW · $pct%", cur.optString("title"), hm.format(Date(st)) + " → " + hm.format(Date(en)) + " · " + fmtLeft(left) + " left", pct, nextLine, fmtLeft(left), mood, en, pct / 100f)
         }
         if (nxt != null) {
             val st = nxt.getLong("start")
             val inMin = ((st - now) / 60_000L).toInt()
-            return WidgetView(R.drawable.wd_bg_a, AMBER, "NEXT · IN " + fmtLeft(inMin).uppercase(), nxt.optString("title"), "at " + hm.format(Date(st)), 0, "", hm.format(Date(st)), mood)
+            return WidgetView(R.drawable.wd_bg_a, AMBER, "NEXT · IN " + fmtLeft(inMin).uppercase(), nxt.optString("title"), "at " + hm.format(Date(st)), 0, "", hm.format(Date(st)), mood, 0, (1f - inMin / 60f).coerceIn(0f, 1f))
         }
         return WidgetView(R.drawable.wd_bg_g, GREEN, "● TODAY", "Nothing more today", "enjoy it", 0, "", "--:--", if (night) "sleepy" else "happy")
     }
@@ -79,24 +79,35 @@ object Widgets {
     fun updateAll(ctx: Context) {
         val mgr = AppWidgetManager.getInstance(ctx)
         val v = view(ctx)
-        for ((cls, kind) in listOf(Widget4x2::class.java to 0, Widget2x2::class.java to 1, WidgetFace::class.java to 2, Widget2x1::class.java to 3)) {
-            for (id in mgr.getAppWidgetIds(ComponentName(ctx, cls))) mgr.updateAppWidget(id, build(ctx, kind, v))
+        val kinds = listOf(Triple(Widget4x2::class.java, 0, 300 to 150), Triple(Widget2x2::class.java, 1, 156 to 156), Triple(WidgetFace::class.java, 2, 156 to 156), Triple(Widget2x1::class.java, 3, 156 to 64))
+        for ((cls, kind, def) in kinds) {
+            for (id in mgr.getAppWidgetIds(ComponentName(ctx, cls))) {
+                val o = mgr.getAppWidgetOptions(id)
+                val w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).let { if (it > 0) it else def.first }
+                val h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0).let { if (it > 0) it else def.second }
+                mgr.updateAppWidget(id, build(ctx, kind, v, w, h))
+            }
         }
         Sw.redrawAll(ctx)
         scheduleTick(ctx)
     }
 
-    private fun build(ctx: Context, kind: Int, v: WidgetView): RemoteViews {
+    /** The face widget's edge is the day: how much of the waking day (06:00 to 23:00) has gone. */
+    private fun dayFrac(now: Long): Float {
+        val c = Calendar.getInstance().apply { timeInMillis = now }
+        val h = c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.MINUTE) / 60f
+        return ((h - 6f) / 17f).coerceIn(0f, 1f)
+    }
+
+    private fun build(ctx: Context, kind: Int, v: WidgetView, wDp: Int, hDp: Int): RemoteViews {
         val rv = RemoteViews(ctx.packageName, when (kind) { 0 -> R.layout.widget_4x2; 1 -> R.layout.widget_2x2; 3 -> R.layout.widget_2x1; else -> R.layout.widget_face })
-        rv.setInt(R.id.root, "setBackgroundResource", v.bg)
+        rv.setImageViewBitmap(R.id.edge, Edge.draw(ctx, wDp, hDp, if (kind == 2) dayFrac(System.currentTimeMillis()) else v.edge, v.accent))
         if (kind == 2) Sw.loop(ctx, rv, v.mood) else rv.setImageViewResource(R.id.face, Notifier.face(ctx, v.mood))
         rv.setTextViewText(R.id.lbl, if (kind == 2) (if (v.label.startsWith("●")) "● HERE" else v.label.substringBefore(" ·")) else v.label)
         rv.setTextColor(R.id.lbl, v.accent)
         if (kind != 2) rv.setTextViewText(R.id.title, v.title)
         if (kind != 2) rv.setTextViewText(R.id.sub, v.sub)
         if (kind == 0) {
-            rv.setProgressBar(R.id.bar, 100, v.pct, false)
-            rv.setViewVisibility(R.id.bar, if (v.pct > 0 || v.label.startsWith("●")) View.VISIBLE else View.INVISIBLE)
             rv.setTextViewText(R.id.nxt, v.next)
             // a live countdown that ticks inside the launcher, with no redraw
             val live = v.endMs > System.currentTimeMillis() && v.label.startsWith("●")

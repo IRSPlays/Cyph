@@ -3,9 +3,11 @@
     <ImageView android:id="@+id/edge" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:importantForAccessibility="no" />
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="18dp" android:gravity="center_horizontal">
         <TextView android:id="@+id/lbl" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:textSize="10sp" android:textColor="@color/cy_neon" android:letterSpacing="0.18" android:maxLines="1"/>
-        <FrameLayout android:id="@+id/ball" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="8dp" android:padding="2dp">
-            <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/wd_ball" android:padding="16dp">
-                <TextView android:id="@+id/ans" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:fontFamily="serif" android:textStyle="italic" android:textSize="16sp" android:textColor="@color/cy_cream" android:maxLines="4" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="10sp" android:autoSizeMaxTextSize="18sp" />
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="8dp">
+            <FrameLayout android:id="@+id/ball" android:layout_width="100dp" android:layout_height="100dp" android:layout_gravity="center" android:padding="2dp">
+                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/wd_ball" android:padding="14dp">
+                    <TextView android:id="@+id/ans" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:fontFamily="serif" android:textStyle="italic" android:textSize="15sp" android:textColor="@color/cy_cream" android:maxLines="4" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="9sp" android:autoSizeMaxTextSize="16sp" />
+                </FrameLayout>
             </FrameLayout>
         </FrameLayout>
     </LinearLayout>

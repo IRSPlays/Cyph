@@ -255,6 +255,12 @@ class WidgetBall : SillyWidget() {
         rv.setTextViewText(R.id.lbl, "TAP TO SHAKE")
         rv.setTextColor(R.id.lbl, Sw.GREEN)
         rv.setViewPadding(R.id.ball, pad(ctx, 2), pad(ctx, 2), pad(ctx, 2), pad(ctx, 2))
+        // a true circle: as wide as the room under the label allows (RemoteViews can resize a view from Android 12)
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            val d = minOf(sz.w - 36 - 8, sz.h - 36 - 10 - 8 - 12).coerceAtLeast(60).toFloat()
+            rv.setViewLayoutWidth(R.id.ball, d, TypedValue.COMPLEX_UNIT_DIP)
+            rv.setViewLayoutHeight(R.id.ball, d, TypedValue.COMPLEX_UNIT_DIP)
+        }
         rv.setTextViewText(R.id.ans, Sw.p(ctx).getString("ball", "ask me something") ?: "ask me something")
         edge(ctx, rv, sz, 1f)
         rv.setOnClickPendingIntent(R.id.root, Sw.tap(ctx, javaClass, "shake"))
@@ -333,18 +339,18 @@ class WidgetNap : SillyWidget() {
         val left = end - System.currentTimeMillis()
         val napping = left > 0
         Sw.loop(ctx, rv, if (napping) "sleepy" else "rest")
-        rv.setTextViewText(R.id.lbl, if (napping) "SHHH · NAPPING" else "NAP TIMER")
+        rv.setTextViewText(R.id.lbl, if (napping) "NAPPING · TAP TO WAKE" else "NAP TIMER")
         rv.setTextColor(R.id.lbl, Sw.GREEN)
         rv.setViewVisibility(R.id.idlegrp, if (napping) View.GONE else View.VISIBLE)
         rv.setViewVisibility(R.id.napgrp, if (napping) View.VISIBLE else View.GONE)
         rv.setTextViewText(R.id.num, (p.getInt("nap_pick", 20)).toString())
-        rv.setTextViewText(R.id.go, if (napping) "TAP TO WAKE" else "START NAP")
+        rv.setTextViewText(R.id.go, "START NAP")
+        rv.setViewVisibility(R.id.go, if (napping) View.GONE else View.VISIBLE)
         if (napping) {
             rv.setChronometerCountDown(R.id.chrono, true)
             rv.setChronometer(R.id.chrono, SystemClock.elapsedRealtime() + left, null, true)
             edge(ctx, rv, sz, 1f - left.toFloat() / len)
             rv.setOnClickPendingIntent(R.id.root, Sw.tap(ctx, javaClass, "wake"))
-            rv.setOnClickPendingIntent(R.id.go, Sw.tap(ctx, javaClass, "wake"))
             tickLater(ctx)
         } else {
             edge(ctx, rv, sz, 0f)

@@ -1,27 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@drawable/wd_bg_g" android:orientation="horizontal" android:padding="10dp" android:gravity="center_vertical">
-    <FrameLayout android:layout_width="92dp" android:layout_height="match_parent" android:background="@drawable/wd_face_tile">
-        <ImageView android:id="@+id/face" android:layout_width="match_parent" android:layout_height="match_parent"
-            android:padding="8dp" android:scaleType="fitCenter" android:contentDescription="Cyph" />
-    </FrameLayout>
-    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
-        android:orientation="vertical" android:gravity="center_vertical" android:paddingStart="12dp" android:paddingEnd="4dp">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <TextView android:id="@+id/lbl" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium" android:textSize="9sp" android:letterSpacing="0.2" android:textColor="@color/cy_neon" android:maxLines="1" />
-            <Chronometer android:id="@+id/live" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:fontFamily="monospace" android:textSize="11sp" android:textColor="@color/cy_neon" android:visibility="gone" />
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/wd_panel">
+    <ImageView android:id="@+id/edge" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:importantForAccessibility="no" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:paddingStart="18dp" android:paddingEnd="20dp" android:paddingTop="16dp" android:paddingBottom="16dp" android:gravity="center_vertical">
+        <FrameLayout android:layout_width="84dp" android:layout_height="match_parent" android:background="@drawable/wd_face_tile">
+            <ImageView android:id="@+id/face" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="8dp" android:scaleType="fitCenter" android:contentDescription="Cyph" />
+        </FrameLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingStart="14dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView android:id="@+id/lbl" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:textSize="10sp" android:letterSpacing="0.18" android:textColor="@color/cy_neon" android:maxLines="1" />
+                <Chronometer android:id="@+id/live" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="12sp" android:textColor="@color/cy_neon" android:visibility="gone" />
+            </LinearLayout>
+            <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="serif" android:textSize="22sp" android:textColor="@color/cy_cream" android:textStyle="italic" android:maxLines="2" android:ellipsize="end" android:layout_marginTop="2dp"/>
+            <TextView android:id="@+id/sub" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="11sp" android:textColor="@color/cy_dim" android:maxLines="1" android:ellipsize="end" android:layout_marginTop="3dp"/>
+            <TextView android:id="@+id/nxt" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="11sp" android:textColor="@color/cy_dim" android:maxLines="1" android:ellipsize="end" android:layout_marginTop="8dp"/>
         </LinearLayout>
-        <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:fontFamily="serif" android:textStyle="italic" android:textSize="21sp" android:textColor="@color/cy_cream"
-            android:maxLines="2" android:ellipsize="end" android:layout_marginTop="1dp" />
-        <TextView android:id="@+id/sub" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:fontFamily="monospace" android:textSize="10sp" android:textColor="@color/cy_dim" android:maxLines="1" android:ellipsize="end" android:layout_marginTop="2dp" />
-        <ProgressBar android:id="@+id/bar" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="5dp"
-            android:progressDrawable="@drawable/bar_green" android:max="100" android:layout_marginTop="7dp" />
-        <TextView android:id="@+id/nxt" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:fontFamily="monospace" android:textSize="10sp" android:textColor="@color/cy_dim" android:maxLines="1" android:ellipsize="end" android:layout_marginTop="6dp" />
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>
