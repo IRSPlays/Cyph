@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/wd_bg_t" android:orientation="vertical" android:padding="12dp">
+    <TextView android:id="@+id/lbl" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:textSize="9sp" android:letterSpacing="0.2" android:textColor="@color/cy_teal" android:maxLines="1" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="bottom" android:layout_marginTop="4dp">
+        <TextView android:id="@+id/l0" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="9sp" android:textColor="@color/cy_neon" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/l1" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="9sp" android:textColor="@color/cy_neon" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/l2" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="9sp" android:textColor="@color/cy_neon" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/l3" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="9sp" android:textColor="@color/cy_neon" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/l4" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="9sp" android:textColor="@color/cy_neon" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/l5" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="9sp" android:textColor="@color/cy_neon" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+    <ViewFlipper android:id="@+id/cur" android:layout_width="wrap_content" android:layout_height="wrap_content" android:autoStart="true" android:flipInterval="520">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="10sp" android:textColor="@color/cy_neon" android:text="$ █" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="10sp" android:textColor="@color/cy_neon" android:text="$" />
+    </ViewFlipper>
+</LinearLayout>

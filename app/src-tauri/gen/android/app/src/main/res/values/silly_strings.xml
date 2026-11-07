@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wd_desc_boop">Cyph: boop his snoot</string>
+    <string name="wd_desc_snack">Cyph: feed him before he gets dramatic</string>
+    <string name="wd_desc_ball">Cyph: shake for advice you should not take</string>
+    <string name="wd_desc_coin">Cyph: coin flip and dice, he judges the result</string>
+    <string name="wd_desc_nap">Cyph: a nap timer he sleeps through with you</string>
+    <string name="wd_desc_excuse">Cyph: a ridiculous excuse for the thing you are avoiding</string>
+    <string name="wd_desc_busy">Cyph: look busy, fake build logs on tap</string>
+    <string name="wd_desc_battery">Cyph: your battery, as his feelings</string>
+</resources>

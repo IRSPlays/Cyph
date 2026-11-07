@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
@@ -20,7 +21,7 @@ import java.util.Locale
  *  the minutes left stay right even when the app is not running. */
 class WidgetView(
     val bg: Int, val accent: Int, val label: String, val title: String, val sub: String, val pct: Int, val next: String,
-    val big: String, val mood: String,
+    val big: String, val mood: String, val endMs: Long = 0,
 )
 
 object Widgets {
@@ -63,7 +64,7 @@ object Widgets {
             val st = cur.getLong("start"); val en = cur.getLong("end")
             val pct = (((now - st) * 100) / maxOf(1L, en - st)).toInt().coerceIn(0, 100)
             val left = ((en - now) / 60_000L).toInt()
-            return WidgetView(R.drawable.wd_bg_g, GREEN, "● NOW · $pct%", cur.optString("title"), hm.format(Date(st)) + " → " + hm.format(Date(en)) + " · " + fmtLeft(left) + " left", pct, nextLine, fmtLeft(left), mood)
+            return WidgetView(R.drawable.wd_bg_g, GREEN, "● NOW · $pct%", cur.optString("title"), hm.format(Date(st)) + " → " + hm.format(Date(en)) + " · " + fmtLeft(left) + " left", pct, nextLine, fmtLeft(left), mood, en)
         }
         if (nxt != null) {
             val st = nxt.getLong("start")
@@ -81,13 +82,14 @@ object Widgets {
         for ((cls, kind) in listOf(Widget4x2::class.java to 0, Widget2x2::class.java to 1, WidgetFace::class.java to 2, Widget2x1::class.java to 3)) {
             for (id in mgr.getAppWidgetIds(ComponentName(ctx, cls))) mgr.updateAppWidget(id, build(ctx, kind, v))
         }
+        Sw.redrawAll(ctx)
         scheduleTick(ctx)
     }
 
     private fun build(ctx: Context, kind: Int, v: WidgetView): RemoteViews {
         val rv = RemoteViews(ctx.packageName, when (kind) { 0 -> R.layout.widget_4x2; 1 -> R.layout.widget_2x2; 3 -> R.layout.widget_2x1; else -> R.layout.widget_face })
         rv.setInt(R.id.root, "setBackgroundResource", v.bg)
-        rv.setImageViewResource(R.id.face, Notifier.face(ctx, v.mood))
+        if (kind == 2) Sw.loop(ctx, rv, v.mood) else rv.setImageViewResource(R.id.face, Notifier.face(ctx, v.mood))
         rv.setTextViewText(R.id.lbl, if (kind == 2) (if (v.label.startsWith("●")) "● HERE" else v.label.substringBefore(" ·")) else v.label)
         rv.setTextColor(R.id.lbl, v.accent)
         if (kind != 2) rv.setTextViewText(R.id.title, v.title)
@@ -96,6 +98,13 @@ object Widgets {
             rv.setProgressBar(R.id.bar, 100, v.pct, false)
             rv.setViewVisibility(R.id.bar, if (v.pct > 0 || v.label.startsWith("●")) View.VISIBLE else View.INVISIBLE)
             rv.setTextViewText(R.id.nxt, v.next)
+            // a live countdown that ticks inside the launcher, with no redraw
+            val live = v.endMs > System.currentTimeMillis() && v.label.startsWith("●")
+            rv.setViewVisibility(R.id.live, if (live) View.VISIBLE else View.GONE)
+            if (live) {
+                rv.setChronometerCountDown(R.id.live, true)
+                rv.setChronometer(R.id.live, SystemClock.elapsedRealtime() + (v.endMs - System.currentTimeMillis()), null, true)
+            }
         }
         if (kind == 1) rv.setTextViewText(R.id.big, v.big)
         rv.setOnClickPendingIntent(R.id.root, Notifier.open(ctx))

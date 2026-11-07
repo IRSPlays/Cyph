@@ -8,8 +8,12 @@
     </FrameLayout>
     <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
         android:orientation="vertical" android:gravity="center_vertical" android:paddingStart="12dp" android:paddingEnd="4dp">
-        <TextView android:id="@+id/lbl" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-medium" android:textSize="9sp" android:letterSpacing="0.2" android:textColor="@color/cy_neon" android:maxLines="1" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <TextView android:id="@+id/lbl" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium" android:textSize="9sp" android:letterSpacing="0.2" android:textColor="@color/cy_neon" android:maxLines="1" />
+            <Chronometer android:id="@+id/live" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:fontFamily="monospace" android:textSize="11sp" android:textColor="@color/cy_neon" android:visibility="gone" />
+        </LinearLayout>
         <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:fontFamily="serif" android:textStyle="italic" android:textSize="21sp" android:textColor="@color/cy_cream"
             android:maxLines="2" android:ellipsize="end" android:layout_marginTop="1dp" />

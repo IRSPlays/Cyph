@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@drawable/wd_bg_g" android:orientation="vertical" android:gravity="center" android:padding="10dp">
-    <ImageView android:id="@+id/face" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-        android:scaleType="fitCenter" android:contentDescription="Cyph" />
-    <TextView android:id="@+id/lbl" android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:fontFamily="sans-serif-medium" android:textSize="9sp" android:letterSpacing="0.2" android:textColor="@color/cy_neon" android:maxLines="1" android:layout_marginTop="4dp" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/wd_bg_g" android:orientation="vertical" android:padding="10dp" android:gravity="center">
+    <include layout="@layout/part_face_loop" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+    <TextView android:id="@+id/lbl" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:textSize="9sp" android:letterSpacing="0.2" android:textColor="@color/cy_neon" android:maxLines="1" android:layout_marginTop="4dp"/>
 </LinearLayout>

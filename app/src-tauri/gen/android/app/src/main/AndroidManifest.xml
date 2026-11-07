@@ -59,6 +59,40 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_info" />
         </receiver>
 
+        <receiver android:name=".WidgetBoop" android:exported="true" android:label="Cyph - boop">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_boop_info" />
+        </receiver>
+        <receiver android:name=".WidgetSnack" android:exported="true" android:label="Cyph - snacks">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_snack_info" />
+        </receiver>
+        <receiver android:name=".WidgetBall" android:exported="true" android:label="Cyph - ball">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ball_info" />
+        </receiver>
+        <receiver android:name=".WidgetCoin" android:exported="true" android:label="Cyph - coin and dice">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_coin_info" />
+        </receiver>
+        <receiver android:name=".WidgetNap" android:exported="true" android:label="Cyph - nap">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_nap_info" />
+        </receiver>
+        <receiver android:name=".WidgetExcuse" android:exported="true" android:label="Cyph - excuses">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_excuse_info" />
+        </receiver>
+        <receiver android:name=".WidgetBusy" android:exported="true" android:label="Cyph - look busy">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_busy_info" />
+        </receiver>
+        <receiver android:name=".WidgetBattery" android:exported="true" android:label="Cyph - battery">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_battery_info" />
+        </receiver>
+        <receiver android:name=".NapDone" android:exported="false" />
+
         <provider
           android:name="androidx.core.content.FileProvider"
           android:authorities="${applicationId}.fileprovider"
