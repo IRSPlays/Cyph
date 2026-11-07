@@ -56,6 +56,7 @@ class Proactive:
         self.config_path = Path(config_path) if config_path else DATA / "proactive.json"
         self.state_path = Path(state_path) if state_path else DATA / "proactive_state.json"
         self.lock = threading.Lock()
+        self.study = None                # a StudyStore, when Study is on: cards due join the evening nudge
 
     # ---- settings and memory of what was sent ------------------------------------------------------
     def config(self) -> dict:
@@ -146,12 +147,21 @@ class Proactive:
                 lines = [f"{w:%a} {w.day} {w:%b}" + (f" {fmt_time(w)}" if e.get("time") else "") + f": {e['title']}"
                          for w, e in urgent]
                 out.append((f"nudge:{day}", "Heads up, coming soon:\n" + "\n".join(lines), True))
+            n = self._cards_due(now)
+            if n:
+                out.append((f"cards:{day}", f"{n} card{'s' if n != 1 else ''} due for review in Study.", True))
         lead = timedelta(minutes=int(cfg["heads_up_min"]))
         for w, e in self.schedule.occurrences(now, now + lead + timedelta(minutes=1)):
             if e.get("time") and now <= w <= now + lead:
                 mins = max(1, round((w - now).total_seconds() / 60))
                 out.append((f"soon:{e['id']}:{w:%Y%m%d%H%M}", f"In {mins} min: {e['title']} ({fmt_time(w)})", False))
         return out
+
+    def _cards_due(self, now: datetime) -> int:
+        try:
+            return len(self.study.due(None, 10000, now.date())) if self.study else 0
+        except Exception:                                  # a study problem must never stop the other nudges
+            return 0
 
     def tick(self, now: datetime | None = None) -> int:
         """Send whatever is due and allowed. Returns how many messages went out."""

@@ -447,3 +447,21 @@ class TestWebRoutes(unittest.TestCase):
         c = self.make(None, None)
         self.assertEqual(c.get("/").status_code, 404)
         self.assertEqual(c.get("/cert.pem").status_code, 404)
+
+
+class TestStudyNudge(unittest.TestCase):
+    def test_cards_due_join_the_evening_nudge_once(self):
+        from datetime import datetime
+        from cyph.clock import TZ
+        from cyph.proactive import Proactive
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            store = StudyStore(root / "study")
+            store.add_card(store.subjects()[0]["id"], "Q", "A", state="approved")
+            sent = []
+            p = Proactive(Planner(root / "s.json"), sent.append, root / "c.json", root / "st.json")
+            p.study = store
+            now = datetime(2026, 11, 9, 19, 5, tzinfo=TZ)
+            self.assertEqual(p.tick(now), 1)
+            self.assertIn("due for review", sent[0])
+            self.assertEqual(p.tick(now), 0)

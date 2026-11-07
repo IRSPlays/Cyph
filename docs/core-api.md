@@ -23,6 +23,34 @@ Request bodies over 64 KiB get 413 (checked before auth).
 | GET `/memory/{key}` | | `{key, entries, used, cap}` (`key` = user, memory, people) |
 | POST `/memory/{key}` | `{action: add\|replace\|remove, text?, match?}` | `{applied, rejected:[{why}]}` (secret filter, duplicates and size caps apply; logged as source `app`) |
 
+## Study
+
+All need the token. Errors are `{detail}` with 404 (missing), 409 (wrong state), 413 (upload over 36 MB), 422 (bad input).
+Uploads are base64 in JSON.
+
+| Method + path | Notes |
+|---|---|
+| GET `/study/today` | what to do now: due count, drafts, tests, weak topics, streak |
+| GET `/study/subjects` | the seven subjects with counts |
+| POST `/study/sources` | `{subject, title, text?, data?, mime?}` imports and processes; GET lists; POST `/study/sources/{id}/retry`; GET `/study/sources/{id}/original` |
+| GET / POST `/study/notes`, GET / PATCH / DELETE `/study/notes/{id}` | notes, edited by hand or from a source |
+| POST `/study/search`, POST `/study/reindex` | semantic search over notes |
+| GET `/study/topics`, PATCH / POST merge | rename or merge topics |
+| GET / POST `/study/cards`, PATCH / DELETE `/study/cards/{id}` | `state`: draft, approved, suspended |
+| POST `/study/cards/draft`, POST `/study/cards/{id}/approve`, POST `/study/cards/{id}/review` | draft with the model; `{grade: 0\|1\|2}` |
+| GET `/study/due`, GET `/study/stats` | queue and numbers |
+| POST `/study/tutor` | `{subject, question, level?}` hint ladder |
+| POST `/study/practice`, POST `/study/practice/answer` | generate and mark |
+| POST `/study/papers/mark`, GET `/study/attempts` | mark a whole paper from a photo or PDF |
+| GET / POST `/study/tests`, DELETE `/study/tests/{id}` | tests with revision blocks in the plan |
+| `/study/notebooks`, `/study/pages`, `/study/boards`, `/study/boards/{id}/items` | pen notebooks (PDF export at `/pdf`) and boards |
+
+Chat: the `say` frame accepts `mode: "study"` and `subject`. A change publishes `changed: study` on `/events`.
+
+### Web app
+
+`GET /` serves `app/dist` and `GET /cert.pem` serves the public certificate, both without a token. Every data route still needs one.
+
 ## WebSocket `/chat`
 
 1. Connect, then within 5 seconds send `{"type":"auth","token":"..."}`. Server replies `{"type":"ready","device":name}`

@@ -840,6 +840,7 @@ def run_service(a=None, server: bool = False):
                 from .core.study import GeminiStudyAI, StudyService, StudyStore
                 study = StudyService(StudyStore(CORE_DATA / "core" / "study"), GeminiStudyAI(), planner=sched)
                 brain.toolbox = ToolBox(sched, proposals=props, study=study)
+                svc.proactive.study = study.store
                 start_core(cfg, store=store, brain=brain, planner=sched, log=log, folder=CORE_DATA / "core",
                            shared=brain.shared, proactive=svc.proactive, proposals=props, study=study,
                            notify=lambda text: svc.api.send(svc.owner, text))

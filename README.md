@@ -41,7 +41,7 @@ The bottom-right corner of every screen belongs to Cyph, so nothing in the UI is
 
 ## The desktop app
 
-Five pages: **Home**, **Calendar**, **Memory**, **Arm**, **Settings** (Study is greyed out, see [Honest status](#honest-status)).
+Six pages: **Home**, **Calendar**, **Memory**, **Study**, **Arm**, **Settings** (see [Study](#study)).
 
 <div align="center">
 <img src="docs/media/desktop-home.png" width="900" alt="Home page: big pixel face, today's plan, arm joints, chat with Cyph">
@@ -175,7 +175,7 @@ random. Each kind is its own Android channel, so you can silence one (say Study)
 | **Nudge** | <img src="docs/media/notif-nudge.png" width="320" alt="Nudge notification"> | A long block is about to end and something follows soon ("hold the next one?"). **SNOOZE 10** / **OPEN** chips. | High |
 | **Reminder** | <img src="docs/media/notif-reminder.png" width="320" alt="Reminder notification"> | 10 minutes before anything with a time. **SNOOZE 10** / **OPEN**. Exact alarms, so they ring even if the app is dead. | High |
 | **Arm** | <img src="docs/media/notif-arm.png" width="320" alt="Arm notification"> | An arm task finished or failed. | Default |
-| **Study** | <img src="docs/media/notif-study.png" width="320" alt="Study notification"> | Cards due. Study is not built yet, so nothing sends this today. | Default |
+| **Study** | <img src="docs/media/notif-study.png" width="320" alt="Study notification"> | Cards due. Today the evening Telegram nudge reports them; the Android notification is not wired yet. | Default |
 | **Alert** | <img src="docs/media/notif-alert.png" width="320" alt="Alert notification"> | The link to the server has been lost for 90 seconds. | High |
 | **Quiet** | <img src="docs/media/notif-quiet.png" width="320" alt="Quiet notification"> | Low-key, shade only, no sound. | Low |
 
@@ -320,8 +320,8 @@ What is real, and what is not yet:
 | Area | State |
 |---|---|
 | Core server, planner, memory, Telegram, sync | Working, used daily. |
-| Desktop app (Home, Calendar, Memory, Arm, Settings) | Working. Study is a greyed-out page. |
-| Phone app (Chat, Plan, More) | Working on my Xiaomi 13T (HyperOS 3). Study tab is a placeholder. |
+| Desktop app (Home, Calendar, Memory, Study, Arm, Settings) | Working. Study is built and tested against a fake model and the mock server; it has not yet run against the real Gemini API. |
+| Phone app (Chat, Plan, More) | Working on my Xiaomi 13T (HyperOS 3). Study tab is built (review, tutor, add, cards, pen) but untested on the phone. |
 | Widgets (4×2, 2×2, 2×1) and notifications | Working on the phone. Widgets are static pictures; several designed variants are not built. |
 | Replies when the app is closed | Working via a foreground service. **Xiaomi/HyperOS may kill it** unless the app has Autostart on and battery set to "No restrictions" (the app links you to those pages). |
 | Push notifications (FCM) | **Not built.** The phone keeps its own connection instead. |
@@ -329,9 +329,34 @@ What is real, and what is not yet:
 | Arm | Works on the real arm; there is no footage in this repo yet. |
 | Build | Debug APK only (large, unsigned; antivirus may flag each reinstall). The device token is stored unencrypted in the app's private folder (follow-up: OS keystore). |
 
+## Study
+
+Seven subjects (Math, Chemistry, Physics, Amath, English, SS, Geog). Everything lives in the core server
+(`cyph/core/study.py`, routes in `study_api.py`, SQLite under `data/core/study/`), so the desktop, phone and iPad see the same data.
+
+- **Add**: paste text, or upload a PDF or photo. Gemini cleans it into notes, a summary, key terms, a study guide and likely questions.
+- **Notes** are chunked and embedded, so search and the tutor answer from your own material (word-overlap fallback if embeddings fail).
+- **Cards** are drafted by the model, and nothing is reviewed until you approve it. Reviews use a 3-grade spaced-repetition scheduler.
+- **Tutor** is a chat mode that uses your notes and gives hints in steps (restate, nudge, first step, solution).
+- **Practice** generates questions on your weak topics and marks your answers, or a photo of a whole paper, against a scheme.
+- **Tests**: add a test and Cyph schedules revision blocks 7, 3 and 1 days before it.
+- **Notebooks and boards**: pen pages (lined, grid, dots, blank; PDF export) and free boards with text, stickies, shapes, connectors and images.
+- Maths and chemistry render with KaTeX and mhchem.
+
+Models are set with `CYPH_STUDY_MODEL` and `CYPH_EMBED_MODEL` (the defaults are unverified; set them to models your key can use).
+The evening nudge adds "N cards due".
+
+### iPad
+
+Build the app once (`cd app && pnpm build`). The core server then serves it: open `https://<pc-address>:<port>/` in Safari, pair
+with the code, and add it to the Home Screen. Safari needs to trust the server's self-signed certificate: open
+`https://<pc-address>:<port>/cert.pem`, install the profile, then enable it under Settings, General, About, Certificate Trust Settings.
+Away from home, put the PC and iPad on Tailscale. Pencil input uses pointer events with palm rejection; strokes are queued
+offline and sent when the connection returns.
+
 ## Roadmap
 
-Study mode (note embeddings, a quiz of due cards, Study notifications), phone voice and QR pairing, push via FCM,
+Study on real Gemini models and real hardware (Apple Pencil, Safari certificate trust), phone voice and QR pairing, push via FCM,
 a signed release build, an encrypted token store, and the remaining widget variants.
 
 <details>
