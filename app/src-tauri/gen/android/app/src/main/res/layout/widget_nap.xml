@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/wd_bg_g" android:orientation="vertical" android:padding="10dp" android:gravity="center">
-    <TextView android:id="@+id/lbl" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:textSize="9sp" android:letterSpacing="0.2" android:textColor="@color/cy_neon" android:maxLines="1" />
-    <include layout="@layout/part_face_loop" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-    <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp">
-        <Chronometer android:id="@+id/chrono" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:fontFamily="monospace" android:textSize="18sp" android:textColor="@color/cy_cream" android:visibility="gone" />
-        <ViewFlipper android:id="@+id/zzz" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="end" android:autoStart="true" android:flipInterval="650" android:visibility="gone">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="serif" android:textStyle="italic" android:textSize="13sp" android:textColor="@color/cy_dim" android:text="z" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="serif" android:textStyle="italic" android:textSize="15sp" android:textColor="@color/cy_dim" android:text="zZ" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="serif" android:textStyle="italic" android:textSize="18sp" android:textColor="@color/cy_dim" android:text="zZz" />
-        </ViewFlipper>
-    </FrameLayout>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <TextView android:id="@+id/b10" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_margin="2dp" android:background="@drawable/chip_bg" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp" android:fontFamily="sans-serif-medium" android:textSize="11sp" android:letterSpacing="0.1" android:textColor="@color/cy_neon" android:text="10" />
-        <TextView android:id="@+id/b20" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_margin="2dp" android:background="@drawable/chip_bg" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp" android:fontFamily="sans-serif-medium" android:textSize="11sp" android:letterSpacing="0.1" android:textColor="@color/cy_neon" android:text="20" />
-        <TextView android:id="@+id/b45" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_margin="2dp" android:background="@drawable/chip_bg" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp" android:fontFamily="sans-serif-medium" android:textSize="11sp" android:letterSpacing="0.1" android:textColor="@color/cy_neon" android:text="45" />
-        <TextView android:id="@+id/bwake" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_margin="2dp" android:background="@drawable/chip_bg" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp" android:fontFamily="sans-serif-medium" android:textSize="11sp" android:letterSpacing="0.1" android:textColor="@color/cy_neon" android:text="WAKE ME" />
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/wd_panel">
+    <ImageView android:id="@+id/edge" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:importantForAccessibility="no" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="18dp" android:gravity="center_horizontal">
+        <TextView android:id="@+id/lbl" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:textSize="10sp" android:textColor="@color/cy_neon" android:letterSpacing="0.18" android:maxLines="1"/>
+        <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <LinearLayout android:id="@+id/idlegrp" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center">
+                <TextView android:id="@+id/num" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="serif" android:textStyle="italic" android:textSize="52sp" android:textColor="@color/cy_cream" />
+                <TextView android:id="@+id/unit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:textSize="10sp" android:textColor="@color/cy_dim" android:letterSpacing="0.1" android:text="MINUTES · TAP TO CHANGE"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/napgrp" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:visibility="gone">
+                <include layout="@layout/part_face_loop" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="6dp" android:layout_marginBottom="6dp" />
+                <Chronometer android:id="@+id/chrono" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="monospace" android:textSize="22sp" android:textColor="@color/cy_cream" />
+            </LinearLayout>
+        </FrameLayout>
+        <TextView android:id="@+id/go" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/wd_pill" android:gravity="center" android:paddingTop="9dp" android:paddingBottom="9dp" android:fontFamily="sans-serif-medium" android:textSize="12sp" android:letterSpacing="0.15" android:textColor="@color/cy_neon" android:layout_marginTop="6dp" />
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

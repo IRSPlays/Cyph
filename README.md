@@ -134,25 +134,26 @@ column says what is actually on the phone today.
 
 ### Silly widgets (interactive, animated)
 
-Eight more, built to be played with. They are native too, and they are the first widgets that **do things without
-opening the app**: a tap is a broadcast to the widget itself. Idle motion (he blinks, a prompt cursor blinks, "zZz")
-is a `ViewFlipper` the launcher animates on its own; a reaction (a boop, a coin spin, shaken-ball wobble) is a short
-burst of partial updates. Everything here works with no link to home. Written for HyperOS 3 (Android 16 base).
+Eight more, built to be played with, and the first widgets that **do things without opening the app**: a tap is a
+broadcast to the widget itself. They share one design rule: **the glowing edge is the readout**. A bright arc runs
+clockwise from the top centre (progress, fullness, battery, nap time) and sweeps round when something happens. The
+middle holds one hero (his face, a ball, a number), under it one line of text, and the whole widget is the tap target.
+Idle motion (he blinks, a prompt cursor blinks) is a `ViewFlipper` the launcher animates itself; a reaction is a short
+burst of partial updates. Everything works with no link to home. Written for HyperOS 3 (Android 16 base).
 
-| Widget | Size | What it does |
-|---|---|---|
-| **Boop** | 2×2 | Tap his snoot. He purrs; boop fast and he giggles, then gets grumpy. Counts your boops. |
-| **Snack Bowl** | 2×2 | Tap to feed him (crunch animation). The bowl drains over 8 hours and he gets dramatic when empty. |
-| **Cyph-Ball** | 2×2 | Tap to shake. The ball wobbles, then he types out advice you should not take. |
-| **Coin & Dice** | 2×2 | COIN or DICE: a spin that slows down, then he judges the result. |
-| **Nap Timer** | 2×2 | 10 / 20 / 45 minutes. He dozes with you, a live countdown, then stretches and nudges you. |
-| **Excuse Generator** | 4×2 | "I don't wanna": a ridiculous excuse for the block you are on, slot-machine style. |
-| **Look Busy** | 4×2 | Fake build logs scroll for a few seconds, then BUILD SUCCESSFUL (nobody checked). |
-| **Existential Battery** | 2×1 | Your real battery as his feelings, from hyper to "tell my plants I loved them". |
+| Widget | Size | Tap | The edge shows |
+|---|---|---|---|
+| **Boop** | 2×2 | Boop his snoot. He purrs; boop fast and he giggles, then gets grumpy. | Progress to the next 50 boops. |
+| **Snack Bowl** | 2×2 | Feed him (crunch animation). | The bowl: drains over 8 hours, green, amber, then coral. |
+| **Cyph-Ball** | 2×2 | Shake. The ball wobbles and he types out advice you should not take. | Sweeps round while it shakes. |
+| **Coin & Dice** | 2×2 | Tap the 🪙 half or the 🎲 half. It spins, slows down, and he judges the result. | Sweeps round while it spins. |
+| **Nap Timer** | 2×2 | Tap the number to change 10 / 20 / 45, tap START. Tap again to wake. | How much of the nap is done. |
+| **Excuse Generator** | 4×2 | Tap for a ridiculous excuse for the block you are on. | Sweeps round while it rolls. |
+| **Look Busy** | 4×2 | Fake build logs scroll for a few seconds, then BUILD SUCCESSFUL (nobody checked). | Build progress. |
+| **Existential Battery** | 2×1 | Your real battery as his feelings. Tap to poke him. | The battery level. |
 
-The old widgets got two upgrades: the **Face** widget now blinks on a loop, and the **4×2 Now** widget has a live
-countdown that ticks without redrawing. Face frames for all 27 moods (and blink frames) come from
-`python tools_bake_widget_frames.py`.
+The old **Face** widget now blinks on a loop, and the **4×2 Now** widget has a live countdown that ticks without
+redrawing. Face frames for all 27 moods (and blink frames) come from `python tools_bake_widget_frames.py`.
 
 **Getting the APK without a PC build:** the `Android APK` GitHub Actions workflow builds the debug APK. Open the
 repo's **Actions** tab, pick the latest run and download the `cyph-debug-apk` artifact.

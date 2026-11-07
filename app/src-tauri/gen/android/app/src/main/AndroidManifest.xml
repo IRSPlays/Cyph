@@ -92,6 +92,7 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_battery_info" />
         </receiver>
         <receiver android:name=".NapDone" android:exported="false" />
+        <receiver android:name=".NapTick" android:exported="false" />
 
         <provider
           android:name="androidx.core.content.FileProvider"
