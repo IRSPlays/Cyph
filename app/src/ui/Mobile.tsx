@@ -11,7 +11,7 @@ import { toast, useToast } from "../lib/toast";
 import type { Pic } from "../lib/types";
 import { CyphCanvas } from "./CyphCanvas";
 import { MobilePlan } from "./MobilePlan";
-import { CardList, ImportBox, ReviewDeck, SourceList, SourceView, TutorBox } from "./StudyParts";
+import { CardList, ImportBox, NewNote, NoteEditor, NoteList, PaperBox, PracticeBox, ReviewDeck, SearchBox, SourceList, SourceView, TutorBox } from "./StudyParts";
 import { Notebooks } from "./StudyInk";
 import { studyToday } from "../lib/resources";
 import { useResource } from "../lib/store";
@@ -206,8 +206,22 @@ function Chat() {
 }
 
 /** The Study page is not built on the desktop either; this says so instead of faking a quiz. */
-type StudyTab = "today" | "review" | "tutor" | "add" | "cards" | "pen";
-const STABS: [StudyTab, string][] = [["today", "TODAY"], ["review", "REVIEW"], ["tutor", "TUTOR"], ["add", "ADD"], ["cards", "CARDS"], ["pen", "PEN"]];
+type StudyTab = "today" | "review" | "tutor" | "notes" | "practice" | "add" | "cards" | "pen";
+const STABS: [StudyTab, string][] = [["today", "TODAY"], ["review", "REVIEW"], ["tutor", "TUTOR"], ["notes", "NOTES"], ["practice", "PRACTICE"], ["add", "ADD"], ["cards", "CARDS"], ["pen", "PEN"]];
+
+function MNotes({ subj, subjects }: { subj?: string; subjects: { id: string; name: string }[] }) {
+  const [id, setId] = useState<string | undefined>(undefined);
+  const [q, setQ] = useState("");
+  if (id) return <div className="mcard"><button className="mbtn" onClick={() => setId(undefined)}>‹ ALL NOTES</button><NoteEditor key={id} id={id} onGone={() => setId(undefined)} /></div>;
+  return (
+    <div className="mcard">
+      <SearchBox subject={subj} onOpen={setId} />
+      <input className="f" placeholder="Filter by title" value={q} onChange={(e) => setQ(e.target.value)} aria-label="filter notes" style={{ margin: "8px 0" }} />
+      <NoteList subject={subj} q={q} onOpen={setId} />
+      <div style={{ marginTop: 8 }}><NewNote subject={subj} subjects={subjects} onMade={setId} /></div>
+    </div>
+  );
+}
 
 function Study() {
   const today = useResource(studyToday());
@@ -220,7 +234,7 @@ function Study() {
   return (
     <div className="mpage pg-study mstudy">
       <div className="tabs" style={{ overflowX: "auto", flex: "none" }}>
-        {STABS.map(([k, n]) => <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{n}{k === "review" && st?.due ? ` ${st.due}` : ""}</button>)}
+        {STABS.map(([k, n]) => <button key={k} className={tab === k ? "on" : ""} onClick={(e) => { setTab(k); e.currentTarget.scrollIntoView?.({ inline: "center", block: "nearest", behavior: "smooth" }); }}>{n}{k === "review" && st?.due ? ` ${st.due}` : ""}</button>)}
       </div>
       {tab !== "today" && tab !== "add" && (
         <select className="f" value={subj ?? ""} onChange={(e) => setSubj(e.target.value || undefined)} aria-label="subject">
@@ -245,6 +259,14 @@ function Study() {
       )}
       {tab === "review" && <div className="mcard"><ReviewDeck subject={subj} compact /></div>}
       {tab === "tutor" && <div style={{ height: "60vh", display: "flex" }}><TutorBox subject={subj} subjectName={cur?.name} /></div>}
+      {tab === "notes" && <MNotes subj={subj} subjects={subjects} />}
+      {tab === "practice" && (
+        <div className="mcard">
+          {subj ? <><PracticeBox subject={subj} subjectName={cur?.name} /><div className="sub2">PAST PAPER</div><PaperBox subject={subj} /></> : (
+            <><div className="empty">Which subject?</div><div className="pick">{subjects.map((s) => <button key={s.id} className="mbtn" style={{ flex: "none" }} onClick={() => setSubj(s.id)}>{s.name.toUpperCase()}</button>)}</div></>
+          )}
+        </div>
+      )}
       {tab === "add" && (
         <div className="mcard">
           <ImportBox subject={subj} subjects={subjects} onOpen={(s) => setSource(s)} />

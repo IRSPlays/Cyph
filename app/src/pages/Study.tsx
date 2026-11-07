@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { studyAttempts, studyToday, studyTopics } from "../lib/resources";
 import { useResource } from "../lib/store";
@@ -15,9 +15,10 @@ type Tab = "today" | "notes" | "tutor" | "cards" | "papers" | "pen" | "boards";
 const TABS: [Tab, string][] = [["today", "TODAY"], ["notes", "NOTES"], ["tutor", "TUTOR"], ["cards", "CARDS"], ["papers", "PRACTICE"], ["pen", "NOTEBOOKS"], ["boards", "BOARDS"]];
 const daysTo = (d: string) => Math.round((new Date(d + "T00:00:00").getTime() - new Date(new Date().toDateString()).getTime()) / 86400000);
 
-function TestForm({ today }: { today: StudyToday }) {
+function TestForm({ today, subjectId }: { today: StudyToday; subjectId?: string }) {
   const [open, setOpen] = useState(false);
-  const [subject, setSubject] = useState(today.subjects[0]?.name ?? "");
+  const [subject, setSubject] = useState(today.subjects.find((s) => s.id === subjectId)?.name ?? today.subjects[0]?.name ?? "");
+  useEffect(() => { const n = today.subjects.find((s) => s.id === subjectId)?.name; if (n) setSubject(n); }, [subjectId, today.subjects]);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [topics, setTopics] = useState("");
@@ -109,9 +110,13 @@ export function Study() {
       case "papers":
         return (
           <div className="center">
-            <PracticeBox subject={subj} subjectName={cur?.name} />
-            <div className="sub2">PAST PAPER</div>
-            <PaperBox subject={subj} />
+            {!subj ? <div><div className="empty">Which subject do you want to practise?</div><div className="pick">{subjects.map((s) => <button key={s.id} className="btn" onClick={() => setSubj(s.id)}>{s.name.toUpperCase()}</button>)}</div></div> : (
+              <>
+                <PracticeBox subject={subj} subjectName={cur?.name} />
+                <div className="sub2">PAST PAPER</div>
+                <PaperBox subject={subj} />
+              </>
+            )}
           </div>
         );
       case "pen":
@@ -129,7 +134,7 @@ export function Study() {
         <div className="sp" />
         <div className="tabs">{TABS.map(([k, n]) => <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{n}</button>)}</div>
       </div>
-      <div className="page">
+      <div className={"page" + (tab === "pen" || tab === "boards" ? " wide" : "")}>
         <div className="cp">
           <div className="lbl">SUBJECTS</div>
           <div className="subj" role="button" tabIndex={0} onClick={() => setSubj(undefined)} style={subj === undefined ? { boxShadow: "inset 0 0 0 2px var(--ne)" } : undefined}><div className="ic" style={{ background: "var(--cr)" }}>∗</div><h5>All</h5><span className="n">{st?.due ? st.due : ""}</span></div>
@@ -167,7 +172,7 @@ export function Study() {
                   </div>
                 );
               })}
-              {data && <TestForm today={data} />}
+              {data && <TestForm today={data} subjectId={subj} />}
               <div className="sub2">WEAK TOPICS</div>
               {weak.map((w) => <div key={w.id} className="weak"><span>{w.name}</span><i>{Math.round(w.weakness * 100)}% MISSED</i></div>)}
               {!weak.length && <div className="mini">None yet. Practise and Cyph will find them.</div>}

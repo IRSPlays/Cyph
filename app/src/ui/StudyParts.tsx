@@ -356,6 +356,7 @@ export function PracticeBox({ subject, subjectName }: { subject?: string; subjec
   const [answer, setAnswer] = useState("");
   const [pics, setPics] = useState<{ mime: string; data: string }[]>([]);
   const [res, setRes] = useState<StudyMarked | null>(null);
+  const [asked, setAsked] = useState<StudyQuestion | null>(null);
   const [busy, setBusy] = useState(false);
   const pick = useRef<HTMLInputElement>(null);
   if (!subject) return <div className="empty">Pick a subject on the left to practise.</div>;
@@ -366,7 +367,7 @@ export function PracticeBox({ subject, subjectName }: { subject?: string; subjec
   const submit = async () => {
     if (!q) return;
     setBusy(true);
-    try { setRes(await api.studyAnswer(q.id, answer, pics)); setQ(null); } catch (e) { toast(errText(e)); } finally { setBusy(false); }
+    try { setRes(await api.studyAnswer(q.id, answer, pics)); setAsked(q); setQ(null); } catch (e) { toast(errText(e)); } finally { setBusy(false); }
   };
   const addPic = async (f?: File) => { if (!f) return; try { const p = await toPic(f); setPics((c) => [...c, { mime: p.mime, data: p.data }].slice(0, 4)); } catch (e) { toast(errText(e)); } };
   return (
@@ -392,6 +393,7 @@ export function PracticeBox({ subject, subjectName }: { subject?: string; subjec
       )}
       {res && (
         <div className="cd">
+          {asked && <div className="paper" style={{ marginBottom: 10 }}><b>{asked.topic.toUpperCase()} · {asked.marks} MARKS</b><Rich text={asked.question} /></div>}
           <div className="q">{res.score} / {res.marks} marks</div>
           <div className="a">{res.feedback}</div>
           {res.next && <div className="a" style={{ color: "var(--ne)" }}>Next: {res.next}</div>}

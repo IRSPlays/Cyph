@@ -146,7 +146,7 @@ export function Boards({ subject }: { subject?: string }) {
             {from && <span className="mini">now tap the second item</span>}
           </div>
           <div className="board">
-            <div className="sheet" ref={sheet} onPointerDown={drawDown} onPointerMove={(e) => { drawMove(e); moveItem(e); }} onPointerUp={() => { drawUp(); endItem(); }}>
+            <div className={"sheet" + (mode === "draw" ? " drawing" : "")} ref={sheet} onPointerDown={drawDown} onPointerMove={(e) => { drawMove(e); moveItem(e); }} onPointerUp={() => { drawUp(); endItem(); }}>
               <svg width="2400" height="1600" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
                 {items.filter((i) => i.kind === "connector").map((c) => {
                   const a = items.find((i) => i.id === c.data.from), b = items.find((i) => i.id === c.data.to);

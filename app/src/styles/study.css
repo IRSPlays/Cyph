@@ -182,3 +182,32 @@
 .pg-study .mini{font:11px 'DM Mono';color:var(--dim)}
 .pg-study .tabs button{white-space:nowrap;flex:none}
 .mstudy .tabs{padding-bottom:2px}
+
+/* ---- real-use fixes (UX pass) ---- */
+/* Study had no toast style, so every "saved" / error message was bare text stuck to the bottom-left corner */
+.pg-study .toast{position:fixed;left:50%;top:76px;transform:translate(-50%,-20px);z-index:60;max-width:min(560px,92vw);background:#12170d;color:var(--cr);padding:9px 16px;border-radius:8px;font:12px/1.4 'DM Mono';box-shadow:0 0 0 1px var(--ne),0 10px 30px #000a;opacity:0;transition:.3s;pointer-events:none}
+.pg-study .toast.on{opacity:1;transform:translate(-50%,0)}
+/* on the phone the shared .mcard p rule (11px, dim) made card faces and answers unreadable */
+.mstudy .rich p,.mstudy .rich li{font:inherit;color:inherit;margin:0}
+.mstudy .flash .rich p{font:italic 22px/1.2 'Instrument Serif'}
+.mstudy .cd .q .rich p{font:italic 20px/1.18 'Instrument Serif';color:var(--cr)}
+.mstudy .cd .a .rich p{font:12px/1.45 'DM Mono';color:#b8c6a4}
+/* iPad: notebooks and boards need the width, so the subject rail shrinks to icons and the right column goes */
+@media (max-width:1300px),(pointer:coarse){
+  .pg-study .page.wide{grid-template-columns:72px minmax(0,1fr)}
+  .pg-study .page.wide>.cp:last-child{display:none}
+  .pg-study .page.wide>.cp:first-child>:not(.subj){display:none}
+  .pg-study .page.wide>.cp:first-child .subj h5,.pg-study .page.wide>.cp:first-child .subj .n{display:none}
+  .pg-study .page.wide>.cp:first-child .subj{justify-content:center;padding-left:0;padding-right:0}
+}
+.pg-study .board .sheet.drawing,.pg-study .board .bi{touch-action:none}
+.pg-study .pick{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+/* finger and Pencil: every control at least 44px */
+@media (pointer:coarse){
+  .pg-study .btn,.pg-study .tabs button,.mstudy .mbtn{min-height:44px}
+  .pg-study .btn.sm{padding-left:12px;padding-right:12px}
+  .pg-study select.f,.pg-study input.f{min-height:44px}
+  .pg-study .dot{width:40px;height:40px;margin:2px}
+  .pg-study .fl,.pg-study .subj{min-height:44px}
+  .pg-study .cmdrow input{min-height:36px}
+}
