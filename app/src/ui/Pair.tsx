@@ -39,7 +39,7 @@ export function Pair({ onPaired }: { onPaired: () => void }) {
           <div className="logo">CYPH<em>/</em>PAIR</div>
           <h1 className="t"><em>FIRST RUN</em>Hi. I'm Cyph.</h1>
           <p className="sub">Paste the pairing link from your other device (Settings → Pair a new device) or from the server.</p>
-          <textarea className="f" rows={3} value={link} onChange={(e) => setLink(e.target.value)} placeholder="cyph://pair?host=…&fp=…&code=…" spellCheck={false} />
+          <textarea className="f" rows={3} value={link} onChange={(e) => setLink(e.target.value)} placeholder={mobile || !("__TAURI_INTERNALS__" in window) ? "pairing code, or the whole link" : "cyph://pair?host=…&fp=…&code=…"} spellCheck={false} />
           {mobile && <button className="btn" onClick={() => void paste()}>PASTE FROM CLIPBOARD</button>}
           <input className="f" value={name} onChange={(e) => setName(e.target.value)} placeholder="name this device" />
           <button className="btn go" disabled={busy || !link.trim()} onClick={() => void go()}>{busy ? "PAIRING…" : "PAIR"}</button>

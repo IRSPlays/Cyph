@@ -8,6 +8,7 @@ import json
 import threading
 from dataclasses import dataclass
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
@@ -104,6 +105,8 @@ class Deps:
     proposals: Any = None       # proposals.Proposals: memories he wants to keep, waiting for a yes
     notify: Any = None          # callable(text): a message to the owner on Telegram (pairings, revocations)
     study: Any = None           # study.StudyService: subjects, notes, cards, practice (the /study routes)
+    web_root: Any = None        # folder with the built web app (app/dist): served at / so an iPad can use it in Safari
+    cert_path: Any = None       # the server's public certificate, offered at /cert.pem for the iPad to trust
 
 
 class PairIn(BaseModel):
@@ -687,4 +690,26 @@ def create_app(d: Deps) -> FastAPI:
             d.log("warn", f"core: chat socket ended ({type(e).__name__})")
             await close_quietly(ws, 1011)
 
+    add_web_routes(app, d)
     return app
+
+
+def add_web_routes(app: FastAPI, d: Deps):
+    """The web app itself and the public certificate. Both are public on purpose (the page is only the UI and the
+    certificate is public by nature); every data route still needs a device token."""
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+    root = Path(d.web_root) if d.web_root else None
+    if root is not None and (root / "index.html").is_file():
+        if (root / "assets").is_dir():
+            app.mount("/assets", StaticFiles(directory=str(root / "assets")), name="assets")
+
+        @app.get("/", include_in_schema=False)
+        def index():
+            return FileResponse(root / "index.html", headers={"Cache-Control": "no-cache"})
+
+    if d.cert_path and Path(d.cert_path).is_file():
+        @app.get("/cert.pem", include_in_schema=False)
+        def cert():
+            return Response(Path(d.cert_path).read_bytes(), media_type="application/x-x509-ca-cert",
+                            headers={"Content-Disposition": 'attachment; filename="cyph.pem"'})

@@ -413,3 +413,37 @@ class TestApi(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWebRoutes(unittest.TestCase):
+    def make(self, web=None, cert=None):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.devices = DeviceStore(root / "devices.db")
+        deps = Deps(devices=self.devices, planner=Planner(root / "s.json"), store=MemoryStore(root / "m"), brain=None,
+                    log=lambda *a: None, pair_limiter=Limiter(5, 600, 900), auth_limiter=Limiter(30, 60, 300), web_root=web, cert_path=cert)
+        return TestClient(create_app(deps))
+
+    def tearDown(self):
+        self.devices.close()
+        self.tmp.cleanup()
+
+    def test_serves_the_built_app_and_the_certificate_without_login(self):
+        web = Path(tempfile.mkdtemp())
+        (web / "assets").mkdir()
+        (web / "index.html").write_text("<html>cyph</html>")
+        (web / "assets" / "a.js").write_text("1")
+        cert = web / "cert.pem"
+        cert.write_text("-----BEGIN CERTIFICATE-----\nx\n-----END CERTIFICATE-----\n")
+        c = self.make(web, cert)
+        self.assertEqual(c.get("/").text, "<html>cyph</html>")
+        self.assertEqual(c.get("/assets/a.js").text, "1")
+        r = c.get("/cert.pem")
+        self.assertEqual(r.headers["content-type"], "application/x-x509-ca-cert")
+        self.assertIn("BEGIN CERTIFICATE", r.text)
+        self.assertEqual(c.get("/plan").status_code, 401)             # data is still behind the token
+
+    def test_nothing_is_served_when_not_built(self):
+        c = self.make(None, None)
+        self.assertEqual(c.get("/").status_code, 404)
+        self.assertEqual(c.get("/cert.pem").status_code, 404)

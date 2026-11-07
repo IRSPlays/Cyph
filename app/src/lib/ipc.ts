@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { mockIpc } from "./mockIpc";
+import { webIpc } from "./webIpc";
 import type { ArmFrame, ClientEvent, Pic, Settings, SyncEvent } from "./types";
 
 export interface Ipc {
@@ -58,4 +59,6 @@ const real: Ipc = {
 
 /** `?mock` in the URL swaps in an in-memory fake, so the UI can be built and looked at in a plain browser. */
 const useMock = typeof location !== "undefined" && new URLSearchParams(location.search).has("mock");
-export const ipc: Ipc = useMock ? mockIpc() : real;
+const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+/** Not the desktop app and not `?mock`: a browser (an iPad) talking to the server that served this page. */
+export const ipc: Ipc = useMock ? mockIpc() : inTauri ? real : webIpc();

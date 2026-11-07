@@ -27,6 +27,12 @@ class Handle:
             self.devices.close()
 
 
+def _web_root():
+    """The built web app (app/dist), when it has been built: the iPad opens it in Safari from this server."""
+    got = Path(__file__).resolve().parents[2] / "app" / "dist"
+    return got if (got / "index.html").is_file() else None
+
+
 def make_config(app, cfg, cert, key):
     """uvicorn settings. The limits apply before any auth: at most 32 connections/tasks at once, idle keep-alive
     connections dropped after 5 s, and WebSocket frames over 64 KiB refused by uvicorn itself."""
@@ -50,7 +56,8 @@ def start(cfg, *, store, brain, planner, log, folder, shared=None, proactive=Non
     hub = Hub()
     deps = Deps(devices=devices, planner=planner, store=store, brain=brain, log=log,
                 pair_limiter=Limiter(5, 600, 900), auth_limiter=Limiter(30, 60, 300),
-                hub=hub, shared=shared, proactive=proactive, notify=notify, proposals=proposals, study=study)
+                hub=hub, shared=shared, proactive=proactive, notify=notify, proposals=proposals, study=study,
+                web_root=_web_root(), cert_path=cert)
     if study is not None:
         study.changed = lambda what: hub.publish({"type": "changed", "what": what})
     topics = {"plan": [planner.path], "day_notes": [planner.notes_path],
