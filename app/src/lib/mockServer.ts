@@ -1,5 +1,6 @@
 /** A tiny in-memory stand-in for the Cyph Core server, for `?mock` in a plain browser and for tests. It answers the same
  *  routes as cyph/core/app.py and announces changes on the same feed, so the sync paths run exactly as they do live. */
+import { createMockStudy, NOT_HANDLED } from "./mockStudy";
 import type {
   ChatRelay,
   DeviceRow,
@@ -34,6 +35,7 @@ export function createMockServer(): MockServer {
   const changed = (what: string) => setTimeout(() => emit({ type: "changed", what }), 30);
   const today = sg();
   let seq = 100;
+  const study = createMockStudy(changed, () => today);
 
   const week: [string, number, string, string, number, string][] = [
     // [title, dayOffset, time, kind, minutes, status]
@@ -199,6 +201,8 @@ export function createMockServer(): MockServer {
       const b = (body ?? {}) as Record<string, unknown>;
       let m: RegExpMatchArray | null;
 
+      const st = await study(method, route, qs, b);
+      if (st !== NOT_HANDLED) return st;
       if (route === "/arm" && method === "GET") return armSnap(true);
       if (route === "/arm/command" && method === "POST") {
         if (!arm.on) return fail(409, "The arm agent is not connected.");

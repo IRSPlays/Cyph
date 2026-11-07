@@ -274,3 +274,31 @@ export interface ApiError {
   status: number;
   detail: string;
 }
+
+/* ---- Study ---- */
+export interface StudySubject { id: string; name: string; color: string }
+export interface StudyToday {
+  subjects: (StudySubject & { due: number; drafts: number; approved: number })[];
+  stats: StudyStats;
+  weak: { id: string; name: string; weakness: number; subject_id: string }[];
+  tests: StudyTest[];
+}
+export interface StudyStats { approved: number; drafts: number; suspended: number; due: number; reviewed_today: number; streak: number; retention: number | null; reviews_30d: number }
+export interface StudySource { id: string; subject_id: string; title: string; kind: "pdf" | "photo" | "text"; file_id: string; status: "processing" | "ready" | "failed"; error: string; created: string }
+export interface StudyOutputs { clean_notes?: string; summary?: string; key_terms?: string; study_guide?: string; likely_questions?: string }
+export interface StudyNoteRow { id: string; subject_id: string; source_id: string | null; title: string; kind: string; updated: string; topic_id: string | null; topic: string | null; preview: string }
+export interface StudyNote extends StudyNoteRow { body: string }
+export interface StudyCard { id: string; subject_id: string; topic_id: string | null; topic: string | null; note_id: string | null; front: string; back: string; image_id: string | null; state: "draft" | "approved" | "suspended"; due: string; interval: number; ease: number; reps: number; lapses: number }
+export interface StudyTopic { id: string; subject_id: string; name: string; cards: number; notes: number; weakness: number }
+export interface StudyTest { id: string; subject_id: string; title: string; date: string; plan_event_id: string | null; topics: string[] }
+export interface StudyHit { note_id: string; title: string; text: string; score: number }
+export interface StudyHint { step: number; stage: "restate" | "nudge" | "first_step" | "solution"; text: string; last: boolean; cites: { n: number; note_id: string; title: string }[] }
+export interface StudyQuestion { id: string; subject_id: string; kind: string; question: string; marks: number; topic: string }
+export interface StudyMarked { score: number; marks: number; feedback: string; next: string }
+export interface StudyAttempt { id: string; subject_id: string; topic: string | null; kind: string; prompt: string; score: number; max: number; feedback: string; at: string }
+export interface InkStroke { c: string; w: number; pts: number[][]; k?: string }
+export interface StudyPageRef { id: string; idx: number; background: string }
+export interface StudyNotebook { id: string; subject_id: string | null; title: string; updated: string; pages: StudyPageRef[] }
+export interface StudyPage { id: string; notebook_id: string; idx: number; background: string; strokes: InkStroke[] }
+export interface BoardItem { id: string; kind: "stroke" | "text" | "sticky" | "shape" | "connector" | "image" | "pdf_page" | "link"; x: number; y: number; w: number; h: number; data: Record<string, unknown> }
+export interface StudyBoard { id: string; subject_id: string | null; title: string; updated: string; items: BoardItem[] }

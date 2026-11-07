@@ -11,9 +11,15 @@ import { toast, useToast } from "../lib/toast";
 import type { Pic } from "../lib/types";
 import { CyphCanvas } from "./CyphCanvas";
 import { MobilePlan } from "./MobilePlan";
+import { CardList, ImportBox, ReviewDeck, SourceList, SourceView, TutorBox } from "./StudyParts";
+import { Notebooks } from "./StudyInk";
+import { studyToday } from "../lib/resources";
+import { useResource } from "../lib/store";
+import type { StudySource } from "../lib/types";
+import "katex/dist/katex.min.css";
+import "../styles/study.css";
 import { hasNative, native, notifyNow, pushAlarms, pushSnapshot } from "../lib/native";
 import { planRange } from "../lib/resources";
-import { useResource } from "../lib/store";
 import "../styles/mobile.css";
 
 type Tab = "chat" | "plan" | "study" | "more";
@@ -200,14 +206,55 @@ function Chat() {
 }
 
 /** The Study page is not built on the desktop either; this says so instead of faking a quiz. */
+type StudyTab = "today" | "review" | "tutor" | "add" | "cards" | "pen";
+const STABS: [StudyTab, string][] = [["today", "TODAY"], ["review", "REVIEW"], ["tutor", "TUTOR"], ["add", "ADD"], ["cards", "CARDS"], ["pen", "PEN"]];
+
 function Study() {
+  const today = useResource(studyToday());
+  const [tab, setTab] = useState<StudyTab>("today");
+  const [subj, setSubj] = useState<string | undefined>(undefined);
+  const [source, setSource] = useState<StudySource | undefined>(undefined);
+  const subjects = today.data?.subjects ?? [];
+  const cur = subjects.find((s) => s.id === subj);
+  const st = today.data?.stats;
   return (
-    <div className="mpage">
-      <div className="mcard" style={{ textAlign: "center" }}>
-        <div className="lbl" style={{ justifyContent: "center" }}>NOT BUILT YET</div>
-        <h5>Study is coming.</h5>
-        <p>Flip cards, quizzes from your notes and photos of pages will live here. For now, ask Cyph in the chat to quiz you.</p>
+    <div className="mpage pg-study mstudy">
+      <div className="tabs" style={{ overflowX: "auto", flex: "none" }}>
+        {STABS.map(([k, n]) => <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{n}{k === "review" && st?.due ? ` ${st.due}` : ""}</button>)}
       </div>
+      {tab !== "today" && tab !== "add" && (
+        <select className="f" value={subj ?? ""} onChange={(e) => setSubj(e.target.value || undefined)} aria-label="subject">
+          <option value="">All subjects</option>
+          {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      )}
+      {tab === "today" && (
+        <>
+          <div className="mcard" style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div className="ring" style={{ "--p": st && st.approved ? Math.max(0, 100 - (st.due / st.approved) * 100) : 100, "--s": "88px" } as React.CSSProperties}><b>{st?.due ?? 0}<small>DUE</small></b></div>
+            <div><div className="lbl">TODAY</div><p>{st?.reviewed_today ?? 0} done · {st?.streak ?? 0} day streak</p><button className="mbtn on" onClick={() => setTab("review")}>START REVIEW</button></div>
+          </div>
+          {subjects.map((s) => (
+            <div key={s.id} className="subj" role="button" tabIndex={0} onClick={() => { setSubj(s.id); setTab("review"); }}>
+              <div className="ic" style={{ background: s.color }}>{s.name[0]}</div><h5>{s.name}</h5><span className="n">{s.due || ""}</span>
+            </div>
+          ))}
+          {(today.data?.tests ?? []).slice(0, 3).map((t) => <div className="mcard" key={t.id}><div className="lbl">TEST · {t.date}</div><p>{t.title}</p></div>)}
+          {(today.data?.weak ?? []).length > 0 && <div className="mcard"><div className="lbl">WEAK</div>{today.data!.weak.slice(0, 3).map((w) => <div key={w.id} className="weak"><span>{w.name}</span><i>{Math.round(w.weakness * 100)}%</i></div>)}</div>}
+        </>
+      )}
+      {tab === "review" && <div className="mcard"><ReviewDeck subject={subj} compact /></div>}
+      {tab === "tutor" && <div style={{ height: "60vh", display: "flex" }}><TutorBox subject={subj} subjectName={cur?.name} /></div>}
+      {tab === "add" && (
+        <div className="mcard">
+          <ImportBox subject={subj} subjects={subjects} onOpen={(s) => setSource(s)} />
+          {source && <div style={{ marginTop: 10 }}><SourceView key={source.id} source={source} onGone={() => setSource(undefined)} /></div>}
+          <div className="sub2">IMPORTS</div>
+          <SourceList subject={subj} cur={source?.id} onOpen={setSource} />
+        </div>
+      )}
+      {tab === "cards" && <div className="mcard"><CardList subject={subj} state="draft" /></div>}
+      {tab === "pen" && <div className="mcard"><Notebooks subject={subj} /></div>}
     </div>
   );
 }

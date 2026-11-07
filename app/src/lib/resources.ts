@@ -16,3 +16,13 @@ export const proposalsRes = () => resource("memory:proposals", ["proposals", "me
 
 export const settingsRes = () => resource("settings", ["settings"], async () => (await api.settings()).proactive);
 export const devicesRes = () => resource("devices", ["devices"], async () => (await api.devices()).devices);
+
+export const studyToday = () => resource("study:today", ["study", "plan"], () => api.studyToday());
+export const studyNotes = (subject?: string) => resource(`study:notes:${subject ?? ""}`, ["study"], async () => (await api.studyNotes(subject)).notes);
+export const studySources = (subject?: string) => resource(`study:sources:${subject ?? ""}`, ["study"], async () => (await api.studySources(subject)).sources);
+export const studyCards = (subject?: string, state?: string) => resource(`study:cards:${subject ?? ""}:${state ?? ""}`, ["study"], async () => (await api.studyCards(subject, state)).cards);
+export const studyDue = (subject?: string) => resource(`study:due:${subject ?? ""}`, ["study"], async () => (await api.studyDue(subject, 100)).cards);
+export const studyTopics = (subject?: string) => resource(`study:topics:${subject ?? ""}`, ["study"], () => api.studyTopics(subject));
+export const studyAttempts = (subject?: string) => resource(`study:attempts:${subject ?? ""}`, ["study"], async () => (await api.studyAttempts(subject)).attempts);
+export const studyNotebooks = () => resource("study:notebooks", ["study"], async () => (await api.studyNotebooks()).notebooks);
+export const studyBoards = () => resource("study:boards", ["study"], async () => (await api.studyBoards()).boards);

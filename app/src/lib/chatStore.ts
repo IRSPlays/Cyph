@@ -107,7 +107,7 @@ const fail = (message: string) => {
 /** Sends a message. Returns false when it was not sent (offline, or he is still answering), so callers keep the text. */
 let lastSent = { text: "", at: 0 };
 
-export async function say(text: string, pics: Pic[] = []): Promise<boolean> {
+export async function say(text: string, pics: Pic[] = [], study?: { mode: "study"; subject: string }): Promise<boolean> {
   const t = text.trim() || (pics.length ? "What do you make of this?" : "");
   if (!t) return false;
   if (linkLooksDead()) await reconnectChat().then(() => new Promise((r) => setTimeout(r, 1200)));
@@ -117,7 +117,7 @@ export async function say(text: string, pics: Pic[] = []): Promise<boolean> {
   lastSent = { text: t, at: Date.now() };
   dispatch({ kind: "user", text: t, pics: pics.map((p) => p.url) });
   try {
-    await ipc.chatSay(t, pics);
+    await ipc.chatSay(t, pics, study);
     return true;
   } catch (e) {
     fail(String((e as { detail?: string })?.detail ?? e));

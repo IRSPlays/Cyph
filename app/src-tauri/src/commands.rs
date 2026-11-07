@@ -141,11 +141,11 @@ pub async fn chat_connect(app: AppHandle, state: State<'_, AppState>) -> Result<
 }
 
 #[tauri::command]
-pub async fn chat_say(window: WebviewWindow, state: State<'_, AppState>, text: String, images: Option<Vec<serde_json::Value>>) -> Result<(), ApiError> {
+pub async fn chat_say(window: WebviewWindow, state: State<'_, AppState>, text: String, images: Option<Vec<serde_json::Value>>, mode: Option<String>, subject: Option<String>) -> Result<(), ApiError> {
     if let Ok(mut g) = state.say_from.lock() {
         *g = window.label().to_string();
     }
-    let frame = serde_json::json!({"type": "say", "text": text, "images": images.unwrap_or_default()}).to_string();
+    let frame = serde_json::json!({"type": "say", "text": text, "images": images.unwrap_or_default(), "mode": mode.unwrap_or_default(), "subject": subject.unwrap_or_default()}).to_string();
     match state.chat.lock().await.as_ref() {
         Some(h) => h.tx.send(frame).map_err(|_| fail("the chat is not connected")),
         None => Err(fail("the chat is not connected")),

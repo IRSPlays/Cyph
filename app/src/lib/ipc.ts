@@ -9,7 +9,7 @@ export interface Ipc {
   unpair(): Promise<Settings>;
   api<T>(method: string, path: string, body?: unknown): Promise<T>;
   chatConnect(): Promise<void>;
-  chatSay(text: string, images?: Pic[]): Promise<void>;
+  chatSay(text: string, images?: Pic[], study?: { mode: "study"; subject: string }): Promise<void>;
   chatDisconnect(): Promise<void>;
   onChat(cb: (e: ClientEvent) => void): Promise<() => void>;
   eventsConnect(): Promise<void>;
@@ -34,7 +34,7 @@ const real: Ipc = {
   unpair: () => invoke("unpair"),
   api: (method, path, body) => invoke("api", { method, path, body }),
   chatConnect: () => invoke("chat_connect"),
-  chatSay: (text, images) => invoke("chat_say", { text, images: (images ?? []).map(({ mime, data }) => ({ mime, data })) }),
+  chatSay: (text, images, study) => invoke("chat_say", { text, images: (images ?? []).map(({ mime, data }) => ({ mime, data })), mode: study?.mode ?? null, subject: study?.subject ?? null }),
   chatDisconnect: () => invoke("chat_disconnect"),
   onChat: (cb) => listen<ClientEvent>("chat", (e) => cb(e.payload)),
   eventsConnect: () => invoke("events_connect"),

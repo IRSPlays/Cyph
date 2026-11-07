@@ -221,6 +221,21 @@ def add_study_routes(app, d, auth, changed):
         changed("study")
         return {"ok": True}
 
+    def as_json(mime: str, data: bytes):
+        return {"mime": mime, "data": base64.b64encode(data).decode()}
+
+    @app.get("/study/files/{fid}/data")
+    def file_data(fid: str, dev: dict = Depends(auth)):
+        """The same bytes as JSON, for the desktop app whose bridge carries JSON only."""
+        got = svc().store.get_file(fid)
+        if not got:
+            raise HTTPException(404, "no such file")
+        return as_json(got[0]["mime"], got[1])
+
+    @app.get("/study/notebooks/{nid}/pdf/data")
+    def nb_pdf_data(nid: str, dev: dict = Depends(auth)):
+        return as_json("application/pdf", guard(lambda: svc().notebook_pdf(nid)))
+
     @app.get("/study/files/{fid}")
     def file_get(fid: str, dev: dict = Depends(auth)):
         got = svc().store.get_file(fid)

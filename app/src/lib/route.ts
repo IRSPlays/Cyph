@@ -11,7 +11,7 @@ export const PAGES = [
 export type PageKey = (typeof PAGES)[number][1];
 
 /** Pages that are in the nav but not built yet: the link is dimmed and goes nowhere, instead of landing on Home. */
-export const SOON: readonly PageKey[] = ["study"];
+export const SOON: readonly PageKey[] = [];
 
 const current = (): PageKey => {
   const k = location.hash.replace(/^#\/?/, "").split(/[?/]/)[0] as PageKey;

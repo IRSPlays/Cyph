@@ -9,6 +9,7 @@ import { Calendar } from "../pages/Calendar";
 import { Home } from "../pages/Home";
 import { Memory } from "../pages/Memory";
 import { Settings } from "../pages/Settings";
+import { Study } from "../pages/Study";
 import { useIsMobile } from "../lib/mobile";
 import { Mobile } from "./Mobile";
 import { Pair } from "./Pair";
@@ -60,6 +61,8 @@ export default function App() {
       return <Arm />;
     case "settings":
       return <Settings />;
+    case "study":
+      return <Study />;
     default:
       return <Home />;
   }

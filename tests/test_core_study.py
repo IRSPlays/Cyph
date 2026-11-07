@@ -336,6 +336,8 @@ class TestApi(Base):
         detail = c.get(f"/study/sources/{src['id']}", headers=h).json()
         self.assertIn("summary", detail["outputs"])
         self.assertEqual(c.get(f"/study/sources/{src['id']}/original", headers=h).content, b"%PDF-1.4 fake")
+        fid = c.get(f"/study/sources/{src['id']}", headers=h).json()["file_id"]
+        self.assertEqual(base64.b64decode(c.get(f"/study/files/{fid}/data", headers=h).json()["data"]), b"%PDF-1.4 fake")
         notes = c.get("/study/notes?subject=Chemistry", headers=h).json()["notes"]
         self.assertEqual(len(notes), 1)
         self.assertIn("mole", c.get(f"/study/notes/{notes[0]['id']}", headers=h).json()["body"].lower())
@@ -383,6 +385,7 @@ class TestApi(Base):
         self.assertEqual(c.get(f"/study/pages/{pid}", headers=h).json()["strokes"][0]["pts"], [[1.0, 2.0], [3.0, 4.0]])
         self.assertEqual(len(c.post(f"/study/notebooks/{nb['id']}/pages", headers=h, json={"background": "dots"}).json()["strokes"]), 0)
         self.assertTrue(c.get(f"/study/notebooks/{nb['id']}/pdf", headers=h).content.startswith(b"%PDF"))
+        self.assertTrue(base64.b64decode(c.get(f"/study/notebooks/{nb['id']}/pdf/data", headers=h).json()["data"]).startswith(b"%PDF"))
         self.assertEqual(c.delete(f"/study/pages/{pid}", headers=h).status_code, 200)
         self.assertEqual(c.delete(f"/study/pages/{c.get(f'/study/notebooks/{nb['id']}', headers=h).json()['pages'][0]['id']}", headers=h).status_code, 409)
         b = c.post("/study/boards", headers=h, json={"title": "Map"}).json()
