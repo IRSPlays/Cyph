@@ -1,5 +1,5 @@
 /* Shared page shell for the Corner-style mockups: top bar + the small Cyph "buddy" bottom-right. */
-const PAGES = [["HOME","home-c2-corner.html"],["CALENDAR","calendar.html"],["MEMORY","memory.html"],["STUDY","study.html"],["ARM","arm.html"],["SETTINGS","settings.html"],["WIDGET","widget.html"],["PHONE","phone.html"]];
+const PAGES = [["HOME","home-c2-corner.html"],["CALENDAR","calendar.html"],["MEMORY","memory.html"],["STUDY","study.html"],["STUDY MODE","study-desktop.html"],["STUDY ON DEVICES","study-devices.html"],["ARM","arm.html"],["SETTINGS","settings.html"],["WIDGET","widget.html"],["PHONE","phone.html"]];
 function shell(active, opts = {}) {
   const bar = document.getElementById("bar");
   bar.innerHTML = `<div class="logo">CYPH<em>/</em>${active}</div><div class="nav">${PAGES.map(([n, h]) => `<a class="${n === active ? "on" : ""}" href="${h}">${n}</a>`).join("")}</div>

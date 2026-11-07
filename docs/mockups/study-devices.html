@@ -1,0 +1,213 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Study mode (phone and iPad)</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+.head{display:flex;align-items:flex-end;gap:16px;padding:14px 22px 0;position:relative;z-index:5}.head .sp{flex:1}
+.hide{display:none!important}
+.page{display:block;overflow:auto;padding-top:12px}
+.page>:last-child{margin-bottom:0}
+.row{display:flex;gap:34px;justify-content:center;align-items:flex-start;padding:6px}
+.row.ph{zoom:.82}
+.ph1{flex:none;width:300px}
+.ph1>h4,.ipw>h4{font:700 11px 'Pixelify Sans';letter-spacing:.22em;color:var(--am);text-align:center;margin-bottom:7px}
+.fr{width:300px;height:600px;border-radius:34px;background:#05070a;padding:9px;box-shadow:0 0 0 2px #2b3524,0 0 0 5px #0b0f08,0 22px 50px #000b}
+.sc{position:relative;width:100%;height:100%;border-radius:26px;overflow:hidden;background:linear-gradient(170deg,#1a2112,#090d07 70%);display:flex;flex-direction:column}
+.sc:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(70% 50% at 70% 100%,rgba(93,255,122,.18),transparent 70%)}
+.sb{display:flex;justify-content:space-between;padding:9px 18px 4px;font:600 10px 'DM Mono';color:var(--cr);position:relative;z-index:2}
+.sb:after{content:"";position:absolute;left:50%;top:7px;width:60px;height:14px;border-radius:8px;background:#000;transform:translateX(-50%)}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;position:relative;z-index:2}
+.hd b{font:700 11px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne)}.hd span{font:9.5px 'DM Mono';color:var(--dim)}
+.body{flex:1;min-height:0;position:relative;z-index:2;overflow:hidden;display:flex;flex-direction:column}
+.tabbar{display:flex;position:relative;z-index:3;background:#080c07f0;border-top:1px solid #1d2815;padding:6px 6px 12px}
+.tabbar div{flex:1;text-align:center;font:700 8.5px 'Pixelify Sans';letter-spacing:.1em;color:#6f7e5f;padding:5px 0;border-radius:7px}
+.tabbar div i{display:block;font-style:normal;font-size:15px;margin-bottom:1px}.tabbar .on{color:var(--ne);background:#10190c}
+.cv{image-rendering:pixelated;filter:drop-shadow(0 0 16px rgba(93,255,122,.25));pointer-events:none;flex:none}
+.cyc{position:absolute;right:6px;bottom:2px;z-index:4;line-height:0}
+/* edge ring, same idea as the widgets */
+.ring{--p:40;--c:var(--ne);width:var(--s,96px);height:var(--s,96px);border-radius:50%;display:grid;place-items:center;position:relative;flex:none;background:conic-gradient(var(--c) calc(var(--p)*1%),#1d2615 0);filter:drop-shadow(0 0 7px color-mix(in srgb,var(--c) 60%,transparent))}
+.ring:before{content:"";position:absolute;inset:7px;border-radius:50%;background:#0b130d}
+.ring b{position:relative;font:700 calc(var(--s,96px)*.26) 'Pixelify Sans';color:var(--cr);text-align:center;line-height:1}.ring b small{display:block;font:8.5px 'DM Mono';color:var(--dim);margin-top:3px}
+.st{padding:4px 12px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
+.due{border-radius:12px;background:#0b130d;box-shadow:0 0 0 2px var(--ne),0 0 18px rgba(93,255,122,.2);padding:12px;display:flex;gap:12px;align-items:center}
+.due h5{font:italic 22px/1 'Instrument Serif';color:var(--cr)}.due p{font:10px 'DM Mono';color:var(--dim);margin-top:4px}
+.go{background:var(--ne);color:#0d120a;border-radius:9px;padding:9px;text-align:center;font:700 10px 'Pixelify Sans';letter-spacing:.16em;box-shadow:0 0 14px rgba(93,255,122,.5);margin-top:7px}
+.sl{display:grid;grid-template-columns:30px 1fr auto;gap:9px;align-items:center;padding:7px 9px;border-radius:9px;background:#0e150b;font:11.5px 'DM Mono';color:var(--cr)}
+.sl .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font:700 13px 'Pixelify Sans';color:#10150e;background:var(--c)}
+.sl small{font:10px 'DM Mono';color:var(--dim)}.sl .n{font:700 11px 'Pixelify Sans';color:var(--c)}
+.bar5{height:4px;border-radius:2px;background:#1d2615;margin-top:3px;overflow:hidden}.bar5 i{display:block;height:100%;width:var(--w);background:var(--c);box-shadow:0 0 6px var(--c)}
+.test{border-radius:9px;background:rgba(240,138,115,.1);box-shadow:inset 0 0 0 1px rgba(240,138,115,.4);padding:7px 10px;font:10.5px 'DM Mono';color:var(--co)}
+.card{border-radius:12px;background:#0b130d;box-shadow:0 0 0 1px #1d2815;padding:14px 12px;text-align:center}
+.card h5{font:italic 23px/1.08 'Instrument Serif';color:var(--cr)}.card p{font:10px 'DM Mono';color:var(--dim);margin-top:7px}
+.math{display:inline-flex;align-items:center;gap:4px;font:italic 15px 'Instrument Serif';color:#fff3b8;background:#0f1b13;border-radius:5px;padding:1px 7px;box-shadow:inset 0 0 0 1px #20382a}
+.fr2{display:inline-flex;flex-direction:column;align-items:center;font-size:.8em;line-height:1.05}.fr2 i{font-style:inherit;padding:0 2px}.fr2 i:first-child{border-bottom:1px solid currentColor}
+.src{font:9.5px 'DM Mono';padding:3px 8px;border-radius:9px;background:rgba(91,159,184,.14);color:var(--bl);display:inline-block;margin:3px 3px 0 0}
+.grades{display:flex;gap:6px}.grades div{flex:1;border-radius:10px;padding:13px 0;text-align:center;font:700 10px 'Pixelify Sans';letter-spacing:.1em;box-shadow:inset 0 -3px 0 #0008}
+.msgs{flex:1;min-height:0;overflow:hidden;padding:6px 14px;display:flex;flex-direction:column;gap:7px;justify-content:flex-end}
+.m{font:italic 15px/1.14 'Instrument Serif';color:#a8b695}.m.u{font:11px/1.35 'DM Mono';color:var(--cr);align-self:flex-end;background:#16200f;padding:6px 9px;border-radius:9px 9px 2px 9px}
+.m.t{font:9.5px 'DM Mono';color:var(--dim)}.m.t.bad{color:var(--co)}
+.now{color:var(--cr);font:italic 17px/1.14 'Instrument Serif';background:#07100a;border:2px solid var(--ne);border-radius:11px;padding:7px 10px;box-shadow:0 0 18px rgba(93,255,122,.25);position:relative}
+.now:after{content:'';position:absolute;right:-9px;bottom:14px;border:6px solid transparent;border-left:9px solid var(--ne);border-right:0}
+.cy{margin-top:auto;flex:none;min-height:128px;display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;padding:0 6px 0 12px;position:relative;z-index:2}
+.cy .now{flex:1;margin-bottom:26px}
+.ladder{display:flex;gap:4px;align-items:center;font:700 8px 'Pixelify Sans';letter-spacing:.12em;color:var(--am)}.ladder i{flex:1;height:4px;border-radius:2px;background:#1d2615}.ladder i.on{background:var(--am)}
+.in{display:flex;gap:6px;padding:8px 10px;position:relative;z-index:3}
+.in div{flex:1;background:#05080a;border-radius:18px;padding:8px 12px;font:11px 'DM Mono';color:var(--dim);box-shadow:inset 0 0 0 1px #1d2815}
+.in b{width:34px;height:34px;border-radius:50%;background:var(--ne);display:grid;place-items:center;color:#0d120a;font-size:15px;box-shadow:0 0 14px rgba(93,255,122,.5)}.in .pic{background:#1d2615;color:#b9c7a3;box-shadow:none}
+.cam{position:relative;height:200px;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#1a2410,#0a0f07)}
+.cam:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(transparent 0 3px,rgba(0,0,0,.25) 3px 4px)}
+.cam .pg{position:absolute;left:12%;right:12%;top:12%;bottom:10%;background:#e7dfc2;transform:perspective(300px) rotateX(10deg) rotateZ(-3deg);box-shadow:0 8px 20px #000a;padding:10px 12px;font:italic 14px/1.2 'Instrument Serif';color:#2a2a24}
+.cam .box{position:absolute;inset:8% 8%;border:2px solid var(--ne);box-shadow:0 0 14px var(--ne);border-radius:4px}
+.cam .cap{position:absolute;left:50%;bottom:8px;margin-left:-20px;width:40px;height:40px;border-radius:50%;background:var(--ne);box-shadow:0 0 0 4px #0008}
+.step{display:flex;gap:8px;align-items:center;font:10.5px 'DM Mono';color:#9fb08a;padding:2px 0}.step b{width:15px;height:15px;border-radius:50%;display:grid;place-items:center;font-size:8px;background:#1d2615;color:var(--dim)}.step.ok b{background:var(--ne);color:#0d120a}.step.ok{color:var(--cr)}
+.prog{height:6px;border-radius:3px;background:#05080a;overflow:hidden}.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--tl),var(--ne));box-shadow:0 0 8px var(--ne)}
+/* iPad */
+.ipw{flex:none}
+.ip{width:1000px;height:690px;border-radius:30px;background:#05070a;padding:14px;box-shadow:0 0 0 2px #2b3524,0 0 0 6px #0b0f08,0 24px 60px #000b}
+.isc{position:relative;width:100%;height:100%;border-radius:18px;overflow:hidden;background:linear-gradient(170deg,#1a2112,#090d07 70%);display:flex;flex-direction:column}
+.isb{display:flex;justify-content:space-between;padding:5px 20px;font:600 10px 'DM Mono';color:var(--cr)}
+.itop{display:flex;align-items:center;gap:12px;padding:6px 14px;border-bottom:1px solid #1d2815}
+.itop b{font:700 12px 'Pixelify Sans';letter-spacing:.2em;color:var(--ne)}.itop span{font:11px 'DM Mono';color:var(--dim)}
+.itop .sp{flex:1}
+.tool{display:flex;gap:4px;background:#0b130d;border-radius:12px;padding:5px;box-shadow:0 0 0 1px #1d2815}
+.tool button{border:0;width:36px;height:34px;border-radius:9px;background:none;color:#b9c7a3;font:700 12px 'Pixelify Sans'}.tool button.on{background:var(--ne);color:#0d120a;box-shadow:0 0 10px rgba(93,255,122,.5)}
+.dot{display:inline-block;width:16px;height:16px;border-radius:50%;margin:9px 3px;box-shadow:0 0 0 2px #0008}.dot.on{box-shadow:0 0 0 2px var(--cr)}
+.ibody{flex:1;min-height:0;display:flex}
+.side{width:200px;flex:none;border-right:1px solid #1d2815;padding:10px;overflow:hidden}
+.side .it{padding:7px 9px;border-radius:8px;font:11.5px 'DM Mono';color:#9fb08a;display:flex;justify-content:space-between}.side .it.on{background:#16241a;color:var(--cr);box-shadow:inset 0 0 0 1px var(--ne)}
+.side h6{font:700 9px 'Pixelify Sans';letter-spacing:.22em;color:#58684a;margin:10px 4px 5px}
+.pgs{display:flex;flex-direction:column;gap:6px;margin-top:4px}.thumb{height:64px;border-radius:5px;background:#ece6cf;position:relative;box-shadow:0 0 0 1px #0008}.thumb.on{box-shadow:0 0 0 2px var(--ne)}.thumb:after{content:attr(data-n);position:absolute;right:4px;bottom:2px;font:8px 'DM Mono';color:#555}
+.canvas{flex:1;position:relative;overflow:hidden}
+.paperpg{position:absolute;left:36px;right:36px;top:14px;bottom:14px;border-radius:6px;box-shadow:0 10px 30px #000a;
+ background:repeating-linear-gradient(#f1ebd4 0 31px,#cfd6c2 31px 32px),#f1ebd4}
+.paperpg.grid{background:linear-gradient(90deg,#d6d9c8 1px,transparent 1px) 0 0/26px 26px,linear-gradient(#d6d9c8 1px,transparent 1px) 0 0/26px 26px,#f1ebd4}
+.paperpg:before{content:"";position:absolute;left:44px;top:0;bottom:0;width:1px;background:#e5a1a1}
+.ink{position:absolute;inset:0;width:100%;height:100%}
+.ink path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.hint2{position:absolute;right:12px;bottom:10px;background:#0b0f08dd;color:#9fb08a;font:10px 'DM Mono';padding:5px 9px;border-radius:7px}
+.ruler{position:absolute;left:300px;top:268px;width:280px;height:44px;background:rgba(93,255,122,.12);border:1.5px solid var(--ne);border-radius:5px;transform:rotate(-8deg);box-shadow:0 0 14px rgba(93,255,122,.35);overflow:hidden}
+.ruler i{position:absolute;top:0;width:1px;height:9px;background:var(--ne)}
+/* board */
+.board{position:absolute;inset:0;background:radial-gradient(circle,#2a3520 1.2px,transparent 1.4px) 0 0/28px 28px,#0b100a}
+.sticky{position:absolute;padding:10px 12px;border-radius:3px;font:19px/1.15 'Special Elite','Instrument Serif';color:#2b2a14;box-shadow:3px 6px 0 #0007;transform:rotate(var(--r,0deg))}
+.tbx{position:absolute;padding:6px 10px;border:1.5px dashed #5b9fb8;border-radius:5px;font:italic 20px/1.2 'Instrument Serif';color:#cfe3f2}
+.shape{position:absolute;display:grid;place-items:center;text-align:center;font:600 11.5px/1.3 'DM Mono';color:#10150e;padding:6px}
+.lnk{position:absolute;display:flex;gap:7px;align-items:center;padding:6px 10px;border-radius:8px;background:#0b130d;box-shadow:0 0 0 1px var(--c);font:11px 'DM Mono';color:var(--cr)}.lnk i{font-style:normal;color:var(--c);font-weight:700}
+.pdfp{position:absolute;background:#ece6cf;border-radius:4px;box-shadow:3px 6px 0 #0007;padding:8px;font:italic 11px/1.25 'Instrument Serif';color:#2a2a22;overflow:hidden}.pdfp b{display:block;font:500 7.5px 'DM Mono';letter-spacing:.14em;color:#7a6a3a;margin-bottom:3px}
+.sel{position:absolute;border:1.5px solid var(--ne);box-shadow:0 0 12px rgba(93,255,122,.4)}.sel i{position:absolute;width:9px;height:9px;background:var(--ne);border-radius:2px}
+.mini{position:absolute;right:12px;top:12px;width:130px;height:84px;border-radius:7px;background:#0b130dee;box-shadow:0 0 0 1px #2c3820}.mini i{position:absolute;background:#2f9d8f;border-radius:1px}.mini u{position:absolute;border:1.5px solid var(--ne);text-decoration:none}
+.note{max-width:900px;margin:12px auto 0;text-align:center;font:italic 18px 'Instrument Serif';color:#8d9d78}
+</style></head><body>
+<div class="deck"><div id="bar" class="bar"></div>
+ <div class="head"><h1 class="t"><em>STUDY MODE</em><span id="ttl">On your phone</span></h1><span class="sub" id="hs">Quick and thumb-sized: review, ask, and photograph a page.</span><div class="sp"></div>
+  <div class="tabs" id="tabs"><button class="on" data-v="ph">PHONE</button><button data-v="nb">iPAD · NOTEBOOK</button><button data-v="bd">iPAD · BOARD</button></div></div>
+
+ <!-- PHONE -->
+ <div class="page" id="v-ph"><div class="row ph">
+  <div class="ph1"><h4>STUDY</h4><div class="fr"><div class="sc"><div class="sb"><span>12:14</span><span>▮▮▮ 87%</span></div>
+   <div class="hd"><b>STUDY</b><span>Sat 7 Nov</span></div>
+   <div class="body"><div class="st">
+    <div class="due"><div class="ring" style="--s:84px;--p:62"><b>23<small>DUE</small></b></div><div style="flex:1"><h5>Cards due today</h5><p>14 done · about 11 min</p><div class="go">START</div></div></div>
+    <div class="test">⚑ Chem Paper 1 in 12 days · mole ratio is weak</div>
+    <div class="sl" style="--c:#d9984a;--w:62%"><div class="ic">C</div><div>Chemistry<div class="bar5"><i></i></div></div><span class="n">9</span></div>
+    <div class="sl" style="--c:#5b9fb8;--w:45%"><div class="ic">P</div><div>Physics<div class="bar5"><i></i></div></div><span class="n">6</span></div>
+    <div class="sl" style="--c:#b392f0;--w:20%"><div class="ic">A</div><div>Amath<div class="bar5"><i></i></div></div><span class="n">5</span></div>
+    <div class="sl" style="--c:#f3ecb2;--w:70%"><div class="ic">E</div><div>English<div class="bar5"><i></i></div></div><span class="n">3</span></div></div>
+    <div class="cyc"><canvas class="cv" id="c1"></canvas></div></div>
+   <div class="tabbar"><div><i>◉</i>CYPH</div><div><i>▤</i>PLAN</div><div class="on"><i>✎</i>STUDY</div><div><i>⚙</i>MORE</div></div></div></div></div>
+
+  <div class="ph1"><h4>REVIEW</h4><div class="fr"><div class="sc"><div class="sb"><span>12:15</span><span>▮▮▮ 87%</span></div>
+   <div class="hd"><b>CHEMISTRY</b><span>15 / 37</span></div>
+   <div class="body"><div class="st"><div class="prog" style="margin:2px 0 4px"><i style="width:40%"></i></div>
+    <div class="card" style="padding:22px 12px"><div class="lbl" style="font-size:9px;justify-content:center;margin-bottom:6px">QUESTION</div><h5>How many moles in 25.0 cm³ of 0.10 mol/dm³ NaOH?</h5><p>tap to flip</p></div>
+    <div style="text-align:center"><span class="src">Acids and bases · p.5</span><span class="src" style="background:rgba(240,138,115,.14);color:var(--co)">weak: mole ratio</span></div>
+    <div class="card" style="background:var(--ne);color:#0d120a;padding:14px"><div class="lbl" style="font-size:9px;justify-content:center;margin-bottom:6px;color:#0d120a">ANSWER</div><h5 style="color:#0d120a">0.0025 mol</h5><p style="color:#1f3a1d"><span class="math" style="background:#d6ffe0;color:#0d120a;box-shadow:none">0.10 × <span class="fr2"><i>25.0</i><i>1000</i></span></span></p></div>
+    <div class="grades"><div style="background:#4a1d17;color:var(--co)">AGAIN</div><div style="background:#2a2a14;color:var(--am)">HARD</div><div style="background:var(--ne);color:#0d120a">GOT IT</div></div></div>
+    <div class="cyc"><canvas class="cv" id="c2"></canvas></div></div>
+   <div class="tabbar"><div><i>◉</i>CYPH</div><div><i>▤</i>PLAN</div><div class="on"><i>✎</i>STUDY</div><div><i>⚙</i>MORE</div></div></div></div></div>
+
+  <div class="ph1"><h4>ASK (TUTOR)</h4><div class="fr"><div class="sc"><div class="sb"><span>12:18</span><span>▮▮▮ 86%</span></div>
+   <div class="hd"><b>CHEMISTRY</b><span>tutor</span></div>
+   <div class="body"><div class="msgs">
+    <div class="m u">i dont get this one</div>
+    <div class="m t">⚙ searched your notes · Acids and bases p.5</div>
+    <div class="m u">cm³, so i divide by 1000?</div></div>
+    <div class="cy"><div class="now"><div class="ladder" style="margin-bottom:5px"><span>HINT</span><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>Yes! That's the step people skip. So <span class="math">25.0 ÷ 1000 = 0.0250 dm³</span>. Now the last bit?<div style="margin-top:5px"><span class="src">p.5 · Acids and bases</span></div></div><canvas class="cv" id="c3"></canvas></div>
+    <div class="in"><div class="pic" style="flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center">📷</div><div>answer, or ask…</div><b>↑</b></div></div>
+   <div class="tabbar"><div><i>◉</i>CYPH</div><div><i>▤</i>PLAN</div><div class="on"><i>✎</i>STUDY</div><div><i>⚙</i>MORE</div></div></div></div></div>
+
+  <div class="ph1"><h4>ADD A SOURCE</h4><div class="fr"><div class="sc"><div class="sb"><span>12:20</span><span>▮▮▮ 86%</span></div>
+   <div class="hd"><b>ADD TO CHEMISTRY</b><span>photo</span></div>
+   <div class="body"><div class="st"><div class="cam"><div class="pg"><b style="font:500 8px 'DM Mono';letter-spacing:.2em;color:#7a6a3a;display:block">CHEM · TOPIC 4</b>Moles = mass ÷ M<sub>r</sub>. Concentration = moles ÷ volume.</div><div class="box"></div><div class="cap"></div></div>
+    <div class="sl" style="--c:#5b9fb8;grid-template-columns:1fr"><span>📄 Choose a PDF instead</span></div>
+    <div class="card" style="text-align:left"><div style="font:11px 'DM Mono';color:var(--cr);margin-bottom:6px">Mole calc worksheet.pdf</div><div class="prog"><i style="width:62%"></i></div><div style="margin-top:7px"><div class="step ok"><b>✓</b>Read 14 pages</div><div class="step ok"><b>✓</b>Clean notes with formulas</div><div class="step"><b>3</b>Summary &amp; key terms</div><div class="step"><b>4</b>Index for search</div></div></div></div>
+    <div class="cyc"><canvas class="cv" id="c4"></canvas></div></div>
+   <div class="tabbar"><div><i>◉</i>CYPH</div><div><i>▤</i>PLAN</div><div class="on"><i>✎</i>STUDY</div><div><i>⚙</i>MORE</div></div></div></div></div>
+ </div>
+ <p class="note">Offline: only pen notes (on the iPad). Everything else needs the server. The due ring uses the same glowing-edge idea as the widgets.</p></div>
+
+ <!-- IPAD NOTEBOOK -->
+ <div class="page hide" id="v-nb"><div class="row"><div class="ipw"><h4>iPAD · SAFARI WEB APP · NOTEBOOK</h4><div class="ip"><div class="isc">
+  <div class="isb"><span>12:24  Sat 7 Nov</span><span>cyph.local · ▮▮▮ 91%</span></div>
+  <div class="itop"><b>CHEMISTRY</b><span>Class notes › Acids and bases</span><div class="sp"></div>
+   <div class="tool"><button>↶</button><button>↷</button></div>
+   <div class="tool"><button class="on">✎</button><button>◍</button><button>⌫</button><button>◌</button><button>▭</button><button>📏</button><button>🖼</button></div>
+   <div class="tool"><span class="dot on" style="background:#27406b"></span><span class="dot" style="background:#c0392b"></span><span class="dot" style="background:#1f6b3a"></span><span class="dot" style="background:#222"></span></div>
+   <div class="tool"><button style="width:auto;padding:0 9px">PDF</button></div></div>
+  <div class="ibody"><div class="side"><h6>NOTEBOOKS</h6><div class="it on">Class notes<span>18</span></div><div class="it">Homework<span>7</span></div><div class="it">Lab book<span>3</span></div>
+    <h6>PAGES</h6><div class="pgs"><div class="thumb" data-n="1"></div><div class="thumb on" data-n="2"></div><div class="thumb" data-n="3"></div></div>
+    <h6>BACKGROUND</h6><div class="it">Blank</div><div class="it on">Lined</div><div class="it">Grid</div><div class="it">Graph</div></div>
+   <div class="canvas"><div class="paperpg" id="pg">
+    <svg class="ink" viewBox="0 0 700 560" preserveAspectRatio="none">
+     <path d="M64 80 h210" stroke="#27406b" stroke-width="1.6"/><path d="M64 214 h150" stroke="#c0392b" stroke-width="2.4"/><path d="M60 250 h300 M60 258 h300" stroke="#27406b" stroke-width="2" opacity="0"/><g stroke="#1f6b3a" stroke-width="2.2"><path d="M70 300 q60 -30 130 0 t130 0"/><path d="M70 340 l60 -8 l60 20 l60 -34 l60 14" /><circle cx="130" cy="332" r="4" fill="#1f6b3a"/><circle cx="190" cy="352" r="4" fill="#1f6b3a"/><circle cx="250" cy="318" r="4" fill="#1f6b3a"/></g>
+    </svg>
+    <div style="position:absolute;left:62px;top:2px;font:italic 30px/32px 'Instrument Serif';color:#27406b;transform:rotate(-1deg)">Acids &amp; bases</div>
+    <div style="position:absolute;left:62px;top:66px;font:italic 25px/32px 'Instrument Serif';color:#27406b;width:290px">pH = −log[H<sup>+</sup>]<br>pH &lt; 7 acid<br><span style="color:#c0392b">pH 7 = neutral !!</span><br>HCl + NaOH → NaCl + H<sub>2</sub>O</div>
+    <div class="ruler" id="ruler"></div>
+    <div style="position:absolute;left:380px;top:34px;font:12px 'DM Mono';color:#666">hand-written, kept as ink</div>
+    <div style="position:absolute;left:380px;top:96px;width:240px;height:96px;border:2px solid #1f6b3a;border-radius:8px;font:12px/1.3 'DM Mono';color:#1f6b3a;padding:8px;background:rgba(31,107,58,.06)">▭ shape: pH &lt; 7 acid · pH = 7 neutral · pH &gt; 7 alkali</div></div>
+    <div class="hint2">Apple Pencil · palm rejection on · autosaved on this iPad · syncs when online</div></div></div>
+ </div></div></div></div>
+ <p class="note">Pen notes are private to you. They only reach Cyph if you send him a page.</p></div>
+
+ <!-- IPAD BOARD -->
+ <div class="page hide" id="v-bd"><div class="row"><div class="ipw"><h4>iPAD · SAFARI WEB APP · FREEFORM BOARD</h4><div class="ip"><div class="isc">
+  <div class="isb"><span>12:31  Sat 7 Nov</span><span>cyph.local · ▮▮▮ 90%</span></div>
+  <div class="itop"><b>CHEMISTRY</b><span>Boards › Mole concept map</span><div class="sp"></div>
+   <div class="tool"><button>↶</button><button>↷</button></div>
+   <div class="tool"><button>↖</button><button class="on">✎</button><button>T</button><button>▤</button><button>◇</button><button>⤳</button><button>🖼</button><button>🔗</button></div>
+   <div class="tool"><span class="dot on" style="background:#5dff7a"></span><span class="dot" style="background:#f3ecb2"></span><span class="dot" style="background:#f08a73"></span><span class="dot" style="background:#5b9fb8"></span></div>
+   <div class="tool"><button style="width:auto;padding:0 9px">EXPORT</button></div></div>
+  <div class="ibody"><div class="canvas">
+   <div class="board">
+    <svg class="ink" viewBox="0 0 960 560" preserveAspectRatio="none" style="pointer-events:none">
+     <defs><marker id="ah" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9z" fill="#5dff7a"/></marker></defs>
+     <g stroke="#5dff7a" stroke-width="2.2" fill="none" marker-end="url(#ah)"><path d="M300 150 C 360 150, 380 190, 430 200"/><path d="M300 330 C 360 330, 380 270, 430 250"/><path d="M590 225 C 630 225, 640 160, 690 150"/><path d="M590 235 C 640 240, 650 330, 700 340"/></g>
+     <g stroke="#f3ecb2" stroke-width="3" fill="none" stroke-linecap="round"><path d="M210 405 q40 -22 80 0 t80 0 t80 0"/><path d="M730 470 l-20 14 l22 8 l-18 16" /></g>
+     <circle cx="470" cy="395" r="30" stroke="#f08a73" stroke-width="3" fill="none" stroke-dasharray="4 5"/></svg>
+    <div class="sticky" style="left:80px;top:100px;width:220px;background:#f3ecb2;--r:-2deg">n = m ÷ M<sub>r</sub><br><small style="font:11px 'DM Mono'">mass in grams</small></div>
+    <div class="sticky" style="left:80px;top:290px;width:220px;background:#f08a73;--r:2deg">n = c × V ÷ 1000<br><small style="font:11px 'DM Mono'">V in cm³ !!</small></div>
+    <div class="shape" style="left:430px;top:178px;width:160px;height:80px;border-radius:40px;background:#5dff7a;font-size:15px;box-shadow:0 0 22px rgba(93,255,122,.45)">THE MOLE<br>6.02 × 10²³</div>
+    <div class="sticky" style="left:690px;top:100px;width:200px;background:#5b9fb8;color:#06141c;--r:1.5deg">Mole ratio from the balanced equation</div>
+    <div class="sticky" style="left:700px;top:310px;width:200px;background:#d9984a;color:#1a1405;--r:-1.5deg">Limiting reagent</div>
+    <div class="tbx" style="left:90px;top:44px">Mole concept map</div>
+    <div class="pdfp" style="left:690px;top:405px;width:130px;height:96px"><b>ACIDS AND BASES · P.7</b>25.0 cm³ of 0.10 mol/dm³ NaOH is neutralised…</div>
+    <div class="lnk" style="--c:#2f9d8f;left:430px;top:440px"><i>≡</i>My mole notes</div>
+    <div class="lnk" style="--c:#5dff7a;left:430px;top:482px"><i>▣</i>Card: moles from c and V</div>
+    <div class="sel" style="left:420px;top:168px;width:180px;height:100px"><i style="left:-5px;top:-5px"></i><i style="right:-5px;top:-5px"></i><i style="left:-5px;bottom:-5px"></i><i style="right:-5px;bottom:-5px"></i></div>
+    <div class="mini"><i style="left:12px;top:14px;width:20px;height:10px"></i><i style="left:12px;top:44px;width:20px;height:10px;background:#f08a73"></i><i style="left:54px;top:30px;width:22px;height:14px;background:#5dff7a"></i><i style="left:96px;top:12px;width:20px;height:10px;background:#5b9fb8"></i><i style="left:96px;top:46px;width:20px;height:10px;background:#d9984a"></i><u style="left:8px;top:6px;width:80px;height:56px"></u></div>
+    <div class="hint2">Pinch to zoom · two fingers pan · endless · saved on this iPad</div></div></div></div>
+ </div></div></div></div>
+ <p class="note">Same ink engine as the notebook. Connectors stay joined when you move things. Links open the note or card.</p></div>
+</div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script><script src="corner.js"></script>
+<script>
+const $ = (id) => document.getElementById(id); shell("STUDY ON DEVICES");
+const heads = {ph:["On your phone","Quick and thumb-sized: review, ask, and photograph a page."],nb:["iPad · notebook","Pages with lined, grid or blank paper. Pencil, shapes, ruler, photos, PDF export."],bd:["iPad · freeform board","An endless canvas. Stickies, shapes, connectors, photos, PDF pages and links to your notes."]};
+function go(v) { document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); ["ph","nb","bd"].forEach(k => $("v-" + k).classList.toggle("hide", k !== v)); $("ttl").textContent = heads[v][0]; $("hs").textContent = heads[v][1]; }
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => go(b.dataset.v));
+const mk = (id, s, mood) => { const a = Cyph.create($(id), {scale: s}); a.setMood(mood, 30); return a; };
+const as = [mk("c1", 3, "happy"), mk("c2", 3, "smug"), mk("c3", 3, "curious"), mk("c4", 3, "happy")];
+addEventListener("mousemove", (e) => as.forEach(a => a.lookAt((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1)));
+document.querySelectorAll(".tool button").forEach(b => b.addEventListener("click", () => { if (b.closest(".tool").querySelectorAll("button").length > 2) { b.closest(".tool").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); } }));
+for (let i = 0; i < 45; i++) { const t = document.createElement("i"); t.style.left = (i * 6.2) + "px"; t.style.height = (i % 5 ? 9 : 15) + "px"; $("ruler").appendChild(t); }
+const h = location.hash.slice(1); if (heads[h]) go(h);
+</script></body></html>

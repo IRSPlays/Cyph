@@ -1,0 +1,247 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cyph · Study mode (desktop)</title>
+<link rel="stylesheet" href="bench2.css"><link rel="stylesheet" href="corner.css">
+<style>
+/* Study mode, desktop. Same Corner look as every page: bar on top, panels, Cyph bottom-right with nothing under him. */
+.head{display:flex;align-items:flex-end;gap:16px;padding:14px 22px 0;position:relative;z-index:5}.head .sp{flex:1}
+.hide{display:none!important}
+.page{grid-template-columns:300px minmax(0,1fr) 360px;padding-top:12px}
+.sub2{font:700 9px 'Pixelify Sans';letter-spacing:.24em;color:#58684a;margin:12px 2px 6px}
+/* edge ring (the same "glowing edge = progress" idea as the phone widgets) */
+.ring{--p:40;--c:var(--ne);width:var(--s,96px);height:var(--s,96px);border-radius:50%;display:grid;place-items:center;position:relative;flex:none;
+  background:conic-gradient(var(--c) calc(var(--p)*1%),#1d2615 0);filter:drop-shadow(0 0 7px color-mix(in srgb,var(--c) 60%,transparent))}
+.ring:before{content:"";position:absolute;inset:7px;border-radius:50%;background:#0b130d}
+.ring b{position:relative;font:700 calc(var(--s,96px)*.26) 'Pixelify Sans';color:var(--cr);text-align:center;line-height:1}
+.ring b small{display:block;font:9px 'DM Mono';color:var(--dim);margin-top:3px;letter-spacing:.08em}
+/* subject tiles */
+.grid7{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;align-content:start}
+.tile{position:relative;border-radius:12px;background:#0e150b;padding:12px 13px 11px;cursor:pointer;box-shadow:inset 0 0 0 1px #1d2815;transition:.12s;overflow:hidden}
+.tile:hover{background:#142010;box-shadow:inset 0 0 0 2px var(--c)}
+.tile .top{display:flex;align-items:center;gap:10px}
+.tile .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font:700 15px 'Pixelify Sans';color:#10150e;background:var(--c)}
+.tile h5{font:italic 26px/1 'Instrument Serif';color:var(--cr)}
+.tile p{font:11px 'DM Mono';color:var(--dim);margin-top:7px}
+.tile .edge{height:5px;border-radius:3px;background:#1d2615;margin-top:9px;overflow:hidden}.tile .edge i{display:block;height:100%;width:var(--w);background:var(--c);box-shadow:0 0 8px var(--c)}
+.tile .chips{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}
+.tile .chip{font-size:10px;padding:2px 8px}
+.tile.add{display:grid;place-items:center;border:2px dashed #2c3820;background:none;color:#8d9d78;font:italic 20px 'Instrument Serif';min-height:128px;box-shadow:none}
+/* tests */
+.test{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center;padding:9px 10px;border-radius:9px;background:#0e150b;margin-bottom:7px;box-shadow:inset 0 0 0 1px #1d2815}
+.test .d{font:700 20px 'Pixelify Sans';color:var(--c);text-align:center;line-height:1}.test .d small{display:block;font:9px 'DM Mono';color:var(--dim);margin-top:2px}
+.test h6{font:500 12.5px 'DM Mono';color:var(--cr)}.test p{font:11px 'DM Mono';color:var(--dim);margin-top:2px}
+.blk{display:grid;grid-template-columns:46px 1fr;gap:8px;padding:6px 9px;border-radius:7px;background:#0e150b;margin-bottom:5px;font:11.5px 'DM Mono';color:var(--cr)}
+.blk small{color:var(--c)}.blk.cy2{box-shadow:inset 3px 0 var(--c)}
+/* library */
+.fold{font:12px/1.9 'DM Mono';color:#9fb08a}
+.fold div{padding:0 8px;border-radius:5px;display:flex;gap:8px;align-items:center;cursor:pointer;justify-content:space-between}
+.fold div:hover{background:#162010}.fold .on{background:#16241a;color:var(--cr);box-shadow:inset 0 0 0 1px var(--ne)}
+.fold .d{color:var(--am);justify-content:flex-start}.fold .ind{padding-left:22px}
+.fold .e{font:700 8.5px 'Pixelify Sans';letter-spacing:.14em;color:var(--ne)}.fold .e.w{color:var(--am)}
+.drop{margin-top:8px;border:2px dashed #2c3820;border-radius:10px;padding:13px;text-align:center;font:italic 18px/1.1 'Instrument Serif';color:#8d9d78;cursor:pointer}
+.drop:hover{border-color:var(--ne);color:var(--cr);background:rgba(93,255,122,.05)}
+.drop small{display:block;font:10px 'DM Mono';color:var(--dim);margin-top:5px;font-style:normal}
+.prog{height:7px;border-radius:4px;background:#05080a;box-shadow:inset 0 1px 3px #000;overflow:hidden;margin:6px 0}.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--tl),var(--ne));box-shadow:0 0 8px var(--ne)}
+.step{display:flex;gap:8px;align-items:center;font:11px 'DM Mono';color:#9fb08a;padding:3px 0}.step b{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:9px;background:#1d2615;color:var(--dim)}
+.step.ok b{background:var(--ne);color:#0d120a}.step.go b{background:var(--am);color:#1a1405;animation:bl 1s steps(1) infinite}.step.ok{color:var(--cr)}
+/* reader */
+.rd{flex:1;min-height:0;overflow:auto;padding:4px 6px 20px 2px}
+.rd h2{font:italic 34px/1 'Instrument Serif';color:var(--cr);margin:2px 0 4px}
+.rd h3{font:700 11px 'Pixelify Sans';letter-spacing:.22em;color:var(--am);margin:18px 0 6px}
+.rd p,.rd li{font:italic 22px/1.3 'Instrument Serif';color:#d6d09a}.rd ul{margin:4px 0 0 20px}
+.rd .meta{font:11px 'DM Mono';color:var(--dim)}
+.math{display:inline-flex;align-items:center;gap:6px;font:italic 20px 'Instrument Serif';color:#fff3b8;background:#0f1b13;border-radius:6px;padding:1px 9px;box-shadow:inset 0 0 0 1px #20382a;vertical-align:middle}
+.math.big{display:flex;justify-content:center;font-size:27px;padding:10px;margin:8px 0;border-radius:9px}
+.fr{display:inline-flex;flex-direction:column;align-items:center;font-size:.8em;line-height:1.05;vertical-align:middle}.fr i{font-style:inherit;padding:0 3px}.fr i:first-child{border-bottom:1px solid currentColor}
+.math sub,.math sup{font-size:.62em}
+.cite{font:600 10px 'DM Mono';font-style:normal;background:var(--tl);color:#06140f;border-radius:3px;padding:1px 6px;margin:0 2px;vertical-align:2px;cursor:pointer}
+.tb{width:100%;border-collapse:collapse;margin:6px 0;font:12px 'DM Mono'}.tb td,.tb th{padding:6px 10px;border:1px solid #20301a;color:#cfd8bc;text-align:left}.tb th{background:#12190f;color:var(--am);font:700 9.5px 'Pixelify Sans';letter-spacing:.14em}
+.out{display:flex;gap:5px;flex-wrap:wrap;margin:2px 0 8px}
+.out button{border:0;cursor:pointer;font:700 9.5px 'Pixelify Sans';letter-spacing:.12em;padding:6px 11px;border-radius:6px;background:#1d2615;color:#b9c7a3}
+.out button.on{background:var(--ne);color:#0d120a;box-shadow:0 0 12px rgba(93,255,122,.4)}
+.kt{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;font:12px/1.4 'DM Mono'}.kt b{color:var(--ne);font-weight:500}.kt span{color:#c3cdb0}
+/* tutor */
+.thread{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:14px;padding-right:6px}
+.msg.u{align-self:flex-end;max-width:84%;font:13.5px/1.4 'DM Mono';color:#cfe3f2;background:#15222d;border-radius:12px 12px 2px 12px;padding:8px 13px;box-shadow:inset 0 0 0 1px #20384a}
+.steps{display:flex;flex-direction:column;gap:3px;font:11px 'DM Mono';color:var(--tl);padding-left:2px}.steps div:before{content:"▸ ";color:var(--am)}.steps b{color:var(--cr);font-weight:500}
+.ans{font:italic 400 clamp(21px,1.5vw,26px)/1.24 'Instrument Serif';color:#e3dca5}
+.ladder{display:flex;gap:6px;align-items:center;font:700 9px 'Pixelify Sans';letter-spacing:.14em;color:var(--dim)}
+.ladder i{flex:1;height:5px;border-radius:3px;background:#1d2615;font-style:normal}.ladder i.on{background:var(--am);box-shadow:0 0 8px var(--am)}.ladder b{font-weight:700;color:var(--am)}
+.logged{font:11px 'DM Mono';color:var(--co);padding:6px 10px;border-radius:7px;background:rgba(240,138,115,.1);box-shadow:inset 0 0 0 1px rgba(240,138,115,.35);align-self:flex-start}
+.modes{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}
+.cmdrow{display:flex;gap:8px;align-items:center;background:#05080aee;border-radius:12px;padding:11px 14px;box-shadow:0 0 0 1px var(--ln)}
+.cmdrow input{flex:1;background:none;border:0;outline:0;color:var(--tx);font:14px 'DM Mono'}.cmdrow .p{color:var(--ne)}
+.pass{border-radius:9px;background:#07100a;box-shadow:0 0 0 1px #1d3a32;padding:10px 12px}
+.pass small{display:block;font:700 9px 'Pixelify Sans';letter-spacing:.18em;color:var(--tl);margin-bottom:4px}
+.pass p{font:italic 18px/1.25 'Instrument Serif';color:#cfd8bc}.pass mark{background:rgba(93,255,122,.22);color:var(--cr);padding:0 3px;border-radius:2px}
+/* cards */
+.cd{border-radius:11px;background:#0e150b;box-shadow:inset 0 0 0 1px #1d2815;padding:11px 12px;margin-bottom:10px}
+.cd.sel{box-shadow:inset 0 0 0 2px var(--am)}
+.cd .q{font:italic 20px/1.18 'Instrument Serif';color:var(--cr)}.cd .a{font:12px/1.45 'DM Mono';color:#b8c6a4;margin-top:6px}
+.cd .row{display:flex;gap:6px;align-items:center;margin-top:9px}.cd .row .src{font:10px 'DM Mono';color:var(--bl);margin-right:auto}
+.cd img,.cd .pic{width:100%;height:78px;border-radius:7px;margin-top:8px;background:#05080a;display:block}
+.flash{perspective:700px;height:200px;cursor:pointer}
+.flash>div{position:relative;height:100%;transition:transform .5s;transform-style:preserve-3d}.flash.flip>div{transform:rotateY(180deg)}
+.flash .f,.flash .b{position:absolute;inset:0;border-radius:12px;display:grid;place-items:center;padding:16px;text-align:center;backface-visibility:hidden;font:italic 26px/1.15 'Instrument Serif'}
+.flash .f{background:#16241a;box-shadow:inset 0 0 0 2px var(--ne);color:var(--cr)}.flash .b{background:var(--ne);color:#0d120a;transform:rotateY(180deg)}
+.flash small{position:absolute;left:12px;top:9px;font:700 9px 'Pixelify Sans';letter-spacing:.18em;opacity:.7;font-style:normal}
+.streak{display:flex;gap:5px}.streak i{flex:1;height:44px;border-radius:4px;background:#161d10;position:relative}.streak i b{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(var(--ne),var(--tl));border-radius:4px;height:var(--h)}
+.weak{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:#0e150b;margin-bottom:6px;font:12px 'DM Mono';color:var(--cr)}
+.weak i{font:700 9px 'Pixelify Sans';letter-spacing:.12em;font-style:normal;color:var(--co)}
+/* paper */
+.paper{background:#e9e1c6;border-radius:6px;padding:16px 18px;color:#2a2a22;font:italic 19px/1.3 'Instrument Serif';box-shadow:0 8px 24px #000a}
+.paper b{font:500 10px 'DM Mono';letter-spacing:.2em;color:#7a6a3a;display:block;margin-bottom:5px}
+.hw{margin-top:10px;border-radius:8px;background:#f4eed6;padding:8px 12px;font:italic 22px/1.2 'Special Elite','Instrument Serif';color:#27406b;position:relative}
+.hw u{text-decoration:wavy underline #c0392b}
+.mk{display:grid;grid-template-columns:34px 1fr;gap:9px;padding:8px 10px;border-radius:8px;background:#0e150b;margin-bottom:6px;font:12px/1.4 'DM Mono';color:#c3cdb0}
+.mk b{font:700 14px 'Pixelify Sans';color:var(--ne);text-align:center}.mk.x b{color:var(--co)}.mk.h b{color:var(--am)}
+.pill{font:700 10px 'Pixelify Sans';letter-spacing:.14em;padding:4px 10px;border-radius:12px;background:#1d2615;color:#b9c7a3}
+.note{font:italic 17px 'Instrument Serif';color:#8d9d78;margin-top:8px}
+</style></head><body>
+<div class="deck"><div id="bar" class="bar"></div>
+ <div class="head"><h1 class="t"><em id="eyb">STUDY MODE</em><span id="ttl">Your subjects</span></h1><span class="sub" id="hs">Sec 3 now, O-Level next year. He knows your plan, your tests and where you slip.</span><div class="sp"></div>
+  <div class="tabs" id="tabs"><button class="on" data-v="home">SUBJECTS</button><button data-v="lib">LIBRARY</button><button data-v="tutor">TUTOR</button><button data-v="cards">CARDS</button><button data-v="paper">PAST PAPER</button></div></div>
+
+ <!-- 1. SUBJECTS -->
+ <div class="page" id="v-home">
+  <div class="cp scroll"><div class="lbl">Today <b>real data, not guesses</b></div>
+   <div style="display:flex;gap:14px;align-items:center"><div class="ring" style="--s:104px;--p:62"><b>23<small>OF 37 DUE</small></b></div>
+    <div><div class="chip ne">● 4 day streak</div><p style="font:12px/1.5 'DM Mono';color:#9fb08a;margin-top:8px">14 cards done, 23 to go. About 11 minutes.</p></div></div>
+   <button class="btn go" style="width:100%;margin-top:12px">START REVIEW</button>
+   <div class="sub2">TESTS IN YOUR PLAN</div>
+   <div class="test" style="--c:#f08a73"><div class="d">12<small>DAYS</small></div><div><h6>Chemistry · Paper 1</h6><p>Mole calc, Acids &amp; salts</p></div><span class="chip co">weak</span></div>
+   <div class="test" style="--c:#d9984a"><div class="d">19<small>DAYS</small></div><div><h6>Amath · Quadratics</h6><p>Discriminant, inequalities</p></div><span class="chip am">ok</span></div>
+   <div class="test" style="--c:#5b9fb8"><div class="d">26<small>DAYS</small></div><div><h6>Geog · Fieldwork</h6><p>Data presentation</p></div><span class="chip bl">ok</span></div>
+   <div class="sub2">IN THE PLAN (HE ADDED THESE)</div>
+   <div class="blk cy2" style="--c:#f08a73"><small>16:30</small>Chem: mole calc, 20 min</div>
+   <div class="blk cy2" style="--c:#d9984a"><small>19:00</small>Amath: discriminant, 15 min</div></div>
+  <div class="cp scroll"><div class="lbl">Subjects <b>7 · add, rename, archive</b></div>
+   <div class="grid7" id="grid"></div></div>
+  <div class="cp scroll"><div class="lbl">Where you slip <b>you can rename</b></div>
+   <div class="weak"><span>Chem · Mole ratio</span><i>5 MISSES</i></div>
+   <div class="weak"><span>Physics · Moments</span><i>4 MISSES</i></div>
+   <div class="weak"><span>Amath · Completing the square</span><i>3 MISSES</i></div>
+   <div class="weak"><span>English · Comprehension: inference</span><i>3 MISSES</i></div>
+   <div class="sub2">THIS WEEK</div><div class="streak"><i><b style="--h:60%"></b></i><i><b style="--h:85%"></b></i><i><b style="--h:30%"></b></i><i><b style="--h:70%"></b></i><i><b style="--h:44%"></b></i><i><b style="--h:12%"></b></i><i><b style="--h:0%"></b></i></div>
+   <p class="note">Mon to Sun · minutes studied</p></div>
+ </div>
+
+ <!-- 2. LIBRARY -->
+ <div class="page hide" id="v-lib">
+  <div class="cp scroll"><div class="lbl">Chemistry <b>embedded on the server</b></div>
+   <div class="fold"><div class="d">▾ Acids &amp; salts</div><div class="ind on">Acids and bases.pdf<span class="e">READY</span></div><div class="ind">Titration notes.md<span class="e">READY</span></div>
+    <div class="d">▾ Mole concept</div><div class="ind">Mole calc worksheet.pdf<span class="e w">62%</span></div><div class="ind">My mole notes<span class="e">TYPED</span></div>
+    <div class="d">▸ Organic</div><div class="d">▸ Past papers</div></div>
+   <div class="drop">Drop a PDF here, or photograph a page<small>PDF · photo · markdown · pasted text</small></div>
+   <div class="sub2">IMPORTING NOW</div>
+   <div class="cp" style="background:#0e150b;padding:10px"><div style="font:12px 'DM Mono';color:var(--cr)">Mole calc worksheet.pdf</div><div class="prog"><i style="width:62%"></i></div>
+    <div class="step ok"><b>✓</b>Read 14 pages</div><div class="step ok"><b>✓</b>Clean notes with formulas</div><div class="step go"><b>3</b>Summary, key terms, guide</div><div class="step"><b>4</b>Index for search</div></div></div>
+  <div class="cp q" style="display:flex;flex-direction:column"><div class="lbl">Acids and bases.pdf <b>12 pages → readable notes</b></div>
+   <div class="out" id="out"><button class="on">CLEAN NOTES</button><button>SUMMARY</button><button>KEY TERMS</button><button>STUDY GUIDE</button><button>LIKELY QUESTIONS</button><button>ORIGINAL</button></div>
+   <div class="rd"><div class="meta">cleaned by Cyph · p.1 to 12 · the original is kept</div>
+    <h2>Acids, bases and the pH scale</h2>
+    <h3>1 · WHAT IS pH?</h3>
+    <p>pH measures the concentration of hydrogen ions in a solution.</p>
+    <div class="math big">pH = −log<sub>10</sub>[H<sup>+</sup>]</div>
+    <p>A pH below 7 is acidic, 7 is neutral, above 7 is alkaline. Each step is a tenfold change <span class="cite">p.2</span></p>
+    <h3>2 · NEUTRALISATION</h3>
+    <div class="math big">HCl + NaOH → NaCl + H<sub>2</sub>O</div>
+    <p>To find the moles of a solution, use <span class="math">n = c × <span class="fr"><i>V</i><i>1000</i></span></span> with V in cm<sup>3</sup> <span class="cite">p.5</span></p>
+    <table class="tb"><tr><th>INDICATOR</th><th>ACID</th><th>ALKALI</th></tr><tr><td>Litmus</td><td>red</td><td>blue</td></tr><tr><td>Methyl orange</td><td>red</td><td>yellow</td></tr><tr><td>Phenolphthalein</td><td>colourless</td><td>pink</td></tr></table>
+    <h3>3 · WORKED EXAMPLE</h3>
+    <p>25.0 cm<sup>3</sup> of 0.10 mol/dm<sup>3</sup> NaOH is neutralised by HCl. Moles of NaOH = <span class="math">0.10 × <span class="fr"><i>25</i><i>1000</i></span> = 0.0025 mol</span> <span class="cite">p.7</span></p></div></div>
+  <div class="cp scroll"><div class="lbl">Cyph's read <b>from this source</b></div>
+   <div class="pass"><small>KEY TERMS</small><div class="kt"><b>Neutralisation</b><span>acid + base → salt + water</span><b>Titration</b><span>measure the volume that just neutralises</span><b>Mole</b><span>6.02 × 10²³ particles</span></div></div>
+   <div class="sub2">LIKELY QUESTIONS</div>
+   <div class="weak" style="display:block"><span>Calculate the concentration of HCl if 20.0 cm³ neutralises 25.0 cm³ of 0.100 mol/dm³ NaOH.</span></div>
+   <div class="weak" style="display:block"><span>State the colour change of methyl orange in alkali.</span></div>
+   <div class="sub2">NEXT</div><button class="btn go" style="width:100%">DRAFT CARDS FROM THIS (12)</button><button class="btn" style="width:100%;margin-top:6px">QUIZ ME ON THIS</button></div>
+ </div>
+
+ <!-- 3. TUTOR -->
+ <div class="page hide" id="v-tutor">
+  <div class="cp scroll"><div class="lbl">Chemistry <b>tutor</b></div>
+   <div class="tile" style="--c:#d9984a;cursor:default"><div class="top"><div class="ic">C</div><h5>Chemistry</h5></div><p>Paper 1 in 12 days</p><div class="chips"><span class="chip co">weak: mole ratio</span></div></div>
+   <div class="sub2">HE HAS OPEN</div>
+   <div class="fold"><div class="on">Acids and bases.pdf<span class="e">p.5</span></div><div>My mole notes<span class="e">§2</span></div></div>
+   <div class="sub2">TUTORING STYLE</div>
+   <div style="font:12px/1.5 'DM Mono';color:#9fb08a">He asks one thing at a time, gives a hint before the answer, and explains differently if you get stuck twice.</div>
+   <div class="sub2">PRACTICE</div>
+   <div class="modes" style="flex-direction:column;margin:0"><button class="btn" style="text-align:left">WORKED PROBLEM</button><button class="btn" style="text-align:left">STRUCTURED QUESTION</button><button class="btn" style="text-align:left">SOURCE-BASED (SS/GEOG)</button><button class="btn" style="text-align:left">ESSAY / COMPREHENSION</button><button class="btn" style="text-align:left">PAST PAPER</button></div></div>
+  <div class="cp" style="display:flex;flex-direction:column"><div class="lbl">Conversation <b>tutor mode · cites your notes</b></div>
+   <div class="thread" id="thread">
+    <div class="msg u">i dont get the mole question. 25.0 cm³ of 0.10 NaOH, how many moles?</div>
+    <div style="display:flex;flex-direction:column;gap:6px"><div class="steps"><div>study_search <b>"moles from concentration and volume"</b> → 3 passages</div><div>read <b>Acids and bases.pdf</b> p.5, <b>My mole notes</b> §2</div></div>
+     <div class="ladder"><b>HINT</b><i class="on"></i><i class="on"></i><i></i><i></i><span>2 OF 4</span></div>
+     <div class="ans">Good one to be stuck on, you're nearly there. In your notes you wrote <span class="math">n = c × <span class="fr"><i>V</i><i>1000</i></span></span> <span class="cite">1</span>. What unit is the 25.0 in, and what does that formula want it in?</div></div>
+    <div class="msg u">cm³, so i divide by 1000?</div>
+    <div style="display:flex;flex-direction:column;gap:6px"><div class="ladder"><b>HINT</b><i class="on"></i><i class="on"></i><i class="on"></i><i></i><span>3 OF 4</span></div>
+     <div class="ans">Yes. That's the step people skip. So 25.0 cm³ is <span class="math"><span class="fr"><i>25.0</i><i>1000</i></span> = 0.0250 dm³</span>. Now try the last bit: <span class="math">n = 0.10 × 0.0250</span>.</div></div>
+    <div class="logged">⚑ Logged: Chem · Mole ratio, step "convert cm³ to dm³" (2nd time this week)</div></div>
+   <div class="cmdrow" style="margin-top:8px"><span class="p">▸</span><input placeholder="answer, ask, or paste a question…"><button class="key mic">● MIC</button><button class="key live">SEND</button></div></div>
+  <div style="display:flex;flex-direction:column;gap:14px;min-height:0">
+   <div class="cp"><div class="lbl">Where that came from <b>click a chip</b></div>
+    <div class="pass"><small>ACIDS AND BASES.PDF · P.5</small><p>…the amount in moles is <mark>n = c × V / 1000</mark> where V is in cm³. Always convert before multiplying…</p></div>
+    <div style="margin-top:8px"><span class="chip bl">Acids and bases · p.5</span> <span class="chip bl">My mole notes · §2</span></div></div>
+   <div class="cp glow"><div class="lbl">Next step <b>when you finish</b></div>
+    <div style="font:italic 20px/1.2 'Instrument Serif';color:var(--cr)">Two more like this, then I'll turn your slips into cards.</div>
+    <button class="btn go" style="width:100%;margin-top:10px">GIVE ME ANOTHER</button></div></div>
+ </div>
+
+ <!-- 4. CARDS -->
+ <div class="page hide" id="v-cards" style="grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) 360px">
+  <div class="cp scroll"><div class="lbl">Drafts to approve <b>Cyph wrote these · 12</b></div>
+   <div class="cd sel"><div class="q">What is the formula to find moles from a solution?</div><div class="a">n = c × V ÷ 1000, V in cm³</div>
+    <div class="row"><span class="src">▸ Acids and bases.pdf · p.5</span><button class="btn sm">EDIT</button><button class="btn sm red">SKIP</button><button class="btn sm go">APPROVE</button></div></div>
+   <div class="cd"><div class="q">Name the colour of methyl orange in alkali.</div><div class="a">Yellow</div>
+    <svg class="pic" viewBox="0 0 300 78"><rect width="300" height="78" fill="#05080a"/><g><rect x="30" y="14" width="40" height="52" rx="6" fill="#e8654a"/><rect x="100" y="14" width="40" height="52" rx="6" fill="#f0b64a"/><text x="30" y="76" fill="#6b7a5e" font-size="8" font-family="DM Mono">acid</text><text x="100" y="76" fill="#6b7a5e" font-size="8" font-family="DM Mono">alkali</text></g><text x="190" y="42" fill="#9fb08a" font-size="11" font-family="DM Mono">picture from the PDF</text></svg>
+    <div class="row"><span class="src">▸ Acids and bases.pdf · p.9</span><button class="btn sm">EDIT</button><button class="btn sm red">SKIP</button><button class="btn sm go">APPROVE</button></div></div>
+   <div class="cd"><div class="q">Why is a titration repeated?</div><div class="a">To get concordant results (within 0.10 cm³) and a reliable average.</div>
+    <div class="row"><span class="src">▸ Titration notes.md</span><button class="btn sm">EDIT</button><button class="btn sm red">SKIP</button><button class="btn sm go">APPROVE</button></div></div>
+   <button class="btn" style="width:100%">APPROVE ALL 12 AFTER I'VE READ THEM</button></div>
+  <div class="cp scroll"><div class="lbl">Review <b>Chemistry · 23 due</b></div>
+   <div class="flash" id="fl"><div><div class="f"><small>QUESTION</small>How many moles are in 25.0 cm³ of 0.10 mol/dm³ NaOH?</div><div class="b"><small>ANSWER</small>0.0025 mol<br><span style="font-size:17px">0.10 × 25.0 ÷ 1000</span></div></div></div>
+   <p class="note" style="text-align:center">tap or press space to flip · keys 1 2 3 to grade</p>
+   <div style="display:flex;gap:8px;margin-top:10px"><button class="btn red" style="flex:1;padding:12px">1 · AGAIN<br><small style="font:9px 'DM Mono';letter-spacing:0">10 min</small></button><button class="btn" style="flex:1;padding:12px">2 · HARD<br><small style="font:9px 'DM Mono';letter-spacing:0">2 days</small></button><button class="btn go" style="flex:1;padding:12px">3 · GOT IT<br><small style="font:9px 'DM Mono';letter-spacing:0">6 days</small></button></div>
+   <div class="sub2">THIS CARD</div><span class="chip bl">Acids and bases · p.5</span> <span class="chip co">weak topic: mole ratio</span></div>
+  <div class="cp scroll"><div class="lbl">Stats <b>from your reviews</b></div>
+   <div style="display:flex;gap:12px;align-items:center"><div class="ring" style="--s:84px;--p:38;--c:var(--am)"><b>14<small>DONE</small></b></div><div style="font:12px/1.6 'DM Mono';color:#9fb08a">Accuracy 81%<br>Avg 6 s a card<br>Streak 4 days</div></div>
+   <div class="sub2">BY SUBJECT (DUE)</div>
+   <div class="weak"><span>Chemistry</span><i style="color:var(--ne)">9</i></div><div class="weak"><span>Physics</span><i style="color:var(--ne)">6</i></div><div class="weak"><span>Amath</span><i style="color:var(--ne)">5</i></div><div class="weak"><span>English</span><i style="color:var(--ne)">3</i></div></div>
+ </div>
+
+ <!-- 5. PAST PAPER -->
+ <div class="page hide" id="v-paper" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr) 360px">
+  <div class="cp scroll"><div class="lbl">Chemistry Paper 1 · 2023 <b>Q7 · 4 marks</b></div>
+   <div class="paper"><b>QUESTION 7</b>25.0 cm³ of sodium hydroxide of concentration 0.10 mol/dm³ is neutralised by hydrochloric acid. Calculate the volume of HCl, of concentration 0.20 mol/dm³, needed. [4]</div>
+   <div class="sub2">YOUR ANSWER (PHOTO OF YOUR WORKING)</div>
+   <div class="hw">n(NaOH) = 0.10 × 25/1000 = 0.0025<br>n(HCl) = 0.0025 <small style="font:11px 'DM Mono'">(1 : 1)</small><br>V = 0.0025 ÷ 0.20 = <u>0.125 cm³</u></div>
+   <div style="display:flex;gap:6px;margin-top:10px"><button class="btn">RETAKE PHOTO</button><button class="btn go">MARK IT</button></div>
+   <p class="note">Marked against the uploaded mark scheme: Chem P1 2023 MS.pdf</p></div>
+  <div class="cp scroll"><div class="lbl">Marks <b>3 / 4</b></div>
+   <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px"><div class="ring" style="--s:92px;--p:75;--c:var(--am)"><b>3<small>OF 4</small></b></div><div style="font:italic 21px/1.2 'Instrument Serif';color:var(--cr)">So close. The method is right, it's a unit slip at the end.</div></div>
+   <div class="mk"><b>✓</b>M1 moles of NaOH from c × V/1000 = 0.0025</div>
+   <div class="mk"><b>✓</b>M1 mole ratio 1 : 1</div>
+   <div class="mk"><b>✓</b>M1 V = n ÷ c</div>
+   <div class="mk x"><b>✗</b>A1 answer in cm³ should be 12.5. You left V in dm³ after dividing: 0.0125 dm³ × 1000.</div>
+   <div class="logged" style="margin-top:6px">⚑ Logged: Chem · Units (dm³ to cm³) · 3rd miss</div>
+   <button class="btn go" style="width:100%;margin-top:10px">MAKE A CARD FOR THIS SLIP</button></div>
+  <div class="cp scroll"><div class="lbl">Past papers <b>this subject</b></div>
+   <div class="weak"><span>2023 P1</span><i style="color:var(--am)">68%</i></div><div class="weak"><span>2022 P1</span><i style="color:var(--ne)">74%</i></div><div class="weak"><span>2021 P1</span><i style="color:var(--dim)">NOT DONE</i></div>
+   <div class="sub2">ADD A PAPER</div><div class="drop">Drop paper + mark scheme<small>he marks against the scheme if you add one</small></div></div>
+ </div>
+</div>
+<script src="cyph-rig.js"></script><script src="cyph-engine.js"></script><script src="bench-common.js"></script><script src="corner.js"></script>
+<script>
+const $ = (id) => document.getElementById(id); shell("STUDY MODE"); const api = buddy(5);
+const SUBJ = [["Math","M","#5dff7a",30,"4 due","Quadratics"],["Chemistry","C","#d9984a",62,"9 due","Mole ratio","co"],["Physics","P","#5b9fb8",45,"6 due","Moments","co"],["Amath","A","#b392f0",20,"5 due","Completing the square"],["English","E","#f3ecb2",70,"3 due","Inference"],["SS","S","#f08a73",55,"2 due","Source utility"],["Geog","G","#2f9d8f",35,"0 due","Fieldwork"]];
+$("grid").innerHTML = SUBJ.map(s => `<div class="tile" style="--c:${s[2]};--w:${s[3]}%"><div class="top"><div class="ic">${s[1]}</div><h5>${s[0]}</h5></div><p>${s[4]} · ${s[3]}% of notes embedded</p><div class="edge"><i></i></div><div class="chips"><span class="chip ${s[6] || "am"}">weak: ${s[5]}</span></div></div>`).join("") + `<div class="tile add">+ add a subject</div>`;
+const heads = {home:["Your subjects","Sec 3 now, O-Level next year. He knows your plan, your tests and where you slip."],lib:["Library","Drop a PDF and he turns it into notes you can actually read, with the original kept."],tutor:["Tutor","He asks, hints, then explains. One step at a time."],cards:["Cards","He drafts, you approve. Nothing enters your reviews until you say so."],paper:["Past paper","Photograph your working. He marks it against the scheme and logs the slip."]};
+const says = {home:["Twelve days to Chem Paper 1 and mole ratio keeps tripping you. I put two short blocks in your plan.","curious"],lib:["That PDF is twelve pages. Formulas came out clean. Want cards from it?","happy"],tutor:["Don't tell me the answer yet. What unit is the 25.0 in?","smug"],cards:["I wrote twelve. Check the pictures, I pulled them from the PDF.","excited"],paper:["Three out of four. The method is right, it's the last unit.","think"]};
+function go(v) { document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); ["home","lib","tutor","cards","paper"].forEach(k => $("v-" + k).classList.toggle("hide", k !== v));
+  $("ttl").textContent = heads[v][0]; $("hs").textContent = heads[v][1]; api.say(says[v][0], says[v][1], 6500); }
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => go(b.dataset.v));
+document.querySelectorAll(".tile:not(.add)").forEach(t => t.onclick = () => go("lib"));
+$("fl").onclick = () => $("fl").classList.toggle("flip");
+document.querySelectorAll("#out button").forEach(b => b.onclick = () => { document.querySelectorAll("#out button").forEach(x => x.classList.toggle("on", x === b)); });
+addEventListener("keydown", e => { if (e.code === "Space" && !$("v-cards").classList.contains("hide")) { e.preventDefault(); $("fl").classList.toggle("flip"); } });
+const h = location.hash.slice(1); if (heads[h]) go(h); else api.say(says.home[0], "curious", 6500);
+</script></body></html>
