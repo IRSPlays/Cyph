@@ -23,7 +23,7 @@ from .planner import MAX_YEAR, MIN_YEAR, Planner
 
 MAX_BODY = 65536            # bytes in one HTTP request body; checked before auth
 MAX_UPLOAD = 36 * 1024 * 1024   # study uploads (a PDF or photos, base64 in JSON) on the paths below only
-UPLOAD_PATHS = ("/study/sources", "/study/papers", "/study/pages/")
+UPLOAD_PATHS = ("/study/sources", "/study/papers", "/study/pages/", "/study/practice/", "/study/boards/", "/study/notes")
 AUTH_WINDOW_S = 5           # a new chat socket must send its auth frame within this
 MAX_PENDING = 8             # chat sockets allowed in the unauthenticated phase at once
 # WebSocket close codes: 4401 = token not valid (re-pair), 4429 = locked out (retry later), 1013 = server busy,
@@ -40,7 +40,7 @@ class BodyLimit:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         limit = self.max_bytes
-        if scope.get("method") in ("POST", "PUT") and any(scope.get("path", "").startswith(u) for u in UPLOAD_PATHS):
+        if scope.get("method") in ("POST", "PUT", "PATCH") and any(scope.get("path", "").startswith(u) for u in UPLOAD_PATHS):
             limit = max(limit, MAX_UPLOAD)
         for k, v in scope.get("headers") or []:
             if k == b"content-length":

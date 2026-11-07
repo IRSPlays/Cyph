@@ -297,7 +297,10 @@ def add_study_routes(app, d, auth, changed):
 
     @app.post("/study/cards")
     def cards_add(body: CardIn, dev: dict = Depends(auth)):
-        got = guard(lambda: svc().store.add_card(sid(body.subject), body.front, body.back, body.state, body.topic))
+        subject_id = guard(lambda: sid(body.subject))
+        if not subject_id:
+            raise HTTPException(422, "pick a subject first")
+        got = guard(lambda: svc().store.add_card(subject_id, body.front, body.back, body.state, body.topic))
         changed("study")
         return got
 

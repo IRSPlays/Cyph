@@ -102,6 +102,13 @@ def parse_json(text: str):
     return None
 
 
+def _int(v, default: int) -> int:
+    try:
+        return int(float(str(v).strip().split()[0]))
+    except (ValueError, IndexError):
+        return default
+
+
 def _vec(v: list[float]) -> bytes:
     import numpy as np
     return np.asarray(v, dtype="float32").tobytes()
@@ -164,6 +171,8 @@ class StudyStore:
             if not self.db.execute("SELECT 1 FROM subjects").fetchone():
                 for name, color in SUBJECTS:
                     self.db.execute("INSERT INTO subjects VALUES(?,?,?,?)", (new_id("s"), name, color, now_iso()))
+            # an import cut short by a restart would read "processing" forever
+            self.db.execute("UPDATE sources SET status='failed', error='interrupted, try again' WHERE status='processing'")
             self.db.commit()
 
     def close(self):
@@ -210,8 +219,13 @@ class StudyStore:
 
     def remove_subject(self, sid: str):
         self.subject(sid)
-        for t in ("cards", "notes", "chunks", "topics", "attempts", "tests", "sources"):
+        for src in self.q("SELECT id FROM sources WHERE subject_id=?", (sid,)):
+            self.remove_source(src["id"])
+        self.run("DELETE FROM reviews WHERE card_id IN (SELECT id FROM cards WHERE subject_id=?)", (sid,))
+        for t in ("cards", "notes", "chunks", "topics", "attempts", "tests"):
             self.run(f"DELETE FROM {t} WHERE subject_id=?", (sid,))
+        for t in ("notebooks", "boards"):                  # pen work is kept, just no longer filed under a subject
+            self.run(f"UPDATE {t} SET subject_id=NULL WHERE subject_id=?", (sid,))
         self.run("DELETE FROM subjects WHERE id=?", (sid,))
 
     # -- files
@@ -516,8 +530,11 @@ class StudyStore:
             pts = s.get("pts") if isinstance(s, dict) else None
             if not isinstance(pts, list) or not pts:
                 continue
-            clean.append({"c": str(s.get("c", "#e8e4d8"))[:9], "w": float(s.get("w", 2)),
-                          "pts": [[float(p[0]), float(p[1])] for p in pts[:5000]], "k": str(s.get("k", "pen"))[:8]})
+            try:
+                clean.append({"c": str(s.get("c", "#e8e4d8"))[:9], "w": float(s.get("w", 2)),
+                              "pts": [[float(p[0]), float(p[1])] for p in pts[:5000]], "k": str(s.get("k", "pen"))[:8]})
+            except (TypeError, ValueError, IndexError, KeyError):
+                raise StudyError("a stroke is malformed")
         self.run("UPDATE pages SET strokes=?, updated=? WHERE id=?", (json.dumps(clean), now_iso(), pid))
         if background:
             if background not in ("lined", "grid", "blank", "dots"):
@@ -562,10 +579,16 @@ class StudyStore:
         if kind not in self.BOARD_KINDS:
             raise StudyError("item kind: " + ", ".join(self.BOARD_KINDS))
         iid = str(item.get("id") or new_id("i"))[:20]
+        other = self.one("SELECT board_id FROM board_items WHERE id=?", (iid,))
+        if other and other["board_id"] != bid:             # ids are global: never move another board's item
+            raise StudyError("that item belongs to another board", 409)
         data = json.dumps(item.get("data") or {})
         if len(data) > 400000:
             raise StudyError("that item is too big")
-        vals = [float(item.get(k, 0) or 0) for k in ("x", "y", "w", "h")]
+        try:
+            vals = [float(item.get(k, 0) or 0) for k in ("x", "y", "w", "h")]
+        except (TypeError, ValueError):
+            raise StudyError("bad item size or position")
         self.run("INSERT OR REPLACE INTO board_items VALUES(?,?,?,?,?,?,?,?,?)", (iid, bid, kind, *vals, data, now_iso()))
         self.run("UPDATE boards SET updated=? WHERE id=?", (now_iso(), bid))
         return next(i for i in self.board(bid)["items"] if i["id"] == iid)
@@ -741,6 +764,8 @@ class StudyService:
                 embs = self.ai.embed(pieces)
             except StudyError:
                 embs = None                             # notes are still saved; search falls back to words
+            for old in st.q("SELECT id FROM notes WHERE source_id=?", (sid,)):      # a retry replaces, never duplicates
+                st.remove_note(old["id"])
             note = st.add_note(src["subject_id"], title, str(got["clean_notes"]), "import", sid, got.get("topic"), embs)
             st.run("UPDATE sources SET status='ready', error='', title=? WHERE id=?", (title, sid))
             self.changed("study")
@@ -754,6 +779,8 @@ class StudyService:
     # -- notes
     def save_note(self, subject_ref, title, body, kind="typed", topic=None):
         subj = self.store.subject(subject_ref)
+        if not subj:
+            raise StudyError("pick a subject first")
         pieces = chunk_text(body)
         embs = self._embed_quiet(pieces)
         note = self.store.add_note(subj["id"], title, body, kind, None, topic, embs)
@@ -867,7 +894,7 @@ class StudyService:
             raise StudyError("I could not set a question")
         pid = new_id("q")
         item = {"id": pid, "subject_id": subj["id"], "kind": kind, "question": str(got["question"]),
-                "marks": max(1, int(got.get("marks") or 4)), "scheme": str(got.get("scheme") or ""),
+                "marks": max(1, min(100, _int(got.get("marks"), 4))), "scheme": str(got.get("scheme") or ""),
                 "topic": str(got.get("topic") or topic or "General")}
         self.practice_items[pid] = item
         if len(self.practice_items) > 200:
@@ -952,7 +979,7 @@ class StudyService:
 
     # -- notebook export
     def notebook_pdf(self, nid) -> bytes:
-        from PIL import Image, ImageDraw
+        from PIL import Image, ImageColor, ImageDraw
         nb = self.store.notebook(nid)
         W, H = 1000, 1414
         imgs = []
@@ -974,6 +1001,10 @@ class StudyService:
             for s in page["strokes"]:
                 pts = [tuple(q) for q in s["pts"]]
                 col = s["c"] if s["c"].lower() not in ("#e8e4d8", "#fff", "#ffffff") else "#222222"
+                try:
+                    ImageColor.getrgb(col)
+                except ValueError:
+                    col = "#222222"
                 if len(pts) == 1:
                     x, y = pts[0]
                     dr.ellipse([x - s["w"], y - s["w"], x + s["w"], y + s["w"]], fill=col)

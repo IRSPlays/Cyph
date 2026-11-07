@@ -276,6 +276,32 @@ class TestService(Base):
         self.assertEqual(t["stats"]["due"], 1)
         self.assertEqual(next(s for s in t["subjects"] if s["name"] == "Chemistry")["due"], 1)
 
+    def test_retry_replaces_notes_and_odd_marks_do_not_crash(self):
+        src = self.svc.import_source("Chemistry", "Moles", "text/plain", None, "moles")
+        self.svc.process(src["id"])
+        self.assertEqual(len(self.store.notes(self.chem)), 1)
+        orig = self.ai.generate
+        self.ai.generate = lambda s, p, parts=(): (json.dumps({"question": "Q?", "marks": "4 marks", "scheme": "x", "topic": "T"}) if "marking scheme" in p else orig(s, p, parts))
+        self.assertEqual(self.svc.practice("Chemistry")["marks"], 4)
+
+    def test_removing_a_subject_leaves_no_orphans(self):
+        self.svc.import_source("Chemistry", "Moles", "text/plain", None, "moles")
+        card = self.svc.draft_cards("Chemistry", None, "text about moles")[0]
+        self.store.edit_card(card["id"], {"state": "approved"})
+        self.store.review(card["id"], 2)
+        nb = self.store.add_notebook(self.chem, "n")
+        self.store.remove_subject(self.chem)
+        for t in ("cards", "reviews", "notes", "chunks", "sources", "files"):
+            self.assertEqual(self.store.one(f"SELECT COUNT(*) n FROM {t}")["n"], 0, t)
+        self.assertIsNone(self.store.notebook(nb["id"])["subject_id"])
+
+    def test_interrupted_imports_are_failed_on_restart(self):
+        fid = self.store.put_file("x", "text/plain", b"x")
+        src = self.store.add_source(self.chem, "t", "text", fid)
+        self.store.close()
+        self.store = StudyStore(self.root / "study")
+        self.assertEqual(self.store.source(src["id"])["status"], "failed")
+
     def test_notebook_pdf(self):
         nb = self.store.add_notebook(self.chem, "Chem")
         self.store.save_page(nb["pages"][0]["id"], [{"c": "#e8e4d8", "w": 3, "pts": [[10, 10], [200, 200]]}])
@@ -399,6 +425,39 @@ class TestApi(Base):
         ok = self.client.post("/study/sources", headers=self.h, json={"subject": "Chemistry", "mime": "image/png", "data": big})
         self.assertEqual(ok.status_code, 200)
         self.assertEqual(self.client.post("/plan", headers=self.h, json={"title": "x", "date": "2026-11-20", "notes": "y" * 100000}).status_code, 413)
+
+    def test_big_bodies_pass_on_every_study_route_that_carries_them(self):
+        c, h = self.client, self.h
+        png = base64.b64encode(b"\x89PNG" + b"x" * 200000).decode()
+        b = c.post("/study/boards", headers=h, json={"title": "B"}).json()
+        r = c.put(f"/study/boards/{b['id']}/items", headers=h, json={"kind": "image", "data": {"src": "data:image/png;base64," + png}})
+        self.assertEqual(r.status_code, 200)
+        n = c.post("/study/notes", headers=h, json={"subject": "Chemistry", "title": "big", "body": "é" * 40000}).json()
+        self.assertEqual(c.patch(f"/study/notes/{n['id']}", headers=h, json={"body": "ü" * 40000}).status_code, 200)
+        q = c.post("/study/practice", headers=h, json={"subject": "Chemistry"}).json()
+        r = c.post(f"/study/practice/{q['id']}/answer", headers=h, json={"answer": "x", "images": [{"mime": "image/png", "data": png}]})
+        self.assertEqual(r.status_code, 200)
+
+    def test_board_items_cannot_be_stolen_between_boards(self):
+        c, h = self.client, self.h
+        a = c.post("/study/boards", headers=h, json={"title": "A"}).json()
+        b = c.post("/study/boards", headers=h, json={"title": "B"}).json()
+        it = c.put(f"/study/boards/{a['id']}/items", headers=h, json={"kind": "text", "data": {"text": "hi"}}).json()
+        r = c.put(f"/study/boards/{b['id']}/items", headers=h, json={"id": it["id"], "kind": "text", "data": {"text": "mine"}})
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(c.get(f"/study/boards/{a['id']}", headers=h).json()["items"][0]["data"]["text"], "hi")
+
+    def test_bad_input_is_4xx_not_500(self):
+        c, h = self.client, self.h
+        self.assertEqual(c.post("/study/notes", headers=h, json={"title": "t", "body": "b"}).status_code, 422)   # no subject
+        self.assertEqual(c.post("/study/cards", headers=h, json={"subject": "", "front": "a", "back": "b"}).status_code, 422)
+        self.assertEqual(c.post("/study/cards", headers=h, json={"subject": "Nope", "front": "a", "back": "b"}).status_code, 404)
+        self.assertEqual(c.delete("/study/subjects/nope", headers=h).status_code, 404)
+        nb = c.post("/study/notebooks", headers=h, json={"title": "n"}).json()
+        pid = nb["pages"][0]["id"]
+        self.assertEqual(c.put(f"/study/pages/{pid}", headers=h, json={"strokes": [{"pts": [[1]]}]}).status_code, 422)
+        self.assertEqual(c.put(f"/study/pages/{pid}", headers=h, json={"strokes": [{"pts": [[1, 2]], "c": "nonsense"}]}).status_code, 200)
+        self.assertEqual(c.get(f"/study/notebooks/{nb['id']}/pdf", headers=h).status_code, 200)
 
     def test_chat_passes_study_mode(self):
         with self.client.websocket_connect("/chat") as ws:

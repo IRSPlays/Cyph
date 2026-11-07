@@ -178,10 +178,19 @@ export function SourceList({ subject, onOpen, cur }: { subject?: string; onOpen:
 export function SourceView({ source, onGone }: { source: StudySource; onGone: () => void }) {
   const [detail, setDetail] = useState<(StudySource & { outputs: StudyOutputs }) | null>(null);
   const [tab, setTab] = useState<keyof StudyOutputs | "original">("clean_notes");
-  useEffect(() => { void api.studySource(source.id).then(setDetail).catch(() => setDetail(null)); }, [source.id, source.status]);
+  const load = useCallback(() => api.studySource(source.id).then(setDetail).catch(() => setDetail(null)), [source.id]);
+  useEffect(() => { void load(); }, [load, source.status]);
+  // the object we were handed is a snapshot from when it was clicked; follow the server until the read finishes
+  const status = detail?.status ?? source.status;
+  useEffect(() => {
+    if (status !== "processing") return;
+    const t = setInterval(() => void load(), 3000);
+    return () => clearInterval(t);
+  }, [status, load]);
+  source = detail ? { ...source, ...detail } : source;
   const o = detail?.outputs ?? {};
-  const step = source.status === "ready" ? 3 : source.status === "failed" ? 1 : 1;
-  const retry = async () => { try { await api.studyRetry(source.id); } catch (e) { toast(errText(e)); } };
+  const step = source.status === "ready" ? 3 : 1;
+  const retry = async () => { try { await api.studyRetry(source.id); await load(); } catch (e) { toast(errText(e)); } };
   const del = async () => { if (!confirm(`Delete "${source.title}" and the notes made from it?`)) return; try { await api.studyDeleteSource(source.id); onGone(); } catch (e) { toast(errText(e)); } };
   const original = async () => {
     try {
@@ -342,6 +351,7 @@ export function PracticeBox({ subject, subjectName }: { subject?: string; subjec
   const topics = useResource(studyTopics(subject));
   const [kind, setKind] = useState("structured");
   const [topic, setTopic] = useState("");
+  useEffect(() => { setTopic(""); }, [subject]);                      // a topic belongs to one subject
   const [q, setQ] = useState<StudyQuestion | null>(null);
   const [answer, setAnswer] = useState("");
   const [pics, setPics] = useState<{ mime: string; data: string }[]>([]);
