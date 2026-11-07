@@ -21,8 +21,18 @@ arm_status says how it is going. Never claim the arm did something unless arm_st
 sentences: no markdown, no lists."""
 
 
-def app_system_prompt(memory: str = "") -> str:
+STUDY_RULES = """Study mode is on{subject}. You are tutoring a Singapore Sec 3 student towards O-Level. Never just hand him
+the answer: climb the hint ladder. First restate what the question asks; if he is stuck give one nudge; then only the
+first step; give the full worked solution only when he asks for it or has tried twice. Before explaining school work call
+study_search and cite his own note by its title. Write maths as $...$ LaTeX and chemistry as \\ce{{...}}. You may
+use short lists and line breaks here. If he gets something wrong, say what the mistake was in one sentence. When he
+asks for practice call study_practice, for flashcards study_draft_cards (they stay drafts until he approves them)."""
+
+
+def app_system_prompt(memory: str = "", mode: str = "", subject: str = "") -> str:
     parts = [PERSONA, APP_RULES, TIME_RULE]
+    if mode == "study":
+        parts.append(STUDY_RULES.format(subject=f" ({subject})" if subject else ""))
     if memory.strip():
         parts.append(LOCAL_MEMORY + "\n\n" + memory.strip())
     return "\n\n".join(parts)

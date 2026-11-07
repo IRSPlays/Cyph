@@ -274,7 +274,7 @@ class Brain:
                 out += val
         return out
 
-    def reply(self, text: str, attachments=(), channel: str = "tg", on_text=None, on_event=None) -> str:
+    def reply(self, text: str, attachments=(), channel: str = "tg", on_text=None, on_event=None, mode: str = "", subject: str = "") -> str:
         """channel "app" (the companion app): always the strong model with the plan tools, the app's system prompt, mood
         tags kept in the answer, and live on_text / on_event callbacks. Memory, shared chat and curation are shared with
         Telegram, so it is one conversation."""
@@ -315,7 +315,7 @@ class Brain:
             memory = self.store.snapshot() if self.store else ""
             if app:
                 from .core.prompts import app_system_prompt
-                system = app_system_prompt(memory)
+                system = app_system_prompt(memory, mode, subject)
             else:
                 system = remote_system_prompt(memory)
             recalled = self.store.recall(text) if self.store else ""
@@ -837,9 +837,11 @@ def run_service(a=None, server: bool = False):
                 from .core.toolbox import ToolBox
                 from .core.proposals import Proposals
                 props = Proposals(store.root / "proposals.json")
-                brain.toolbox = ToolBox(sched, proposals=props)
+                from .core.study import GeminiStudyAI, StudyService, StudyStore
+                study = StudyService(StudyStore(CORE_DATA / "core" / "study"), GeminiStudyAI(), planner=sched)
+                brain.toolbox = ToolBox(sched, proposals=props, study=study)
                 start_core(cfg, store=store, brain=brain, planner=sched, log=log, folder=CORE_DATA / "core",
-                           shared=brain.shared, proactive=svc.proactive, proposals=props,
+                           shared=brain.shared, proactive=svc.proactive, proposals=props, study=study,
                            notify=lambda text: svc.api.send(svc.owner, text))
             except Exception as e:                       # the bot must keep working whatever the API does
                 log("error", f"core API did not start: {type(e).__name__}: {e}")

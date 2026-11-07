@@ -21,6 +21,8 @@ from .limiter import Limiter
 from .planner import MAX_YEAR, MIN_YEAR, Planner
 
 MAX_BODY = 65536            # bytes in one HTTP request body; checked before auth
+MAX_UPLOAD = 36 * 1024 * 1024   # study uploads (a PDF or photos, base64 in JSON) on the paths below only
+UPLOAD_PATHS = ("/study/sources", "/study/papers", "/study/pages/")
 AUTH_WINDOW_S = 5           # a new chat socket must send its auth frame within this
 MAX_PENDING = 8             # chat sockets allowed in the unauthenticated phase at once
 # WebSocket close codes: 4401 = token not valid (re-pair), 4429 = locked out (retry later), 1013 = server busy,
@@ -36,13 +38,16 @@ class BodyLimit:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
+        limit = self.max_bytes
+        if scope.get("method") in ("POST", "PUT") and any(scope.get("path", "").startswith(u) for u in UPLOAD_PATHS):
+            limit = max(limit, MAX_UPLOAD)
         for k, v in scope.get("headers") or []:
             if k == b"content-length":
                 try:
                     declared = int(v)
                 except ValueError:
                     declared = self.max_bytes + 1
-                if declared > self.max_bytes:
+                if declared > limit:
                     return await self.reject(send)
         total, started = 0, False
 
@@ -51,7 +56,7 @@ class BodyLimit:
             msg = await receive()
             if msg["type"] == "http.request":
                 total += len(msg.get("body") or b"")
-                if total > self.max_bytes:
+                if total > limit:
                     raise HTTPException(413, "request body too large")   # FastAPI turns this into a 413
             return msg
 
@@ -98,6 +103,7 @@ class Deps:
     proactive: Any = None       # proactive.Proactive: its settings are editable from the app
     proposals: Any = None       # proposals.Proposals: memories he wants to keep, waiting for a yes
     notify: Any = None          # callable(text): a message to the owner on Telegram (pairings, revocations)
+    study: Any = None           # study.StudyService: subjects, notes, cards, practice (the /study routes)
 
 
 class PairIn(BaseModel):
@@ -499,6 +505,9 @@ def create_app(d: Deps) -> FastAPI:
             cs.cancel()
             arm.detach(out)
 
+    from .study_api import add_study_routes
+    add_study_routes(app, d, auth, changed)
+
     # ---- the live change feed -------------------------------------------------------------------------
     @app.websocket("/events")
     async def events(ws: WebSocket):
@@ -549,10 +558,11 @@ def create_app(d: Deps) -> FastAPI:
         if d.hub is not None:
             d.hub.publish({"type": "chat", "from": dev["id"], "device": dev["name"], "ev": item})
 
-    async def answer(ws: WebSocket, text: str, dev: dict, attachments: list | None = None):
+    async def answer(ws: WebSocket, text: str, dev: dict, attachments: list | None = None, mode: str = "", subject: str = ""):
         loop = asyncio.get_running_loop()
         q: asyncio.Queue = asyncio.Queue()
         relay(dev, {"type": "user", "text": text, "images": len(attachments or [])})
+        extra = {"mode": mode, "subject": subject} if mode else {}
 
         def put(item):
             if item is not None:
@@ -562,7 +572,7 @@ def create_app(d: Deps) -> FastAPI:
         def work():
             try:
                 return d.brain.reply(text, attachments or (), channel="app", on_text=lambda t: put({"type": "delta", "text": t}),
-                                     on_event=lambda e: put({"type": "event", **e}))
+                                     on_event=lambda e: put({"type": "event", **e}), **extra)
             finally:
                 put(None)
 
@@ -669,7 +679,8 @@ def create_app(d: Deps) -> FastAPI:
                         await ws.send_json({"type": "busy"})
                         continue
                     async with turn["lock"]:
-                        await answer(ws, text, dev, pics)
+                        mode = "study" if msg.get("mode") == "study" and d.study is not None else ""
+                        await answer(ws, text, dev, pics, mode, str(msg.get("subject") or "")[:40])
         except WebSocketDisconnect:
             pass
         except Exception as e:                                  # never the content, only the kind of failure

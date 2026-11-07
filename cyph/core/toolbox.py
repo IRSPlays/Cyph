@@ -49,6 +49,17 @@ ARM_TOOLS = [
     _fn("arm_stop", "Stop the arm's current job at once.", {}, []),
     _fn("arm_status", "How the arm's current or last job is going.", {}, []),
 ]
+STUDY_TOOLS = [
+    _fn("study_search", "Search HIS OWN study notes for a question. Use before explaining anything from school; cite the note title.",
+        {"query": _S, "subject": {"type": "string", "description": "Math, Chemistry, Physics, Amath, English, SS or Geog"}}, ["query"]),
+    _fn("study_draft_cards", "Make flashcards from a note he has. They are drafts: he approves each one; never say they are live.",
+        {"note_id": _S, "subject": _S, "n": _N}, ["note_id"]),
+    _fn("study_due", "How many flashcards are due today, per subject.", {}, []),
+    _fn("study_weak_topics", "Topics he is doing worst in, from practice marks and forgotten cards.",
+        {"subject": _S}, []),
+    _fn("study_practice", "Set him a practice question (kind: worked, structured, sbq, essay or paper). Topic defaults to his weakest.",
+        {"subject": _S, "topic": _S, "kind": _S}, ["subject"]),
+]
 EDITABLE = ("title","date", "time", "duration_min", "kind", "notes", "project")
 ADD_KEYS = EDITABLE + ("repeat", "days", "until")
 
@@ -58,14 +69,16 @@ def _brief(ev: dict) -> dict:
 
 
 class ToolBox:
-    def __init__(self, planner, now=None, proposals=None, arm=None):
+    def __init__(self, planner, now=None, proposals=None, arm=None, study=None):
         self.planner = planner
+        self.study = study                # core.study.StudyService, or None
         self.proposals = proposals
         self.arm = arm                    # core.arm.ArmBridge; set by core.run.start once the API exists
         self.now = now or (lambda: datetime.now(TZ))
 
     def tools(self) -> list[dict]:
-        return TOOLS + ([MEMORY_TOOL] if self.proposals is not None else []) + (ARM_TOOLS if self.arm is not None else [])
+        return TOOLS + ([MEMORY_TOOL] if self.proposals is not None else []) + (ARM_TOOLS if self.arm is not None else []) \
+            + (STUDY_TOOLS if self.study is not None else [])
 
     def _date(self, s) -> date:
         s = str(s or "").strip().lower()
@@ -91,6 +104,8 @@ class ToolBox:
             return f"{name} failed: {str(res['error'])[:80]}"
         if "proposed" in res:
             return f"{name}: {res['proposed'][:60]}"
+        if name.startswith("study_"):
+            return f"{name}: " + (str(res.get("summary") or "")[:60] if "error" not in res else "")
         if name.startswith("arm_"):
             return f"{name}: {str(res.get('started') or res.get('state') or res.get('stopped') or '')[:60]}"
         t = res.get("added") or res.get("updated") or {}
@@ -176,6 +191,46 @@ class ToolBox:
             return {"error": "the arm's PC is not connected"}
         b = snap["state"].get("brain") or {}
         return {"state": b.get("state", "idle"), **{k: b[k] for k in ("goal", "last", "msg", "calls", "secs") if k in b}}
+
+    # ---- study ---------------------------------------------------------------------------------------
+    def _study_search(self, a):
+        from .study import StudyError
+        try:
+            hits = self.study.search(a.get("query"), a.get("subject") or None, 4)
+        except StudyError as e:
+            return {"error": str(e)}
+        return {"results": [{"note": h["title"], "text": h["text"][:500]} for h in hits], "summary": f"{len(hits)} notes"}
+
+    def _study_draft_cards(self, a):
+        from .study import StudyError
+        try:
+            cards = self.study.draft_cards(a.get("subject") or None, str(a.get("note_id") or ""), "", int(a.get("n") or 6))
+        except StudyError as e:
+            return {"error": str(e)}
+        return {"drafted": len(cards), "note": "they wait for his approval in Study", "summary": f"{len(cards)} drafts"}
+
+    def _study_due(self, a):
+        t = self.study.today()
+        return {"due": t["stats"]["due"], "by_subject": {s["name"]: s["due"] for s in t["subjects"] if s["due"]},
+                "summary": f"{t['stats']['due']} due"}
+
+    def _study_weak_topics(self, a):
+        from .study import StudyError
+        try:
+            sub = self.study.store.subject(a.get("subject") or None)
+        except StudyError as e:
+            return {"error": str(e)}
+        w = self.study.store.weak_topics(sub["id"] if sub else None, 5)
+        return {"weak": [{"topic": x["name"], "weakness": round(x["weakness"], 2)} for x in w], "summary": f"{len(w)} weak"}
+
+    def _study_practice(self, a):
+        from .study import StudyError
+        try:
+            q = self.study.practice(a.get("subject"), a.get("topic") or None, a.get("kind") or "structured")
+        except StudyError as e:
+            return {"error": str(e)}
+        return {"question_id": q["id"], "topic": q["topic"], "marks": q["marks"], "question": q["question"],
+                "note": "he answers it in the Study tab (or tell him the question)", "summary": q["topic"]}
 
     def _day_note(self, a):
         d = self._date(a.get("date"))

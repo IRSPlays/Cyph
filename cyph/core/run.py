@@ -36,7 +36,7 @@ def make_config(app, cfg, cert, key):
                           limit_concurrency=32, timeout_keep_alive=5, ws_max_size=65536)
 
 
-def start(cfg, *, store, brain, planner, log, folder, shared=None, proactive=None, notify=None, proposals=None,
+def start(cfg, *, store, brain, planner, log, folder, shared=None, proactive=None, notify=None, proposals=None, study=None,
           ready_timeout: float = 10.0) -> Handle:
     import uvicorn
     from .app import Deps, create_app
@@ -50,7 +50,9 @@ def start(cfg, *, store, brain, planner, log, folder, shared=None, proactive=Non
     hub = Hub()
     deps = Deps(devices=devices, planner=planner, store=store, brain=brain, log=log,
                 pair_limiter=Limiter(5, 600, 900), auth_limiter=Limiter(30, 60, 300),
-                hub=hub, shared=shared, proactive=proactive, notify=notify, proposals=proposals)
+                hub=hub, shared=shared, proactive=proactive, notify=notify, proposals=proposals, study=study)
+    if study is not None:
+        study.changed = lambda what: hub.publish({"type": "changed", "what": what})
     topics = {"plan": [planner.path], "day_notes": [planner.notes_path],
               "memory": [store.path(k) for k in FILES], "memory_log": [store.root / "changes.log"]}
     if shared is not None:
