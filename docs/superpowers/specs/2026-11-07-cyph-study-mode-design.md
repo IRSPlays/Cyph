@@ -14,7 +14,8 @@ all managed from the app (add, rename, archive): **Math, Chemistry, Physics, Ama
 Three areas, in this order of importance to the owner:
 
 1. **Subjects and notes.** Each subject holds typed notes and imported sources (PDFs and the like) that Cyph turns into
-   readable notes, the way Google NotebookLM does. A separate pen-notes area is built later (see phase 5).
+   readable notes, the way Google NotebookLM does. Pen notes come later (see phase 5): page-based notebooks for class
+   notes, and freeform boards in the style of Apple Freeform.
 2. **Cards.** Spaced-repetition flashcards, drafted by Cyph from the owner's notes and approved by the owner.
 3. **Tutoring and practice.** Cyph teaches back and forth, and runs worked problems, structured and source-based
    questions, essay and comprehension feedback, and past papers.
@@ -41,7 +42,8 @@ they are not in scope (see Parked).
 | PDF import | NotebookLM style: clean readable notes (headings, formulas), original kept, plus per source a summary, key terms, a study guide and likely questions. |
 | Embeddings | Gemini Embedding 2, as the owner asked. The exact model id and vector size are checked against the current API docs in phase 0 and are not assumed. |
 | Notes | Typed notes (rich text, tables, checklists, formulas, folder per subject, search). Pen notes on a canvas, built later. |
-| Pen notes | Notebooks and pages; blank, lined, grid and graph-paper backgrounds; shapes and a ruler; photos; export to PDF. |
+| Pen notes | Two separate things that share one ink engine. **Notebooks:** page-based, with blank, lined, grid and graph-paper backgrounds, for class notes. **Boards:** freeform, an endless canvas you pan and zoom, like Apple Freeform. Both have shapes and a ruler, photos, and export to PDF. |
+| Board items | Pen strokes, text boxes and sticky notes, shapes and connectors that stay joined when moved, photos and PDF pages, and links to your typed notes and cards (tap to open). |
 | Pen notes offline | **Pen notes only** work offline (saved on the device, synced later). Everything else needs the server. |
 | iPad | A web app in Safari (Add to Home Screen), with Apple Pencil through the browser. No native app, no Mac. |
 | iPad network | Through the existing **Playit** tunnel. Needs a certificate Safari accepts (see 6.2). |
@@ -64,7 +66,10 @@ they are not in scope (see Parked).
 - `reviews(card, at, grade, seconds)`.
 - `attempts(id, subject, topic, kind, question, answer, marks, max_marks, feedback, at)`: practice and past papers.
 - `tests(plan_event_id, subject, topics)`: ties a Plan test to a subject.
-- Later: `notebooks`, `pages(ink JSON, background, images)`.
+- Later, notebooks: `notebooks(id, subject, title)` and `pages(id, notebook, n, background, ink JSON, images)`.
+- Later, boards: `boards(id, subject, title, view)` and `board_items(id, board, kind, x, y, w, h, rotation, z, data JSON)`.
+  `kind` is `stroke`, `text`, `sticky`, `shape`, `connector`, `image`, `pdf_page` or `link`. A `link` points at a note or
+  a card by id. A connector stores the two item ids it joins, so it follows them when they move.
 
 Search is a cosine comparison in numpy over the stored vectors, which is fine for a personal library. Files (originals,
 images) live on disk beside the database, not in it. Streaks and stats are computed from `reviews` and `attempts`.
@@ -144,8 +149,10 @@ nudges.
 - **3. Tutoring and practice.** Hint-ladder tutor, worked problems, SBQ and structured questions, essay and
   comprehension feedback, past papers, weak-topic tracking, tests linked to the Plan with revision blocks.
 - **4. iPad web app.** Browser transport, install to Home Screen, trusted HTTPS.
-- **5. Pen notes.** Canvas with pressure and palm rejection, notebooks and pages, backgrounds, shapes and ruler,
-  photos, PDF export, offline save and sync.
+- **5. Pen notes.** One ink engine (pressure, tilt, palm rejection, eraser, lasso) used by two things:
+  **5a Notebooks** (pages, backgrounds, shapes and ruler, photos, PDF export) and **5b Freeform boards** (endless pan
+  and zoom, text boxes and stickies, shapes and connectors, photos and PDF pages, links to notes and cards, export of
+  the whole board or a selected area). Offline save and sync for both. Which of 5a and 5b comes first is open.
 
 ## 8. Open items (not decided, not built)
 
@@ -158,6 +165,9 @@ nudges.
 4. **Material rules.** Default: only the owner's own notes, school material and papers go in. Cyph does not fetch
    syllabus or exam content from the web.
 5. **Spending cap.** A monthly Gemini budget for imports and tutoring.
+6. **Notebooks or boards first** when phase 5 starts.
+7. **Boards at scale.** An endless board with a lot of ink must stay smooth on the iPad. Drawing the visible area only
+   and a size limit per board are the likely answers, to be checked in the phase 0 Pencil test.
 
 ## 9. Parked (asked about, not chosen)
 
