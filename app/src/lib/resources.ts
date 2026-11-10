@@ -26,3 +26,7 @@ export const studyTopics = (subject?: string) => resource(`study:topics:${subjec
 export const studyAttempts = (subject?: string) => resource(`study:attempts:${subject ?? ""}`, ["study"], async () => (await api.studyAttempts(subject)).attempts);
 export const studyNotebooks = () => resource("study:notebooks", ["study"], async () => (await api.studyNotebooks()).notebooks);
 export const studyBoards = () => resource("study:boards", ["study"], async () => (await api.studyBoards()).boards);
+export const studyNow = (device: string) => resource(`study:now:${device}`, ["study", "plan"], () => api.studyNow(device));
+export const studyInbox = () => resource("study:inbox", ["study"], async () => (await api.studyInbox()).items);
+export const studyLibrary = () => resource("study:library", ["study"], async () => (await api.studyLibrary()).subjects);
+export const studyTopic = (id: string) => resource(`study:topic:${id}`, ["study"], () => api.studyTopic(id));

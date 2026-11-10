@@ -11,7 +11,7 @@ import { toast, useToast } from "../lib/toast";
 import type { Pic } from "../lib/types";
 import { CyphCanvas } from "./CyphCanvas";
 import { MobilePlan } from "./MobilePlan";
-import { CardList, ImportBox, NewNote, NoteEditor, NoteList, PaperBox, PracticeBox, ReviewDeck, SearchBox, SourceList, SourceView, TestForm, TutorBox } from "./StudyParts";
+import { CardList, ImportBox, NewNote, NoteEditor, NoteList, PaperBox, PracticeBox, SearchBox, SourceList, SourceView, TutorBox } from "./StudyParts";
 import { Notebooks } from "./StudyInk";
 import { Boards } from "./StudyBoard";
 import { studyToday } from "../lib/resources";
@@ -19,6 +19,8 @@ import { useResource } from "../lib/store";
 import type { StudySource } from "../lib/types";
 import "katex/dist/katex.min.css";
 import "../styles/study.css";
+import "../styles/studynow.css";
+import { HUB_TABS, StudyHub, isHub, type HubTab } from "./StudyNow";
 import { hasNative, native, notifyNow, pushAlarms, pushSnapshot } from "../lib/native";
 import { planRange } from "../lib/resources";
 import "../styles/mobile.css";
@@ -207,8 +209,8 @@ function Chat() {
 }
 
 /** The Study page is not built on the desktop either; this says so instead of faking a quiz. */
-type StudyTab = "today" | "review" | "tutor" | "notes" | "practice" | "add" | "cards" | "pen" | "boards";
-const STABS: [StudyTab, string][] = [["today", "TODAY"], ["review", "REVIEW"], ["tutor", "TUTOR"], ["notes", "NOTES"], ["practice", "PRACTICE"], ["add", "ADD"], ["cards", "CARDS"], ["pen", "PEN"], ["boards", "BOARDS"]];
+type StudyTab = HubTab | "tutor" | "notes" | "practice" | "add" | "cards" | "pen" | "boards";
+const STABS: [StudyTab, string][] = [...HUB_TABS, ["tutor", "TUTOR"], ["notes", "NOTES"], ["practice", "PRACTICE"], ["add", "ADD"], ["cards", "CARDS"], ["pen", "PEN"], ["boards", "BOARDS"]];
 
 function MNotes({ subj, subjects }: { subj?: string; subjects: { id: string; name: string }[] }) {
   const [id, setId] = useState<string | undefined>(undefined);
@@ -226,7 +228,7 @@ function MNotes({ subj, subjects }: { subj?: string; subjects: { id: string; nam
 
 function Study() {
   const today = useResource(studyToday());
-  const [tab, setTab] = useState<StudyTab>("today");
+  const [tab, setTab] = useState<StudyTab>("now");
   const [subj, setSubj] = useState<string | undefined>(undefined);
   const [source, setSource] = useState<StudySource | undefined>(undefined);
   const subjects = today.data?.subjects ?? [];
@@ -236,34 +238,15 @@ function Study() {
   return (
     <div className="mpage pg-study mstudy">
       <div className="tabs" style={{ overflowX: "auto", flex: "none" }}>
-        {STABS.map(([k, n]) => <button key={k} className={tab === k ? "on" : ""} onClick={(e) => { setTab(k); e.currentTarget.scrollIntoView?.({ inline: "center", block: "nearest", behavior: "smooth" }); }}>{n}{k === "review" && st?.due ? ` ${st.due}` : ""}</button>)}
+        {STABS.map(([k, n]) => <button key={k} className={tab === k ? "on" : ""} onClick={(e) => { setTab(k); e.currentTarget.scrollIntoView?.({ inline: "center", block: "nearest", behavior: "smooth" }); }}>{n}</button>)}
       </div>
-      {tab !== "today" && tab !== "add" && (
+      {!isHub(tab) && tab !== "add" && (
         <select className="f" value={subj ?? ""} onChange={(e) => setSubj(e.target.value || undefined)} aria-label="subject">
           <option value="">All subjects</option>
           {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       )}
-      {tab === "today" && (
-        <>
-          <div className="mcard" style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div className="ring" style={{ "--p": st && st.approved ? Math.max(0, 100 - (st.due / st.approved) * 100) : 100, "--s": "88px" } as React.CSSProperties}><b>{st?.due ?? 0}<small>DUE</small></b></div>
-            <div><div className="lbl">TODAY</div><p>{st?.reviewed_today ?? 0} done · {st?.streak ?? 0} day streak</p><button className="mbtn on" onClick={() => setTab("review")}>START REVIEW</button></div>
-          </div>
-          {subjects.map((s) => (
-            <div key={s.id} className="subj" role="button" tabIndex={0} onClick={() => { setSubj(s.id); setTab("review"); }}>
-              <div className="ic" style={{ background: s.color }}>{s.name[0]}</div><h5>{s.name}</h5><span className="n">{s.due || ""}</span>
-            </div>
-          ))}
-          {(today.data?.tests ?? []).slice(0, 5).map((t) => {
-            const sj = subjects.find((x) => x.id === t.subject_id);
-            return <div className="mcard" key={t.id}><div className="lbl">TEST · {t.date}</div><p>{t.title}{sj ? ` · ${sj.name}` : ""}{t.topics.length ? ` · ${t.topics.slice(0, 2).join(", ")}` : ""}</p></div>;
-          })}
-          {today.data && <TestForm today={today.data} subjectId={subj} />}
-          {(today.data?.weak ?? []).length > 0 && <div className="mcard"><div className="lbl">WEAK</div>{today.data!.weak.slice(0, 3).map((w) => <div key={w.id} className="weak"><span>{w.name}</span><i>{Math.round(w.weakness * 100)}%</i></div>)}</div>}
-        </>
-      )}
-      {tab === "review" && <div className="mcard"><ReviewDeck subject={subj} compact /></div>}
+      {isHub(tab) && <StudyHub tab={tab} setTab={setTab} device="phone" subjects={subjects} />}
       {tab === "tutor" && <div style={{ height: "60vh", display: "flex" }}><TutorBox subject={subj} subjectName={cur?.name} /></div>}
       {tab === "notes" && <MNotes subj={subj} subjects={subjects} />}
       {tab === "practice" && (

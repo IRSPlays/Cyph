@@ -18,7 +18,7 @@ import type {
   ProactiveSettings,
   StudySubject, StudyToday, StudyStats, StudySource, StudyOutputs, StudyNoteRow, StudyNote, StudyCard, StudyTopic,
   StudyHit, StudyHint, StudyQuestion, StudyMarked, StudyAttempt, StudyTest, StudyNotebook, StudyPage, InkStroke,
-  StudyBoard, BoardItem,
+  StudyBoard, BoardItem, StudyNow, SessionView, StepResult, DebriefOut, InboxItem, LibSubject, TopicDetail, DisputeOut, Homework,
 } from "./types";
 
 const q = (o: Record<string, string | number>) => new URLSearchParams(Object.entries(o).map(([k, v]) => [k, String(v)])).toString();
@@ -104,4 +104,24 @@ export const api = {
   studyPutItem: (bid: string, it: Partial<BoardItem> & { kind: BoardItem["kind"] }) => ipc.api<BoardItem>("PUT", `/study/boards/${bid}/items`, it),
   studyDeleteItem: (bid: string, iid: string) => ipc.api<{ ok: boolean }>("DELETE", `/study/boards/${bid}/items/${iid}`),
   studyDeleteBoard: (id: string) => ipc.api<{ ok: boolean }>("DELETE", `/study/boards/${id}`),
+  // the session engine
+  studyNow: (device: string) => ipc.api<StudyNow>("GET", `/study/now?${q({ device })}`),
+  studyStart: (device: string, kind = "", topic?: string) => ipc.api<SessionView>("POST", "/study/session", { device, kind, topic }),
+  studySession: (id: string) => ipc.api<SessionView>("GET", `/study/session/${id}`),
+  studyStep: (id: string, b: { grade?: number; option?: number; value?: string; answer?: string; had?: boolean; ticks?: boolean[]; images?: { mime: string; data: string }[] }) =>
+    ipc.api<StepResult>("POST", `/study/session/${id}/answer`, b),
+  studyNext: (id: string) => ipc.api<SessionView>("POST", `/study/session/${id}/next`),
+  studyEnd: (id: string) => ipc.api<SessionView>("POST", `/study/session/${id}/end`),
+  studyHint: (id: string) => ipc.api<{ hints: string[]; last: boolean }>("POST", `/study/session/${id}/hint`, {}),
+  studyDispute: (attempt: string) => ipc.api<DisputeOut>("POST", `/study/attempts/${attempt}/dispute`),
+  studyFlagQuestion: (id: string, reason: string) => ipc.api<{ rule: string; topic: string }>("POST", `/study/questions/${id}/flag`, { reason }),
+  studyFlagCard: (id: string) => ipc.api<{ rule: string }>("POST", `/study/cards/${id}/flag`),
+  studyDebrief: (text: string, finish = false) => ipc.api<DebriefOut>("POST", "/study/debrief", { text, finish }),
+  studyInbox: () => ipc.api<{ items: InboxItem[] }>("GET", "/study/inbox"),
+  studyInboxAdd: (b: { title?: string; mime: string; data?: string; text?: string }) => ipc.api<StudySource>("POST", "/study/inbox", b),
+  studyMoveSource: (id: string, subject: string) => ipc.api<StudySource>("POST", `/study/sources/${id}/move`, { subject }),
+  studyLibrary: () => ipc.api<{ subjects: LibSubject[] }>("GET", "/study/library"),
+  studyTopic: (id: string) => ipc.api<TopicDetail>("GET", `/study/topics/${id}`),
+  studyHomeworkDone: (id: string, done = true) => ipc.api<{ ok: boolean }>("POST", `/study/homework/${id}`, { done }),
+  studyAddHomework: (b: { subject: string; title: string; due: string; topic?: string }) => ipc.api<Homework>("POST", "/study/homework", b),
 };

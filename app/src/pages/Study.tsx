@@ -7,17 +7,19 @@ import type { StudySource } from "../lib/types";
 import { Shell } from "../ui/Shell";
 import { Boards } from "../ui/StudyBoard";
 import { Notebooks } from "../ui/StudyInk";
-import { CardList, errText, pluralCards, TestForm, ImportBox, NoteEditor, NoteList, NewNote, PaperBox, PracticeBox, ReviewDeck, SearchBox, SourceList, SourceView, TutorBox } from "../ui/StudyParts";
+import { CardList, errText, TestForm, ImportBox, NoteEditor, NoteList, NewNote, PaperBox, PracticeBox, ReviewDeck, SearchBox, SourceList, SourceView, TutorBox } from "../ui/StudyParts";
 import "katex/dist/katex.min.css";
 import "../styles/study.css";
+import "../styles/studynow.css";
+import { HUB_TABS, StudyHub, isHub, type HubTab } from "../ui/StudyNow";
 
-type Tab = "today" | "notes" | "tutor" | "cards" | "papers" | "pen" | "boards";
-const TABS: [Tab, string][] = [["today", "TODAY"], ["notes", "NOTES"], ["tutor", "TUTOR"], ["cards", "CARDS"], ["papers", "PRACTICE"], ["pen", "NOTEBOOKS"], ["boards", "BOARDS"]];
+type Tab = HubTab | "notes" | "tutor" | "cards" | "papers" | "pen" | "boards";
+const TABS: [Tab, string][] = [...HUB_TABS, ["notes", "NOTES"], ["tutor", "TUTOR"], ["cards", "CARDS"], ["papers", "PRACTICE"], ["pen", "NOTEBOOKS"], ["boards", "BOARDS"]];
 const daysTo = (d: string) => Math.round((new Date(d + "T00:00:00").getTime() - new Date(new Date().toDateString()).getTime()) / 86400000);
 
 export function Study() {
   const today = useResource(studyToday());
-  const [tab, setTab] = useState<Tab>("today");
+  const [tab, setTab] = useState<Tab>("now");
   const [subj, setSubj] = useState<string | undefined>(undefined);
   const [cardsTab, setCardsTab] = useState<"review" | "draft" | "all">("review");
   const [note, setNote] = useState<string | undefined>(undefined);
@@ -38,29 +40,8 @@ export function Study() {
 
   const centre = (() => {
     switch (tab) {
-      case "today":
-        return (
-          <div className="scroll" style={{ flex: 1 }}>
-            {st && (
-              <div className="startbar">
-                <div><b>{st.due}</b><span>{st.due === 1 ? "card due" : "cards due"}{st.streak > 0 ? ` · ${st.streak} day streak` : ""}</span></div>
-                <button className="btn go" disabled={!st.due} onClick={() => { setSubj(undefined); setCardsTab("review"); setTab("cards"); }}>{st.due ? "START REVIEW" : "ALL CAUGHT UP"}</button>
-              </div>
-            )}
-            <div className="grid7">
-              {subjects.map((s) => (
-                <div key={s.id} className="tile" style={{ "--c": s.color } as React.CSSProperties} role="button" tabIndex={0}
-                  onClick={() => { setSubj(s.id); setTab(s.due ? "cards" : "notes"); setCardsTab("review"); }} onKeyDown={(e) => e.key === "Enter" && setSubj(s.id)}>
-                  <div className="top"><div className="ic">{s.name[0]}</div><h5>{s.name}</h5></div>
-                  <p>{s.due} due · {pluralCards(s.approved)}</p>
-                  <div className="edge"><i style={{ "--w": s.approved ? `${Math.max(4, 100 - (s.due / s.approved) * 100)}%` : "0%" } as React.CSSProperties} /></div>
-                  {s.drafts > 0 && <div className="chips"><span className="chip am">{s.drafts} drafts</span></div>}
-                </div>
-              ))}
-            </div>
-            {st && st.reviews_30d > 0 && <div className="note">Kept {st.retention !== null ? Math.round(st.retention * 100) : 0}% over the last 30 days · {st.streak} day streak</div>}
-          </div>
-        );
+      case "now": case "debrief": case "inbox": case "library":
+        return null;
       case "notes":
         return (
           <div className="center">
@@ -105,13 +86,17 @@ export function Study() {
   })();
 
   const weak = (subj ? topics.data?.weak : data?.weak) ?? [];
+  const hub = isHub(tab);
   return (
     <Shell page="study" className="pg-study">
       <div className="head">
-        <h1 className="t"><em>STUDY</em>{cur?.name ?? "All subjects"}</h1>
+        <h1 className="t"><em>STUDY</em>{hub ? "What now?" : cur?.name ?? "All subjects"}</h1>
         <div className="sp" />
         <div className="tabs">{TABS.map(([k, n]) => <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{n}</button>)}</div>
       </div>
+      {hub ? (
+        <div className="page one"><div className="cp scroll"><StudyHub tab={tab} setTab={setTab} device="desk" subjects={subjects} /></div></div>
+      ) : (
       <div className={"page" + (tab === "pen" || tab === "boards" ? " wide" : "")}>
         <div className="cp">
           <div className="lbl">SUBJECTS</div>
@@ -167,6 +152,7 @@ export function Study() {
           )}
         </div>
       </div>
+      )}
     </Shell>
   );
 }

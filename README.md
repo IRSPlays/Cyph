@@ -332,19 +332,30 @@ What is real, and what is not yet:
 ## Study
 
 Seven subjects (Math, Chemistry, Physics, Amath, English, SS, Geog). Everything lives in the core server
-(`cyph/core/study.py`, routes in `study_api.py`, SQLite under `data/core/study/`), so the desktop, phone and iPad see the same data.
+(`cyph/core/study.py` and the session engine `cyph/core/session.py`, routes in `study_api.py`, SQLite under `data/core/study/`),
+so the PC, phone and iPad see the same data. Design mockups: `docs/mockups/study-v2.html`.
 
-- **Add**: paste text, or upload a PDF or photo. Gemini cleans it into notes, a summary, key terms, a study guide and likely questions.
-- **Notes** are chunked and embedded, so search and the tutor answer from your own material (word-overlap fallback if embeddings fail).
-- **Cards** are drafted by the model, and nothing is reviewed until you approve it. Reviews use a 3-grade spaced-repetition scheduler.
-- **Tutor** is a chat mode that uses your notes and gives hints in steps (restate, nudge, first step, solution).
-- **Practice** generates questions on your weak topics and marks your answers, or a photo of a whole paper, against a scheme.
-- **Tests**: add a test and Cyph schedules revision blocks 7, 3 and 1 days before it.
-- **Notebooks and boards**: pen pages (lined, grid, dots, blank; PDF export) and free boards with text, stickies, shapes, connectors and images.
+Study is built around one question: **what do I do now?** Four screens, the same on phone, PC and iPad:
+
+- **NOW**: Cyph picks the session (cards due, weak topics, a test inside a day, a comeback after 5+ days away) and you press START.
+  "Just 3 cards" is always offered. Steps: cards (two buttons), a 3-minute lesson for new or failing topics, questions, homework.
+  Phone questions are tap-to-answer or one number; PC and iPad take written working or a photo. English and SS get answer plans and
+  self-ticked checklists (Cyph does not mark writing). A session started on one device can be continued on the other.
+- **Questions** come from your own worksheets first (real question, marks and answer key extracted at import, the diagram cropped from the
+  PDF page). Cyph-made questions are labelled and weighted less. Marking is per point; the final number is checked in code, not by the
+  model, and Cyph says "not sure" when it is. **I think I'm right** re-marks at once and can only raise the mark. **Bad question** bins
+  it and teaches Cyph a rule for that topic.
+- **DEBRIEF**: when you get home, say one thing you learned (typed is enough). Cyph checks it against your notes and makes cards from the gaps.
+- **INBOX**: throw in a PDF, photo or text. It is kept straight away, filed by subject and topic, with UNDO and "wrong subject".
+- **LIBRARY**: subjects and topics with strength in words (not started, weak, okay, solid), each topic's notes, cards, questions and what
+  Cyph has learned about you there. The older tools (notes, tutor, cards, practice, notebooks, boards) are still beside it.
+- **Reminders** are a nudge, never a lock: an evening "Home yet?" message (`study_nudge`, default 16:30) and a line in chat. Tests and
+  homework are told to Cyph in chat. Teacher marks outweigh Cyph's. No backlog count and no streak are shown.
 - Maths and chemistry render with KaTeX and mhchem.
 
 Models are set with `CYPH_STUDY_MODEL` and `CYPH_EMBED_MODEL` (the defaults are unverified; set them to models your key can use).
-The evening nudge adds "N cards due".
+Not done yet: the Android notification for the study reminder, voice debrief, syllabus topics for each subject (`POST /study/syllabus`
+is ready; it needs the exam type and syllabus codes).
 
 ### iPad
 

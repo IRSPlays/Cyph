@@ -302,3 +302,59 @@ export interface StudyNotebook { id: string; subject_id: string | null; title: s
 export interface StudyPage { id: string; notebook_id: string; idx: number; background: string; strokes: InkStroke[] }
 export interface BoardItem { id: string; kind: "stroke" | "text" | "sticky" | "shape" | "connector" | "image" | "pdf_page" | "link"; x: number; y: number; w: number; h: number; data: Record<string, unknown> }
 export interface StudyBoard { id: string; subject_id: string | null; title: string; updated: string; items: BoardItem[] }
+
+// ---- study: the session engine
+export type Strength = "new" | "weak" | "okay" | "solid";
+export interface WeakTopic { id: string; name: string; subject: string; label: Strength; score: number | null; test: string }
+export interface Homework { id: string; subject: string; subject_id: string; title: string; due: string; done: number }
+export interface DebriefResult { topics: { subject: string; topic: string; state: "solid" | "shaky" | "missed"; gap: string }[]; cards: number; done: boolean }
+export interface StudyNow {
+  state: "empty" | "ready" | "open" | "done" | "idle";
+  kind: string;
+  minutes: number;
+  headline: string;
+  steps: { label: string; sub: string; min: number }[];
+  session: string | null;
+  session_device: string | null;
+  weak: WeakTopic[];
+  test: { id: string; title: string; subject: string; date: string; days: number } | null;
+  debrief: { done: boolean; open: boolean; result: DebriefResult | null };
+  inbox: { today: number; reading: number; titles: string[] };
+  homework: Homework[];
+}
+export interface MarkPoint { point: string; got: boolean | null; quote: string; why: string; checked?: boolean; marks?: number }
+export interface StepResult {
+  grade?: number; correct?: boolean; answer?: number; explain?: string; attempt?: string; mode?: string; score?: number; max?: number;
+  points?: MarkPoint[]; headline?: string; unsure?: boolean; slip?: string; had?: boolean; ticked?: number; of?: number; done?: boolean;
+}
+export interface SessionQ {
+  id: string; text: string; marks: number; origin: "source" | "cyph"; ref: string; source: string; key: string; figure: string | null;
+  topic: string; topic_id: string; subject: string; mode: "quick" | "full" | "plan" | "paragraph"; why: string;
+  ask?: string; options?: string[]; final_label?: string; unit?: string; plan?: string[]; checklist?: string[];
+}
+export interface SessionStep {
+  type: "card" | "lesson" | "question" | "paragraph" | "homework";
+  result: StepResult | null;
+  gone?: boolean;
+  card?: { id: string; front: string; back: string; topic: string; subject: string; why: string; image_id: string | null };
+  topic?: string; subject?: string; why?: string;
+  lesson?: { example: { problem: string; steps: string[] }; ask: string; options: string[]; source: string };
+  q?: SessionQ; retry?: boolean; hints?: string[];
+  homework?: Homework;
+}
+export interface SessionSummary { minutes: number; moved: { id: string; name: string; was: Strength; now: Strength; score: number | null }[]; next: string; headline: string; cards: number; good: number }
+export interface SessionView {
+  id: string; kind: string; device: string; state: "open" | "done" | "ended"; pos: number; total: number; types: string[]; headline: string;
+  step?: SessionStep; summary?: SessionSummary | null;
+}
+export interface DebriefOut extends DebriefResult { id: string; turns: { who: "you" | "cyph"; text: string }[]; ask: string }
+export interface InboxItem { id: string; title: string; kind: string; status: string; error: string; created: string; subject: string; subject_id: string; topic: string; note_id: string | null; cards: number; questions: number }
+export interface LibTopic { id: string; subject_id: string; name: string; subject: string; color: string; cards: number; questions: number; notes: number; score: number | null; label: Strength; why?: string | null }
+export interface LibSubject { id: string; name: string; color: string; score: number | null; label: Strength; due: number; topics: LibTopic[] }
+export interface TopicDetail extends Omit<LibTopic, "notes"> {
+  slip: string; record: string; rules: string[];
+  notes: { id: string; title: string; updated: string }[];
+  card_list: { id: string; front: string; back: string; state: string; due: string }[];
+  question_list: { id: string; text: string; origin: string; ref: string; marks: number }[];
+}
+export interface DisputeOut { changed: boolean; score: number; max: number; points: MarkPoint[]; headline: string }

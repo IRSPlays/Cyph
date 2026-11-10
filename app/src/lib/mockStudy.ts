@@ -1,5 +1,6 @@
 /** The Study half of the in-memory mock server: same routes and shapes as cyph/core/study_api.py, with canned "model"
  *  answers, so Study can be built and clicked through in a plain browser. */
+import { createMockSession } from "./mockSession";
 import type { BoardItem, InkStroke, StudyCard } from "./types";
 
 type Rec = Record<string, unknown>;
@@ -23,7 +24,7 @@ export function schedule(c: { interval: number; ease: number; reps: number; laps
 export function createMockStudy(changed: (what: string) => void, today: () => string) {
   const subjects = SUBJECTS.map(([name, color], i) => ({ id: `s${i}`, name, color }));
   const sub = (ref?: string | null) => (ref ? subjects.find((s) => s.id === ref || s.name.toLowerCase() === ref.toLowerCase()) : undefined);
-  const topics: { id: string; subject_id: string; name: string }[] = [];
+  const topics: { id: string; subject_id: string; name: string; why?: string }[] = [];
   const topicOf = (sid: string, name?: string | null) => {
     if (!name) return null;
     let t = topics.find((x) => x.subject_id === sid && x.name.toLowerCase() === name.toLowerCase());
@@ -81,8 +82,12 @@ export function createMockStudy(changed: (what: string) => void, today: () => st
 
   const HINTS = ["So the question is asking you to find what happens to the quantity in the middle step. It tests the mole concept.", "Think about which formula links mass, moles and molar mass.", "First step: write $n = m / M_r$ and substitute the numbers you are given.", "Worked solution: $n = 36/18 = 2\\text{ mol}$. So the mass of 2 mol of water is $2\\times18 = 36\\text{ g}$."];
 
+  const engine = createMockSession({ subjects, topics, topicOf, cards, addCard: (s, f, bk, st, t) => addCard(s, f, bk, st, t), addNote, notes, sources, attempts, tests, reviews, review: (c, g) => { Object.assign(c, schedule(c, g, today()), { reps: c.reps + 0 }); reviews.push({ card: c.id, grade: g, at: today() }); }, changed, today, id });
+
   return async function handle(method: string, route: string, qs: URLSearchParams, b: Rec): Promise<unknown> {
     if (!route.startsWith("/study/")) return NOT_HANDLED;
+    const mine = await engine(method, route, qs, b);
+    if (mine !== undefined) return mine;
     let m: RegExpMatchArray | null;
     const subject = qs.get("subject") ?? undefined;
     const sid = subject ? sub(subject)?.id : undefined;
