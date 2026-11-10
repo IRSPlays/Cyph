@@ -24,6 +24,7 @@ DEFAULTS = {
     "enabled": True,
     "morning_brief": "06:45",          # weekdays; weekends one hour later
     "evening_nudge": "19:00",          # tests and deadlines in the next 3 days
+    "study_nudge": "16:30",            # home from school: today's study session, once
     "heads_up_min": 30,                # before a timed item
     "quiet": ["22:30", "06:30"],
     "school": ["08:00", "15:00"],
@@ -57,6 +58,7 @@ class Proactive:
         self.state_path = Path(state_path) if state_path else DATA / "proactive_state.json"
         self.lock = threading.Lock()
         self.study = None                # a StudyStore, when Study is on: cards due join the evening nudge
+        self.study_nudge = None          # callable() -> the line for today's session, or None when it is done
 
     # ---- settings and memory of what was sent ------------------------------------------------------
     def config(self) -> dict:
@@ -73,7 +75,7 @@ class Proactive:
                 continue
             if k == "enabled":
                 cfg[k] = bool(v)
-            elif k in ("morning_brief", "evening_nudge"):
+            elif k in ("morning_brief", "evening_nudge", "study_nudge"):
                 cfg[k] = _clock(v)
             elif k in ("quiet", "school"):
                 if not (isinstance(v, (list, tuple)) and len(v) == 2):
@@ -148,8 +150,16 @@ class Proactive:
                          for w, e in urgent]
                 out.append((f"nudge:{day}", "Heads up, coming soon:\n" + "\n".join(lines), True))
             n = self._cards_due(now)
-            if n:
+            if n and self.study_nudge is None:
                 out.append((f"cards:{day}", f"{n} card{'s' if n != 1 else ''} due for review in Study.", True))
+        study_at = _t(cfg["study_nudge"])
+        if self.study_nudge is not None and study_at <= now.time() < (datetime.combine(now.date(), study_at) + timedelta(hours=3)).time():
+            try:
+                line = self.study_nudge()
+            except Exception:                              # a study problem must never stop the other nudges
+                line = None
+            if line:
+                out.append((f"study:{day}", line, True))
         lead = timedelta(minutes=int(cfg["heads_up_min"]))
         for w, e in self.schedule.occurrences(now, now + lead + timedelta(minutes=1)):
             if e.get("time") and now <= w <= now + lead:

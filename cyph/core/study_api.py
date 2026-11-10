@@ -132,6 +132,63 @@ class ItemIn(BaseModel):
     data: dict[str, Any] = {}
 
 
+class InboxIn(BaseModel):
+    title: str = ""
+    mime: str
+    data: str = ""
+    text: str = ""
+    subject: Optional[str] = None
+
+
+class StartIn(BaseModel):
+    device: str = "desk"
+    kind: str = ""            # "", mini, more or topic
+    topic: Optional[str] = None
+
+
+class StepIn(BaseModel):
+    grade: Optional[int] = None
+    option: Optional[int] = None
+    value: Optional[str] = None
+    answer: str = ""
+    had: Optional[bool] = None
+    ticks: list[bool] = []
+    images: list[dict] = []
+
+
+class HintIn(BaseModel):
+    n: Optional[int] = None
+
+
+class FlagIn(BaseModel):
+    reason: str = "confusing"
+
+
+class DebriefIn(BaseModel):
+    text: str = ""
+    finish: bool = False
+
+
+class HomeworkIn(BaseModel):
+    subject: str
+    title: str
+    due: str
+    topic: Optional[str] = None
+
+
+class DoneIn(BaseModel):
+    done: bool = True
+
+
+class MoveIn(BaseModel):
+    subject: str
+
+
+class SyllabusIn(BaseModel):
+    subject: str
+    topics: list[str]
+
+
 def pics(raw: list[dict]) -> list[dict]:
     out = []
     for it in raw[:4]:
@@ -454,3 +511,92 @@ def add_study_routes(app, d, auth, changed):
         guard(lambda: svc().store.remove_board(bid))
         changed("study")
         return {"ok": True}
+
+    # ---- the session engine: one START button -----------------------------------------------------------
+    def eng():
+        return svc().engine
+
+    @app.get("/study/now")
+    def now(device: str = "desk", dev: dict = Depends(auth)):
+        return guard(lambda: eng().now(device))
+
+    @app.post("/study/session")
+    def session_start(body: StartIn, dev: dict = Depends(auth)):
+        return guard(lambda: eng().start(body.device, body.kind, body.topic))
+
+    @app.get("/study/session/{zid}")
+    def session_get(zid: str, dev: dict = Depends(auth)):
+        return guard(lambda: eng().view(zid))
+
+    @app.post("/study/session/{zid}/answer")
+    def session_answer(zid: str, body: StepIn, dev: dict = Depends(auth)):
+        return guard(lambda: eng().answer(zid, body.model_dump(exclude={"images"}), pics(body.images)))
+
+    @app.post("/study/session/{zid}/next")
+    def session_next(zid: str, dev: dict = Depends(auth)):
+        return guard(lambda: eng().next(zid))
+
+    @app.post("/study/session/{zid}/end")
+    def session_end(zid: str, dev: dict = Depends(auth)):
+        return guard(lambda: eng().end(zid))
+
+    @app.post("/study/session/{zid}/hint")
+    def session_hint(zid: str, body: HintIn, dev: dict = Depends(auth)):
+        return guard(lambda: eng().hint(zid, body.n))
+
+    @app.post("/study/attempts/{aid}/dispute")
+    def attempt_dispute(aid: str, dev: dict = Depends(auth)):
+        return guard(lambda: eng().dispute(aid))
+
+    @app.post("/study/questions/{qid}/flag")
+    def question_flag(qid: str, body: FlagIn, dev: dict = Depends(auth)):
+        return guard(lambda: eng().flag_question(qid, body.reason))
+
+    @app.post("/study/cards/{cid}/flag")
+    def card_flag(cid: str, dev: dict = Depends(auth)):
+        return guard(lambda: eng().flag_card(cid))
+
+    @app.post("/study/debrief")
+    def debrief(body: DebriefIn, dev: dict = Depends(auth)):
+        return guard(lambda: eng().debrief(body.text, body.finish))
+
+    @app.get("/study/inbox")
+    def inbox(dev: dict = Depends(auth)):
+        return {"items": guard(lambda: eng().inbox())}
+
+    @app.post("/study/inbox")
+    def inbox_add(body: InboxIn, dev: dict = Depends(auth)):
+        try:
+            data = base64.b64decode(body.data, validate=True) if body.data else None
+        except (binascii.Error, ValueError):
+            raise HTTPException(422, "that file could not be read")
+        got = guard(lambda: svc().import_source(body.subject, body.title, body.mime, data, body.text))
+        changed("study")
+        return got
+
+    @app.post("/study/sources/{rid}/move")
+    def source_move(rid: str, body: MoveIn, dev: dict = Depends(auth)):
+        got = guard(lambda: svc().store.move_source(rid, svc().store.subject(body.subject)["id"]))
+        changed("study")
+        return got
+
+    @app.get("/study/library")
+    def library(dev: dict = Depends(auth)):
+        return guard(lambda: eng().library())
+
+    @app.get("/study/topics/{tid}")
+    def topic_get(tid: str, dev: dict = Depends(auth)):
+        return guard(lambda: eng().topic_detail(tid))
+
+    @app.post("/study/homework")
+    def homework_add(body: HomeworkIn, dev: dict = Depends(auth)):
+        return guard(lambda: eng().add_homework(body.subject, body.title, body.due, body.topic))
+
+    @app.post("/study/homework/{hid}")
+    def homework_done(hid: str, body: DoneIn, dev: dict = Depends(auth)):
+        guard(lambda: eng().done_homework(hid, body.done))
+        return {"ok": True}
+
+    @app.post("/study/syllabus")
+    def syllabus(body: SyllabusIn, dev: dict = Depends(auth)):
+        return {"added": guard(lambda: eng().add_syllabus(body.subject, body.topics))}

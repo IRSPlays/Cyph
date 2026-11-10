@@ -29,10 +29,17 @@ use short lists and line breaks here. If he gets something wrong, say what the m
 asks for practice call study_practice, for flashcards study_draft_cards (they stay drafts until he approves them)."""
 
 
-def app_system_prompt(memory: str = "", mode: str = "", subject: str = "") -> str:
-    parts = [PERSONA, APP_RULES, TIME_RULE]
+STUDY_HELP = """Study: when he mentions a test or exam call study_add_test, homework study_add_homework, a mark from his teacher
+study_teacher_mark. When he tells you anything he learned at school, even one line, call study_debrief with his words; it
+counts as his debrief. Imported material is kept automatically: never say cards are waiting for approval."""
+
+
+def app_system_prompt(memory: str = "", mode: str = "", subject: str = "", nudge: str = "", study: bool = False) -> str:
+    parts = [PERSONA, APP_RULES, TIME_RULE] + ([STUDY_HELP] if study else [])
     if mode == "study":
         parts.append(STUDY_RULES.format(subject=f" ({subject})" if subject else ""))
     if memory.strip():
         parts.append(LOCAL_MEMORY + "\n\n" + memory.strip())
+    if nudge:
+        parts.append(nudge)
     return "\n\n".join(parts)

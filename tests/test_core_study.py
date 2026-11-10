@@ -526,7 +526,7 @@ class TestStudyNudge(unittest.TestCase):
             sent = []
             p = Proactive(Planner(root / "s.json"), sent.append, root / "c.json", root / "st.json")
             p.study = store
-            now = datetime(2026, 11, 9, 19, 5, tzinfo=TZ)
+            now = datetime.now(TZ).replace(hour=19, minute=5)      # the card is due today, whatever today is
             self.assertEqual(p.tick(now), 1)
             self.assertIn("due for review", sent[0])
             self.assertEqual(p.tick(now), 0)

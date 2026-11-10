@@ -151,6 +151,17 @@ CREATE TABLE IF NOT EXISTS pages(id TEXT PRIMARY KEY, notebook_id TEXT, idx INTE
 CREATE TABLE IF NOT EXISTS boards(id TEXT PRIMARY KEY, subject_id TEXT, title TEXT, created TEXT, updated TEXT);
 CREATE TABLE IF NOT EXISTS board_items(id TEXT PRIMARY KEY, board_id TEXT, kind TEXT, x REAL, y REAL, w REAL, h REAL,
   data TEXT, updated TEXT);
+CREATE TABLE IF NOT EXISTS questions(id TEXT PRIMARY KEY, subject_id TEXT, topic_id TEXT, source_id TEXT, origin TEXT, ref TEXT,
+  text TEXT, marks INTEGER, scheme TEXT, answer TEXT, numeric REAL, unit TEXT, key TEXT, quick TEXT, figure TEXT, state TEXT,
+  created TEXT);
+CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, day TEXT, kind TEXT, device TEXT, steps TEXT, pos INTEGER, state TEXT,
+  started TEXT, finished TEXT, info TEXT);
+CREATE TABLE IF NOT EXISTS lessons(topic_id TEXT PRIMARY KEY, body TEXT, created TEXT);
+CREATE TABLE IF NOT EXISTS rules(id TEXT PRIMARY KEY, subject_id TEXT, topic_id TEXT, kind TEXT, text TEXT, created TEXT);
+CREATE TABLE IF NOT EXISTS debriefs(id TEXT PRIMARY KEY, day TEXT, turns TEXT, result TEXT, state TEXT, created TEXT);
+CREATE TABLE IF NOT EXISTS homework(id TEXT PRIMARY KEY, subject_id TEXT, topic_id TEXT, title TEXT, due TEXT, plan_event_id TEXT,
+  done INTEGER DEFAULT 0, created TEXT);
+CREATE TABLE IF NOT EXISTS kv(k TEXT PRIMARY KEY, v TEXT);
 CREATE INDEX IF NOT EXISTS i_cards_due ON cards(state, due);
 CREATE INDEX IF NOT EXISTS i_chunks_subject ON chunks(subject_id);
 """
@@ -175,6 +186,11 @@ class StudyStore:
                     self.db.execute("INSERT INTO subjects VALUES(?,?,?,?)", (new_id("s"), name, color, now_iso()))
             if not any(r[1] == 'blocks' for r in self.db.execute("PRAGMA table_info(tests)")):
                 self.db.execute("ALTER TABLE tests ADD COLUMN blocks TEXT DEFAULT '[]'")      # revision blocks made with the test
+            for table, col, kind in (("attempts", "question_id", "TEXT"), ("attempts", "hints", "INTEGER DEFAULT 0"),
+                                     ("attempts", "disputed", "INTEGER DEFAULT 0"), ("attempts", "detail", "TEXT DEFAULT ''"),
+                                     ("topics", "why", "TEXT"), ("cards", "source_id", "TEXT")):
+                if not any(r[1] == col for r in self.db.execute(f"PRAGMA table_info({table})")):
+                    self.db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {kind}")
             # an import cut short by a restart would read "processing" forever
             self.db.execute("UPDATE sources SET status='failed', error='interrupted, try again' WHERE status='processing'")
             self.db.commit()
@@ -269,7 +285,7 @@ class StudyStore:
         if got:
             return got["id"]
         tid = new_id("t")
-        self.run("INSERT INTO topics VALUES(?,?,?,?)", (tid, subject_id, name, now_iso()))
+        self.run("INSERT INTO topics(id,subject_id,name,created) VALUES(?,?,?,?)", (tid, subject_id, name, now_iso()))
         return tid
 
     def topics(self, subject_id: str | None = None):
@@ -299,7 +315,7 @@ class StudyStore:
         a, b = (self.one("SELECT * FROM topics WHERE id=?", (x,)) for x in (src, dst))
         if not a or not b or a["subject_id"] != b["subject_id"] or src == dst:
             raise StudyError("those topics cannot be merged")
-        for t in ("cards", "notes", "attempts"):
+        for t in ("cards", "notes", "attempts", "questions", "homework"):
             self.run(f"UPDATE {t} SET topic_id=? WHERE topic_id=?", (dst, src))
         self.run("DELETE FROM topics WHERE id=?", (src,))
 
@@ -381,7 +397,7 @@ class StudyStore:
 
     # -- cards
     def add_card(self, subject_id: str, front: str, back: str, state: str = "draft", topic: str | None = None,
-                 note_id: str | None = None, image_id: str | None = None):
+                 note_id: str | None = None, image_id: str | None = None, source_id: str | None = None):
         front, back = str(front or "").strip()[:1500], str(back or "").strip()[:3000]
         if not front or not back:
             raise StudyError("a card needs a front and a back")
@@ -389,8 +405,8 @@ class StudyStore:
             raise StudyError("bad card state")
         cid = new_id("c")
         tid = self.topic(subject_id, topic) if topic else None
-        self.run("INSERT INTO cards(id,subject_id,topic_id,note_id,front,back,image_id,state,due,created) VALUES(?,?,?,?,?,?,?,?,?,?)",
-                 (cid, subject_id, tid, note_id, front, back, image_id, state, today().isoformat(), now_iso()))
+        self.run("INSERT INTO cards(id,subject_id,topic_id,note_id,front,back,image_id,state,due,created,source_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                 (cid, subject_id, tid, note_id, front, back, image_id, state, today().isoformat(), now_iso(), source_id))
         return self.card(cid)
 
     def card(self, cid: str):
@@ -465,11 +481,14 @@ class StudyStore:
                 "reviews_30d": len(rv)}
 
     # -- attempts
-    def add_attempt(self, subject_id, topic, kind, prompt, answer, score, mx, feedback, scheme=""):
+    def add_attempt(self, subject_id, topic, kind, prompt, answer, score, mx, feedback, scheme="", question_id=None,
+                    hints=0, detail=""):
         aid = new_id("a")
         tid = self.topic(subject_id, topic) if topic else None
-        self.run("INSERT INTO attempts VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                 (aid, subject_id, tid, kind, prompt[:4000], answer[:8000], float(score), float(mx), feedback[:4000], scheme[:4000], now_iso()))
+        self.run("INSERT INTO attempts(id,subject_id,topic_id,kind,prompt,answer,score,max,feedback,scheme,at,question_id,hints,detail) "
+                 "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 (aid, subject_id, tid, kind, prompt[:4000], answer[:8000], float(score), float(mx), feedback[:4000], scheme[:4000],
+                  now_iso(), question_id, int(hints), detail[:8000]))
         return self.one("SELECT * FROM attempts WHERE id=?", (aid,))
 
     def attempts(self, subject_id=None, limit=50):
@@ -649,11 +668,44 @@ class StudyStore:
         s = self.source(sid)
         for n in self.q("SELECT id FROM notes WHERE source_id=?", (sid,)):
             self.remove_note(n["id"])
+        self.drop_made(sid)
         self.run("DELETE FROM source_outputs WHERE source_id=?", (sid,))
         self.run("DELETE FROM sources WHERE id=?", (sid,))
         if s.get("file_id"):
             self.run("DELETE FROM files WHERE id=?", (s["file_id"],))
             (self.folder / "files" / s["file_id"]).unlink(missing_ok=True)
+
+    def drop_made(self, sid):
+        """The cards and questions an import made (undoing it, or reading it again)."""
+        for c in self.q("SELECT id FROM cards WHERE source_id=?", (sid,)):
+            self.remove_card(c["id"])
+        for q in self.q("SELECT figure FROM questions WHERE source_id=? AND figure IS NOT NULL AND figure!=''", (sid,)):
+            src = self.one("SELECT file_id FROM sources WHERE id=?", (sid,))
+            if not src or q["figure"] != src["file_id"]:
+                self.run("DELETE FROM files WHERE id=?", (q["figure"],))
+                (self.folder / "files" / q["figure"]).unlink(missing_ok=True)
+        self.run("DELETE FROM questions WHERE source_id=?", (sid,))
+
+    def move_source(self, sid, subject_id):
+        """Wrong subject: the source and everything it made go to another subject, keeping their topic names."""
+        self.source(sid)
+        if not self.one("SELECT 1 FROM subjects WHERE id=?", (subject_id,)):
+            raise StudyError("no such subject", 404)
+        old = set()
+        def moved(tid):
+            t = self.one("SELECT name FROM topics WHERE id=?", (tid,)) if tid else None
+            if t:
+                old.add(tid)
+            return self.topic(subject_id, t["name"]) if t else None
+        for table, where in (("notes", "source_id=?"), ("cards", "source_id=?"), ("questions", "source_id=?")):
+            for r in self.q(f"SELECT id, topic_id FROM {table} WHERE {where}", (sid,)):
+                self.run(f"UPDATE {table} SET subject_id=?, topic_id=? WHERE id=?", (subject_id, moved(r["topic_id"]), r["id"]))
+        self.run("UPDATE chunks SET subject_id=? WHERE note_id IN (SELECT id FROM notes WHERE source_id=?)", (subject_id, sid))
+        self.run("UPDATE sources SET subject_id=? WHERE id=?", (subject_id, sid))
+        for tid in old:                                 # a topic the move emptied does not stay behind as a ghost
+            if not any(self.one(f"SELECT 1 FROM {t} WHERE topic_id=?", (tid,)) for t in ("notes", "cards", "questions", "attempts", "homework")):
+                self.run("DELETE FROM topics WHERE id=?", (tid,))
+        return self.source(sid)
 
     # -- search
     def search(self, qvec, text: str, subject_id=None, k=5):
@@ -726,13 +778,25 @@ SYSTEM = ("You are Cyph's study engine for a Singapore secondary school student 
           "Be accurate and syllabus-aware. Use plain text; write maths as LaTeX between $...$ and chemistry with \\ce{...}. "
           "Reply with exactly the format asked for and nothing else.")
 
+QUESTION_SHAPE = """{"ref": its number as printed ("Q4", "2(b)") or "", "text": the question, "marks": total marks, "topic": its syllabus topic,
+   "answer": the final answer, "key": "printed" if the answer comes from an answer key or worked solution in the material, else "cyph",
+   "scheme": [{"point": one thing that earns marks, "marks": 1, "final": true only on the point that is the final answer}],
+   "numeric": the final answer as a plain number or null, "unit": its unit or "", "figure": true if it cannot be answered without a
+   diagram, graph, map or picture, "page": the page it is on (1 for a photo),
+   "quick": {"ask": the same question cut down so it can be answered by tapping, "options": 3 or 4 short options, "correct": index of the
+   right option, "final_label": what the numeric answer is called ("Mass of hydrogen") or "", "explain": one sentence on why}}"""
+
 IMPORT_PROMPT = """Turn the attached study material into revision material. Reply with ONE JSON object:
-{"title": short title, "topic": the single syllabus topic it belongs to,
+{"title": short title, "kind": "notes", "worksheet" or "paper", "subject": the school subject it belongs to,
+ "topic": the single syllabus topic it belongs to,
  "clean_notes": the content rewritten as clear, well organised notes in markdown (keep every fact, drop the clutter),
  "summary": five sentences at most,
  "key_terms": [{"term": ..., "definition": ...}],
  "study_guide": a short step by step plan to learn it,
- "likely_questions": [question strings an O-Level exam could ask about it]}"""
+ "cards": up to 12 flashcards [{"front": a question testing ONE fact or step, "back": the short answer}], facts from the material only,
+ "questions": every question PRINTED in the material (at most 20), copied word for word, never invented, each as
+  """ + QUESTION_SHAPE + """}
+If the material prints no questions, "questions" is []. Never make up a source, a quotation or a case study."""
 
 
 class StudyService:
@@ -740,14 +804,14 @@ class StudyService:
         self.store, self.ai, self.planner = store, ai, planner
         self.changed = changed or (lambda what: None)
         self.background = background
+        from .session import Engine
+        self.engine = Engine(self)                      # sessions, marking, strength: the one START button
         self._active: set[str] = set()                  # sources being read right now: one read at a time per source
         self._pool = ThreadPoolExecutor(max_workers=2)  # at most two model reads at once, the rest wait
 
     # -- import
     def import_source(self, subject_ref, title, mime, data: bytes | None = None, text: str = ""):
-        subj = self.store.subject(subject_ref)
-        if not subj:
-            raise StudyError("pick a subject first")
+        subj = self.store.subject(subject_ref) or {"id": ""}      # no subject given: the import works it out
         if mime not in MIME_OK:
             raise StudyError("PDF, picture (PNG/JPEG/WebP) or text only")
         if mime == "text/plain":
@@ -794,11 +858,18 @@ class StudyService:
             meta, data = st.get_file(src["file_id"])
             parts = [] if meta["mime"] == "text/plain" else [{"mime": meta["mime"], "data": data}]
             prompt = IMPORT_PROMPT + ("\n\nMaterial:\n" + data.decode("utf-8", "replace")[:30000] if not parts else "")
-            subj = st.one("SELECT name FROM subjects WHERE id=?", (src["subject_id"],))["name"]
-            raw = self.ai.generate(SYSTEM + f" Subject: {subj}.", prompt, parts)
+            names = [x["name"] for x in st.subjects()]
+            known = st.one("SELECT name FROM subjects WHERE id=?", (src["subject_id"],))
+            raw = self.ai.generate(SYSTEM + (f" Subject: {known['name']}." if known else " His subjects: " + ", ".join(names) + "."), prompt, parts)
             got = parse_json(raw)
             if not isinstance(got, dict) or not str(got.get("clean_notes") or "").strip():
                 raise StudyError("I could not read that material")
+            if not known:                                # filed by what the material says, else the first subject
+                guess = str(got.get("subject") or "").strip().lower()
+                pick = next((x for x in st.subjects() if x["name"].lower() == guess), None) or \
+                    next((x for x in st.subjects() if guess and (guess in x["name"].lower() or x["name"].lower() in guess)), None) or st.subjects()[0]
+                st.run("UPDATE sources SET subject_id=? WHERE id=?", (pick["id"], sid))
+                src = st.source(sid)
             for k in ("summary", "study_guide"):
                 st.set_output(sid, k, str(got.get(k) or ""))
             st.set_output(sid, "key_terms", json.dumps(got.get("key_terms") or []))
@@ -812,7 +883,13 @@ class StudyService:
                 embs = None                             # notes are still saved; search falls back to words
             for old in st.q("SELECT id FROM notes WHERE source_id=?", (sid,)):      # a retry replaces, never duplicates
                 st.remove_note(old["id"])
+            st.drop_made(sid)
             note = st.add_note(src["subject_id"], title, str(got["clean_notes"]), "import", sid, got.get("topic"), embs)
+            for c in (got.get("cards") or [])[:12]:      # kept straight away: nothing waits for a yes
+                if isinstance(c, dict) and str(c.get("front") or "").strip() and str(c.get("back") or "").strip():
+                    st.add_card(src["subject_id"], c["front"], c["back"], "approved", got.get("topic"), note["id"], source_id=sid)
+            from .session import save_questions
+            save_questions(st, src, got.get("questions") or [], got.get("topic"), meta, data)
             st.run("UPDATE sources SET status='ready', error='', title=? WHERE id=?", (title, sid))
             self.changed("study")
             return note

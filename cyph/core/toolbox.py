@@ -54,6 +54,17 @@ STUDY_TOOLS = [
         {"query": _S, "subject": {"type": "string", "description": "Math, Chemistry, Physics, Amath, English, SS or Geog"}}, ["query"]),
     _fn("study_draft_cards", "Make flashcards from a note he has. They are drafts: he approves each one; never say they are live.",
         {"note_id": _S, "subject": _S, "n": _N}, ["note_id"]),
+    _fn("study_now", "Today's study session: whether it is done, how long it is and what is in it. Use before talking about what he should study.", {}, []),
+    _fn("study_debrief", "He just told you something he learned at school today (even one line). Pass his words exactly. It finds the gaps, "
+                         "makes cards, and gives you ONE follow-up question to ask him; if it does, ask it. Set finish when he wants to stop.",
+        {"text": _S, "finish": {"type": "boolean"}}, ["text"]),
+    _fn("study_add_test", "He told you about a test or exam. Adds it to his plan; its topics come first in sessions and test prep turns on the night before.",
+        {"subject": _S, "title": _S, "date": {"type": "string", "description": "YYYY-MM-DD"},
+         "topics": {"type": "array", "items": {"type": "string"}}}, ["subject", "title", "date"]),
+    _fn("study_add_homework", "He told you about homework. Adds it with its due date; it replaces that day's session the day before it is due.",
+        {"subject": _S, "title": _S, "due": {"type": "string", "description": "YYYY-MM-DD"}, "topic": _S}, ["subject", "title", "due"]),
+    _fn("study_teacher_mark", "He told you a mark his teacher gave him. It is the truth about that topic and outweighs your own marking.",
+        {"subject": _S, "topic": _S, "score": _N, "max": _N, "what": _S}, ["subject", "score", "max"]),
     _fn("study_due", "How many flashcards are due today, per subject.", {}, []),
     _fn("study_weak_topics", "Topics he is doing worst in, from practice marks and forgotten cards.",
         {"subject": _S}, []),
@@ -208,6 +219,44 @@ class ToolBox:
         except StudyError as e:
             return {"error": str(e)}
         return {"drafted": len(cards), "note": "they wait for his approval in Study", "summary": f"{len(cards)} drafts"}
+
+    def _study_now(self, a):
+        n = self.study.engine.now("phone")
+        return {"state": n["state"], "minutes": n["minutes"], "steps": [s["label"] for s in n["steps"]], "headline": n["headline"],
+                "weakest": [f"{w['name']} ({w['label']})" for w in n["weak"]], "test": n["test"], "summary": n["state"]}
+
+    def _study_debrief(self, a):
+        from .study import StudyError
+        try:
+            r = self.study.engine.debrief(a.get("text"), bool(a.get("finish")))
+        except StudyError as e:
+            return {"error": str(e)}
+        return {"ask_him": r["ask"], "done": r["done"], "topics": [f"{t['topic']}: {t['state']}" for t in r["topics"]], "cards_made": r["cards"],
+                "note": "ask him the follow-up if there is one; when done, tell him it counted", "summary": "done" if r["done"] else "asked a follow-up"}
+
+    def _study_add_test(self, a):
+        from .study import StudyError
+        try:
+            r = self.study.plan_test(a.get("subject"), str(a.get("title") or "Test"), self._date(a.get("date")).isoformat(), a.get("topics") or [], blocks=())
+        except StudyError as e:
+            return {"error": str(e)}
+        return {"added": {"title": r["test"]["title"], "date": r["test"]["date"], "topics": r["test"]["topics"]}, "summary": r["test"]["title"]}
+
+    def _study_add_homework(self, a):
+        from .study import StudyError
+        try:
+            h = self.study.engine.add_homework(a.get("subject"), a.get("title"), self._date(a.get("due")).isoformat(), a.get("topic") or None)
+        except StudyError as e:
+            return {"error": str(e)}
+        return {"added": {"title": h["title"], "due": h["due"], "subject": h["subject"]}, "summary": h["title"]}
+
+    def _study_teacher_mark(self, a):
+        from .study import StudyError
+        try:
+            r = self.study.engine.teacher_mark(a.get("subject"), a.get("topic") or None, float(a.get("score") or 0), float(a.get("max") or 0), str(a.get("what") or ""))
+        except (StudyError, ValueError) as e:
+            return {"error": str(e)}
+        return {"recorded": r, "summary": f"{r['score']:g}/{r['max']:g}"}
 
     def _study_due(self, a):
         t = self.study.today()

@@ -315,7 +315,14 @@ class Brain:
             memory = self.store.snapshot() if self.store else ""
             if app:
                 from .core.prompts import app_system_prompt
-                system = app_system_prompt(memory, mode, subject)
+                study = getattr(getattr(self, "toolbox", None), "study", None)
+                nudge = ""
+                if study is not None:
+                    try:
+                        nudge = study.engine.chat_nudge()
+                    except Exception:                    # a study problem never stops a chat reply
+                        nudge = ""
+                system = app_system_prompt(memory, mode, subject, nudge, study is not None)
             else:
                 system = remote_system_prompt(memory)
             recalled = self.store.recall(text) if self.store else ""
@@ -841,6 +848,8 @@ def run_service(a=None, server: bool = False):
                 study = StudyService(StudyStore(CORE_DATA / "core" / "study"), GeminiStudyAI(), planner=sched)
                 brain.toolbox = ToolBox(sched, proposals=props, study=study)
                 svc.proactive.study = study.store
+                svc.proactive.study_nudge = study.engine.nudge
+                study.engine.projects = lambda: store.snapshot()
                 start_core(cfg, store=store, brain=brain, planner=sched, log=log, folder=CORE_DATA / "core",
                            shared=brain.shared, proactive=svc.proactive, proposals=props, study=study,
                            notify=lambda text: svc.api.send(svc.owner, text))
