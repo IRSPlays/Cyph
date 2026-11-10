@@ -21,7 +21,7 @@ const silly = () => SILLY[Math.floor(Math.random() * SILLY.length)];
 const Pill = ({ tone = "", children }: { tone?: string; children: React.ReactNode }) => <span className={"sp-pill " + tone}>{children}</span>;
 const Bar = ({ s }: { s: Strength }) => <div className={"sp-bar s-" + s}><i style={{ width: FILL[s] + "%" }} /></div>;
 const Says = ({ children }: { children: React.ReactNode }) => (
-  <div className="sp-says"><div className="b">{children}</div><div className="cyface"><CyphCanvas scale={3} /></div></div>
+  <div className="sp-says"><div className="b">{children}</div><div className="cyface"><CyphCanvas scale={2} /></div></div>
 );
 /** A full-screen page: header, scrolling body, buttons pinned at the bottom. */
 function Screen({ title, right, children, foot }: { title: string; right?: React.ReactNode; children: React.ReactNode; foot?: React.ReactNode }) {
@@ -33,8 +33,8 @@ function Screen({ title, right, children, foot }: { title: string; right?: React
     </div>
   );
 }
-const Btn = ({ on, xl, co, children, ...p }: { on?: boolean; xl?: boolean; co?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-  <button {...p} className={"mbtn" + (on ? " on" : "") + (xl ? " xl" : "") + (co ? " red" : "")}>{children}</button>
+const Btn = ({ on, xl, co, className = "", children, ...p }: { on?: boolean; xl?: boolean; co?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+  <button {...p} className={"mbtn" + (on ? " on" : "") + (xl ? " xl" : "") + (co ? " red" : "") + (className ? " " + className : "")}>{children}</button>
 );
 
 type View = "home" | "debrief" | "inbox" | "library";
@@ -113,9 +113,9 @@ function Home({ go, onStart }: { go: (v: View, topic?: string) => void; onStart:
           ))}</div>
         </>
       )}
+      <Btn className="sp-snap" onClick={() => go("inbox")}>{d.inbox.today ? `SNAP A WORKSHEET · ${d.inbox.today} KEPT TODAY` : "SNAP A WORKSHEET"}</Btn>
       <div className="mbtns sp-links">
         {!d.debrief.done && d.state !== "empty" && <Btn onClick={() => go("debrief")}>DEBRIEF</Btn>}
-        <Btn onClick={() => go("inbox")}>{d.inbox.today ? `INBOX ${d.inbox.today}` : "SNAP A WORKSHEET"}</Btn>
         <Btn onClick={() => go("library")}>LIBRARY</Btn>
       </div>
     </div>

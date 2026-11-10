@@ -67,7 +67,7 @@
 .sp-says .b{flex:1;min-width:0;margin-bottom:26px;font:italic 20px/1.16 'Instrument Serif';color:var(--cr);background:#07100a;border:2px solid var(--ne);border-radius:12px;padding:8px 12px;box-shadow:0 0 18px rgba(93,255,122,.25);position:relative}
 .sp-says .b:after{content:'';position:absolute;right:-9px;bottom:14px;border:6px solid transparent;border-left:9px solid var(--ne);border-right:0}
 .sp-says .cyface{order:2;line-height:0}
-.sp-hint{padding:6px 0}.sp-hint p{font:12.5px/1.45 'DM Mono';color:var(--cr);margin:3px 0 0}
+.sp-hint{padding:10px 12px;border-radius:10px;background:#0e150b}.sp-hint:has(button:disabled){opacity:.6}.sp-hint p{font:12.5px/1.45 'DM Mono';color:var(--cr);margin:3px 0 0}
 .sp-tickrow{display:flex;gap:10px;font:12.5px/1.4 'DM Mono';color:var(--cr);padding:5px 0}.sp-tickrow input{accent-color:var(--ne);margin-top:2px}
 .sp-pics{display:flex;gap:6px}.sp-pics img{height:56px;border-radius:6px}
 .sr .f{width:100%;background:#05080a;border:0;border-radius:10px;padding:12px;color:var(--tx);font:13px 'DM Mono';outline:0;box-shadow:inset 0 0 0 1px #1d2815}
@@ -85,3 +85,5 @@
 .sp-subj{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.sp-subj .chip{border:0}
 .sp-row{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:var(--pn,#0b130d);border:0;border-radius:12px;padding:14px 12px;box-shadow:0 0 0 1px #1d2815;font:13px 'DM Mono';color:var(--cr)}
 .sp-row small{display:block;color:var(--dim);font-size:11px;margin-top:2px}.sp-row span{font:700 9.5px 'Pixelify Sans';letter-spacing:.14em;color:#9aa889}
+.sp-snap{flex:none;width:100%;background:#13190f;padding:14px 8px}
+.sp-links .mbtn{padding:12px 4px}
