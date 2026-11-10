@@ -1,0 +1,336 @@
+<title>Cyph Study Rethink</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Instrument+Serif:ital@0;1&family=Pixelify+Sans:wght@500;600;700&display=swap">
+<style>
+/* layout: one reading column for the plan, device frames break out wider; single dark look, same as the Cyph app */
+:root{color-scheme:dark;--bg:#0b0f08;--pn:#12170d;--pn2:#1a2212;--ln:#2c3820;--tx:#e6efd8;--dim:#7d8c6f;--cr:#f3ecb2;--ne:#5dff7a;--am:#d9984a;--co:#f08a73;--tl:#2f9d8f;--bl:#7fb4e8;--deck:#333a24;
+  --px:'Pixelify Sans','DM Mono',monospace;--mono:'DM Mono',ui-monospace,Menlo,monospace;--serif:'Instrument Serif',Georgia,serif}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font:14px/1.6 var(--mono);padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.col{max-width:70ch;margin:0 auto}.wide{max-width:1120px;margin:0 auto}
+h1{font:400 clamp(34px,6vw,58px)/1.02 var(--serif);font-style:italic;color:var(--cr);margin:6px 0 14px;text-wrap:balance}
+h2{font:600 15px var(--px);letter-spacing:.2em;color:var(--am);text-transform:uppercase;margin:56px 0 12px}
+h3{font:400 24px/1.15 var(--serif);font-style:italic;color:var(--cr);margin:30px 0 6px;text-wrap:balance}
+p{margin:0 0 12px}b,strong{color:var(--cr);font-weight:500}
+.eye{font:600 11px var(--px);letter-spacing:.24em;color:var(--ne)}
+.lead{font-size:15px;color:#cfdcc0}
+.dim{color:var(--dim)}
+ul{margin:0 0 12px;padding-left:20px}li{margin-bottom:5px}
+.verbs{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:18px 0}
+.verb{background:var(--pn);border-radius:8px;padding:14px;box-shadow:inset 0 2px 7px #000c,0 1px 0 #ffffff12;min-width:0}
+.verb i{font:600 11px var(--px);letter-spacing:.2em;font-style:normal;color:var(--ne)}
+.verb.main{outline:1px solid var(--ne)}
+.verb h4{font:400 22px var(--serif);font-style:italic;color:var(--cr);margin:4px 0 6px}
+.verb p{font-size:12.5px;margin:0;color:#b9c7a3}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font:600 10px var(--px);letter-spacing:.18em;color:var(--dim);padding:6px 10px 6px 0;border-bottom:1px solid var(--ln)}
+td{padding:8px 10px 8px 0;border-bottom:1px solid var(--ln);vertical-align:top}td:first-child{color:var(--cr);white-space:nowrap}
+.tw{overflow-x:auto}
+.cap{font-size:12px;color:var(--dim);margin:8px 0 0}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.tabs button{font:600 11px var(--px);letter-spacing:.14em;padding:7px 12px;border-radius:4px;border:0;background:#262c1a;color:var(--dim);cursor:pointer;box-shadow:0 2px 0 #0009}
+.tabs button[aria-selected=true]{background:var(--ne);color:#0d120a}
+.tabs button:focus-visible{outline:2px solid var(--cr)}
+/* device frames */
+.fx{overflow-x:auto;margin:14px 0 6px;padding-bottom:6px}
+.desk{min-width:860px;border-radius:12px;padding:10px;background:linear-gradient(160deg,#454c31,#262c1a 75%);box-shadow:inset 0 0 0 2px #1a2012;font:11.5px/1.45 var(--mono)}
+.desk.pad{min-width:760px;max-width:900px;margin:0 auto;border-radius:22px;padding:14px;background:#1c1f1a;box-shadow:inset 0 0 0 2px #000}
+.bar{display:flex;align-items:center;gap:8px;padding:0 4px 9px}
+.logo{font:700 16px var(--px);color:var(--cr);margin-right:8px}.logo em{color:var(--ne);font-style:normal}
+.nv{font:600 10px var(--px);letter-spacing:.12em;padding:5px 10px;border-radius:4px;background:#262c1a;color:var(--dim)}
+.nv.on{color:var(--cr);background:#2f3822;box-shadow:inset 2px 0 0 var(--ne)}
+.sub{display:flex;gap:6px;align-items:center;margin-bottom:9px}
+.sp{margin-left:auto}
+.key{font:600 10px var(--px);letter-spacing:.12em;padding:5px 9px;border-radius:4px;background:#262c1a;color:var(--cr);box-shadow:0 2px 0 #0009,inset 0 1px 0 #ffffff14;display:inline-block;white-space:nowrap}
+.key.go{background:var(--ne);color:#0d120a}.key.am{background:var(--am);color:#1a1405}.key.mic{background:#3a1f1a;color:var(--co)}
+.g{display:grid;gap:9px}.g2{grid-template-columns:1.55fr 1fr}.g3{grid-template-columns:1fr 1.5fr 1fr}
+.pn{background:var(--pn);border-radius:8px;box-shadow:inset 0 2px 7px #000c,0 1px 0 #ffffff12;padding:12px;min-width:0}
+.lbl{font:600 10px var(--px);letter-spacing:.22em;color:var(--am);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+.lbl span{color:var(--dim);font-family:var(--mono);letter-spacing:.04em;font-weight:400}
+.say{font:italic 400 23px/1.15 var(--serif);color:var(--cr);margin:2px 0 12px}
+.say.s{font-size:18px}
+.step{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:8px 10px;border-radius:6px;background:var(--pn2);margin-bottom:6px}
+.step u{text-decoration:none;font:600 11px var(--px);color:var(--ne)}
+.step small{display:block;color:var(--dim);font-size:10.5px}
+.step em{font-style:normal;color:var(--dim);font-size:10.5px}
+.start{display:flex;align-items:center;gap:12px;margin-top:12px}
+.big{font:700 16px var(--px);letter-spacing:.16em;padding:13px 26px;border-radius:7px;background:var(--ne);color:#0d120a;box-shadow:0 4px 0 #1c6a2c,0 0 22px rgba(93,255,122,.35)}
+.row{display:grid;grid-template-columns:1fr 70px 26px;gap:8px;align-items:center;padding:5px 0;font-size:11px}
+.row small{color:var(--dim)}
+.m{height:6px;border-radius:3px;background:#070a05;overflow:hidden}.m i{display:block;height:100%;background:var(--co)}.m i.a{background:var(--am)}.m i.n{background:var(--ne)}
+.row b{font-weight:400;text-align:right;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-size:10px;padding:2px 7px;border-radius:3px;background:#222c17;color:#b9c7a3;margin:0 4px 4px 0}
+.chip.w{background:#3a1f1a;color:var(--co)}.chip.a{background:#33290f;color:var(--am)}.chip.n{background:#143019;color:var(--ne)}
+.prog{display:flex;gap:4px;margin-bottom:10px}.prog i{flex:1;height:5px;border-radius:3px;background:#070a05}.prog i.d{background:var(--ne)}.prog i.c{background:var(--am)}
+.q{font:400 21px/1.25 var(--serif);color:var(--cr);margin:6px 0 12px}
+.ans{background:#070a05;border-radius:7px;padding:10px;min-height:74px;color:var(--dim);box-shadow:inset 0 2px 5px #000;margin-bottom:10px}
+.keys{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ladder{display:grid;gap:5px}.ladder div{padding:6px 9px;border-radius:5px;background:var(--pn2);font-size:11px}.ladder div.off{color:var(--dim)}.ladder div b{font:600 9.5px var(--px);letter-spacing:.14em;color:var(--am);margin-right:6px}
+.us{background:#16202a;color:#bcd0e0;padding:7px 10px;border-radius:9px 9px 2px 9px;margin:0 0 8px 40px;font-size:11.5px}
+.cy{font:italic 400 17px/1.2 var(--serif);color:var(--cr);margin:0 40px 8px 0}
+.item{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:9px 10px;border-radius:6px;background:var(--pn2);margin-bottom:6px}
+.item .ic{width:34px;height:40px;border-radius:4px;background:#070a05;display:grid;place-items:center;font:600 9px var(--px);color:var(--dim)}
+.item small{display:block;color:var(--dim);font-size:10.5px}
+.ink{background:#f4f0dc;border-radius:8px;min-height:230px;position:relative;overflow:hidden;background-image:linear-gradient(#0000 23px,#c9c3a155 24px);background-size:100% 24px}
+.ink svg{position:absolute;inset:0;width:100%;height:100%}
+/* phones */
+.phones{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;margin:16px 0 6px}
+.ph{width:236px;max-width:100%;border-radius:26px;padding:9px;background:#1c1f1a;box-shadow:inset 0 0 0 2px #000;font:11px/1.45 var(--mono)}
+.ph .in{background:var(--bg);border-radius:19px;padding:12px 10px 10px;min-height:440px;display:flex;flex-direction:column;gap:8px}
+.ph h5{font:600 10px var(--px);letter-spacing:.2em;color:var(--am);margin:0}
+.ph figcaption,.fc{font-size:11.5px;color:var(--dim);text-align:center;margin-top:8px}
+figure{margin:0}
+.tb{display:flex;gap:4px;margin-top:auto}.tb span{flex:1;text-align:center;font:600 9px var(--px);letter-spacing:.1em;padding:7px 0;border-radius:5px;background:#1a2212;color:var(--dim)}.tb span.on{color:#0d120a;background:var(--ne)}
+.rec{width:96px;height:96px;border-radius:50%;margin:10px auto;background:radial-gradient(circle,#f08a73 0 34%,#3a1f1a 36% 100%);box-shadow:0 0 26px rgba(240,138,115,.35)}
+.shot{border-radius:8px;height:170px;background:repeating-linear-gradient(0deg,#e9e4cd 0 9px,#d8d2b6 9px 10px);position:relative}
+.shot:after{content:"";position:absolute;inset:14px;border:2px solid var(--ne);border-radius:4px}
+.ask{background:var(--pn);border-left:3px solid var(--am);padding:12px 14px;border-radius:0 8px 8px 0;margin-bottom:10px}
+.ask b{display:block;margin-bottom:2px}
+@media(max-width:640px){h2{margin-top:44px}}
+</style>
+
+<div class="col">
+  <div class="eye">CYPH · STUDY MODE · PROPOSAL</div>
+  <h1>Open Study, press one button, get better at what you are worst at.</h1>
+  <p class="lead">Today Study is seven tabs of tools and you have to work out which one to use. This plan turns it into one thing: a short session that Cyph has already built for you. Everything else exists to feed that session.</p>
+  <p class="dim">Based on your answers: Cyph tells you what to do · PC and iPad as separate full apps · 10 to 20 minute bursts · plan from due cards and weak topics · one button to start · one inbox for material · explain what you learned out loud after school.</p>
+
+  <h2>What is wrong now</h2>
+  <ul>
+    <li><b>No starting point.</b> TODAY, NOTES, TUTOR, CARDS, PRACTICE, NOTEBOOKS and BOARDS all sit at the same level. Nothing says which one matters right now.</li>
+    <li><b>The tools do not talk to each other.</b> A wrong answer in PRACTICE does not change what CARDS shows you. Weak topics are a list you can look at, not something that drives the work.</li>
+    <li><b>Adding material is a chore.</b> You pick the subject, wait, then go to a different tab to approve draft cards.</li>
+    <li><b>The phone is a shrunken desktop.</b> It has the same tabs instead of the two things a phone is good for: a quick session and a camera.</li>
+  </ul>
+
+  <h2>The new shape</h2>
+  <p>Three things you do, and one place where everything is kept.</p>
+</div>
+
+<div class="wide">
+  <div class="verbs">
+    <div class="verb main"><i>1 · EVERY DAY</i><h4>Session</h4><p>One START button. About 15 minutes: the cards that are due, then questions on your weakest topic, then one question you got wrong before. Cyph picks all of it.</p></div>
+    <div class="verb"><i>2 · AFTER SCHOOL</i><h4>Debrief</h4><p>Hold the mic and explain what you learned today. Cyph works out the topics, asks you about the parts you skipped or got wrong, and marks those as weak.</p></div>
+    <div class="verb"><i>3 · WHENEVER</i><h4>Inbox</h4><p>Drop a PDF, snap a worksheet, forward a past paper. Cyph guesses the subject and topic and prepares cards and questions. You confirm with one tap.</p></div>
+    <div class="verb"><i>THE SHELF</i><h4>Library</h4><p>Each subject is a list of topics with a strength bar. Notes, cards, papers, notebooks and boards live under their topic. You come here to look something up, not to decide what to do.</p></div>
+  </div>
+  <p class="cap" style="text-align:center">Debrief and Inbox tell Cyph what you know and what you have. The Session spends that. A <b>STUCK?</b> key opens the tutor from any screen.</p>
+</div>
+
+<div class="col"><h2>Desktop</h2><h3>Now: the only screen you need to open</h3>
+<p>Cyph says in one sentence what the session is and why. The steps are listed so you can see it is short. One button.</p></div>
+<div class="wide"><div class="fx"><div class="desk">
+  <div class="bar"><span class="logo">CY<em>PH</em></span><span class="nv">HOME</span><span class="nv on">STUDY</span><span class="nv">CALENDAR</span><span class="nv">MEMORY</span></div>
+  <div class="sub"><span class="key go">NOW</span><span class="key">LIBRARY</span><span class="key">INBOX · 3</span><span class="sp key am">STUCK?</span></div>
+  <div class="g g2">
+    <div class="pn">
+      <div class="lbl">TODAY'S SESSION <span>about 15 min</span></div>
+      <div class="say">Moles first. You slipped on limiting reagents twice this week, so we fix that today.</div>
+      <div class="step"><u>1</u><div>9 cards due<small>Chemistry 5 · Physics 4, weakest topics first</small></div><em>4 min</em></div>
+      <div class="step"><u>2</u><div>Weak spot: Limiting reagent<small>2 questions made from Chem_WS_7.pdf, hints if you need them</small></div><em>7 min</em></div>
+      <div class="step"><u>3</u><div>Second try: Kinematics<small>the v-t graph question you got wrong on Friday</small></div><em>4 min</em></div>
+      <div class="start"><span class="big">START</span><span class="dim">6 day streak · last session yesterday 21:40</span></div>
+    </div>
+    <div class="g">
+      <div class="pn"><div class="lbl">WEAKEST TOPICS <span>all 31 in Library</span></div>
+        <div class="row"><div>Limiting reagent<br><small>Chemistry</small></div><div class="m"><i style="width:22%"></i></div><b>22</b></div>
+        <div class="row"><div>v-t graphs<br><small>Physics</small></div><div class="m"><i style="width:35%"></i></div><b>35</b></div>
+        <div class="row"><div>Chain rule<br><small>Amath</small></div><div class="m"><i class="a" style="width:48%"></i></div><b>48</b></div>
+        <div class="row"><div>SBQ: reliability<br><small>SS</small></div><div class="m"><i class="a" style="width:51%"></i></div><b>51</b></div>
+      </div>
+      <div class="pn"><div class="lbl">DEBRIEF <span>not done today</span></div>
+        <div class="keys"><span class="key mic">● HOLD TO TALK</span><span class="dim">Tell me what you learned at school.</span></div></div>
+      <div class="pn"><div class="lbl">INBOX <span>3 waiting for you</span></div><span class="dim">Chem_WS_7.pdf · photo from phone · 2024 Prelim P2</span></div>
+    </div>
+  </div>
+</div></div></div>
+
+<div class="col"><h3>Inside a session</h3><p>One step per screen with a progress strip on top. No tabs, nothing else to click. Pick a step:</p>
+<div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-s="s1" id="t1">1 · CARD</button><button role="tab" aria-selected="false" data-s="s2" id="t2">2 · WEAK SPOT</button><button role="tab" aria-selected="false" data-s="s3" id="t3">END · WHAT CHANGED</button></div></div>
+<div class="wide"><div class="fx">
+  <div class="desk" id="s1">
+    <div class="bar"><span class="logo">CY<em>PH</em></span><span class="dim">SESSION · step 1 of 3 · card 4 of 9</span><span class="sp key am">STUCK?</span><span class="key">END</span></div>
+    <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="pn" style="padding:26px;text-align:center"><span class="chip">Chemistry · Mole concept</span>
+      <div class="q" style="font-size:28px;margin:18px 0">What is the limiting reagent?</div>
+      <div class="dim" style="margin-bottom:18px">Say it or think it, then show the answer.</div>
+      <div class="keys" style="justify-content:center"><span class="key go">SHOW ANSWER · SPACE</span></div>
+      <div class="keys" style="justify-content:center;margin-top:10px;opacity:.5"><span class="key">1 AGAIN</span><span class="key">2 HARD</span><span class="key">3 GOOD</span></div>
+    </div>
+  </div>
+  <div class="desk" id="s2" hidden>
+    <div class="bar"><span class="logo">CY<em>PH</em></span><span class="dim">SESSION · step 2 of 3 · question 1 of 2</span><span class="sp key am">STUCK?</span><span class="key">END</span></div>
+    <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i></div>
+    <div class="g g2">
+      <div class="pn"><span class="chip w">Weak spot · Limiting reagent</span>
+        <div class="q">4.8 g of magnesium reacts with 0.30 mol of hydrochloric acid. Which reagent is limiting, and what mass of hydrogen forms?</div>
+        <div class="ans">Type your working, or write it on the iPad or paper and attach a photo.</div>
+        <div class="keys"><span class="key go">CHECK MY ANSWER</span><span class="key">PHOTO</span><span class="key">SKIP</span></div>
+      </div>
+      <div class="pn"><div class="lbl">HINTS <span>each one costs a little strength</span></div>
+        <div class="ladder"><div><b>RESTATE</b>You need moles of each reagent, then compare with the equation ratio.</div><div><b>NUDGE</b>Mg + 2HCl. How many moles of HCl does 0.20 mol Mg need?</div><div class="off"><b>FIRST STEP</b>tap to open</div><div class="off"><b>SOLUTION</b>tap to open</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="desk" id="s3" hidden>
+    <div class="bar"><span class="logo">CY<em>PH</em></span><span class="dim">SESSION DONE · 14 min</span></div>
+    <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i></div>
+    <div class="g g2">
+      <div class="pn"><div class="say">Limiting reagent is moving. You needed one hint on the first question and none on the second.</div>
+        <div class="row"><div>Limiting reagent</div><div class="m"><i class="a" style="width:41%"></i></div><b>22→41</b></div>
+        <div class="row"><div>v-t graphs</div><div class="m"><i class="a" style="width:44%"></i></div><b>35→44</b></div>
+        <div class="row"><div>Mole concept cards</div><div class="m"><i class="n" style="width:78%"></i></div><b>7 of 9</b></div>
+        <div class="keys" style="margin-top:12px"><span class="key go">DONE</span><span class="key">ANOTHER 10 MIN</span></div>
+      </div>
+      <div class="pn"><div class="lbl">TOMORROW</div><span class="dim">6 cards due. Next weak spot: Chain rule (Amath).<br><br>I will remind you on Telegram at 19:30 if you have not started.</span></div>
+    </div>
+  </div>
+</div></div>
+
+<div class="col"><h3>Debrief: explain it and Cyph finds the gaps</h3>
+<p>You talk. Cyph sorts what you said into topics, then asks one question at a time about the parts that were thin or wrong. Topics you explained well gain strength. The parts you missed become weak spots and cards, and show up in the next session.</p></div>
+<div class="wide"><div class="fx"><div class="desk">
+  <div class="bar"><span class="logo">CY<em>PH</em></span><span class="dim">DEBRIEF · Tuesday 10 Nov</span><span class="sp key">FINISH</span></div>
+  <div class="g g2">
+    <div class="pn">
+      <div class="us">ok so chem today was titration, you put acid in the burette and add it to the alkali till the indicator changes colour, thats the end point. then physics we did moments, force times distance</div>
+      <div class="cy">Good on titration. One thing: why do you add the acid slowly near the end point?</div>
+      <div class="us">so you dont overshoot, one drop can change it</div>
+      <div class="cy">Right. For moments: distance from where, and measured how?</div>
+      <div class="us">from the pivot... not sure about the second part</div>
+      <div class="cy">The perpendicular distance from the pivot to the line of the force. I have added that as a card.</div>
+      <div class="keys" style="margin-top:8px"><span class="key mic">● HOLD TO TALK</span><span class="key">TYPE INSTEAD</span></div>
+    </div>
+    <div class="pn"><div class="lbl">WHAT I HEARD</div>
+      <span class="chip n">Titration · solid</span><span class="chip n">End point · solid</span><span class="chip a">Moments · shaky</span><span class="chip w">Perpendicular distance · missed</span>
+      <div class="lbl" style="margin-top:14px">WHAT I DID</div>
+      <span class="dim">Added 3 cards (already approved, they came from your own words).<br>Marked Moments as a weak spot for Thursday.<br>No notes on Moments yet. Add the worksheet to the Inbox and I can ask better questions.</span>
+    </div>
+  </div>
+</div></div></div>
+
+<div class="col"><h3>Inbox: add anything, confirm once</h3>
+<p>Every file or photo from any device lands here. Cyph reads it, guesses where it belongs and gets cards and questions ready. Confirm keeps it all. Change lets you fix the subject or drop cards you do not want.</p></div>
+<div class="wide"><div class="fx"><div class="desk">
+  <div class="bar"><span class="logo">CY<em>PH</em></span><span class="nv on">STUDY</span></div>
+  <div class="sub"><span class="key">NOW</span><span class="key">LIBRARY</span><span class="key go">INBOX · 3</span><span class="sp dim">drop files anywhere on this window</span></div>
+  <div class="pn">
+    <div class="item"><div class="ic">PDF</div><div>Chem_WS_7.pdf<small>Looks like Chemistry · Mole concept. Ready: summary, 12 cards, 5 questions.</small></div><div class="keys"><span class="key go">CONFIRM</span><span class="key">CHANGE</span></div></div>
+    <div class="item"><div class="ic">IMG</div><div>Photo from phone, 16:42<small>Looks like Physics · Moments (textbook p.84). Ready: 6 cards, 3 questions.</small></div><div class="keys"><span class="key go">CONFIRM</span><span class="key">CHANGE</span></div></div>
+    <div class="item"><div class="ic">PDF</div><div>2024 Prelim P2.pdf<small>Looks like a past paper: Amath, 11 questions, mark scheme found. Questions will be used in your sessions by topic.</small></div><div class="keys"><span class="key go">CONFIRM</span><span class="key">CHANGE</span></div></div>
+    <div class="item" style="opacity:.6"><div class="ic">…</div><div>SS_Ch3_slides.pdf<small>Reading, about 1 minute left.</small></div><div></div></div>
+  </div>
+</div></div></div>
+
+<div class="col"><h3>Library: subjects, topics, and everything under them</h3>
+<p>Pick a subject and you see its topics ordered by strength. A topic holds its notes, cards, questions, your handwritten pages and boards together. Search covers all of it.</p></div>
+<div class="wide"><div class="fx"><div class="desk">
+  <div class="bar"><span class="logo">CY<em>PH</em></span><span class="nv on">STUDY</span></div>
+  <div class="sub"><span class="key">NOW</span><span class="key go">LIBRARY</span><span class="key">INBOX · 3</span><span class="sp dim">⌕ search notes, cards, papers</span></div>
+  <div class="g g3">
+    <div class="pn"><div class="lbl">SUBJECTS</div>
+      <div class="row"><div>Math</div><div class="m"><i class="n" style="width:72%"></i></div><b>72</b></div>
+      <div class="row"><div><b>Chemistry</b></div><div class="m"><i class="a" style="width:54%"></i></div><b>54</b></div>
+      <div class="row"><div>Physics</div><div class="m"><i class="a" style="width:58%"></i></div><b>58</b></div>
+      <div class="row"><div>Amath</div><div class="m"><i class="a" style="width:49%"></i></div><b>49</b></div>
+      <div class="row"><div>English</div><div class="m"><i class="n" style="width:70%"></i></div><b>70</b></div>
+      <div class="row"><div>SS</div><div class="m"><i class="a" style="width:55%"></i></div><b>55</b></div>
+      <div class="row"><div>Geog</div><div class="m"><i class="n" style="width:66%"></i></div><b>66</b></div>
+    </div>
+    <div class="pn"><div class="lbl">CHEMISTRY TOPICS <span>weakest first</span></div>
+      <div class="row"><div><b>Limiting reagent</b><br><small>8 cards · 5 questions · 1 note</small></div><div class="m"><i style="width:22%"></i></div><b>22</b></div>
+      <div class="row"><div>Titration<br><small>6 cards · 2 questions · 2 pages</small></div><div class="m"><i class="a" style="width:57%"></i></div><b>57</b></div>
+      <div class="row"><div>Mole concept<br><small>14 cards · 6 questions · 1 note</small></div><div class="m"><i class="n" style="width:64%"></i></div><b>64</b></div>
+      <div class="row"><div>Periodic table<br><small>20 cards · 1 note · 1 board</small></div><div class="m"><i class="n" style="width:81%"></i></div><b>81</b></div>
+    </div>
+    <div class="pn"><div class="lbl">LIMITING REAGENT</div>
+      <span class="chip">NOTE · Chem_WS_7 summary</span><span class="chip">8 CARDS</span><span class="chip">5 QUESTIONS</span><span class="chip">PAGE · my working, 3 Nov</span>
+      <div class="dim" style="margin:10px 0">Wrong 3 of the last 4 times. Usual mistake: comparing masses instead of moles.</div>
+      <div class="keys"><span class="key go">PRACTISE THIS NOW</span><span class="key">NEW PAGE</span></div>
+    </div>
+  </div>
+</div></div></div>
+
+<div class="col"><h2>iPad</h2><h3>The same session, with the Pencil as the answer box</h3>
+<p>The iPad is its own full app, as you asked. The one difference: in a question step the answer area is a page you write on. Cyph reads the handwriting to check it, and the page is saved under the topic.</p></div>
+<div class="wide"><div class="fx"><div class="desk pad">
+  <div class="bar"><span class="logo">CY<em>PH</em></span><span class="dim">SESSION · step 2 of 3</span><span class="sp key am">STUCK?</span><span class="key">END</span></div>
+  <div class="prog"><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i></div>
+  <div class="g" style="grid-template-columns:1fr 1.6fr">
+    <div class="pn"><span class="chip w">Weak spot · Limiting reagent</span><div class="q" style="font-size:18px">4.8 g of magnesium reacts with 0.30 mol of hydrochloric acid. Which reagent is limiting, and what mass of hydrogen forms?</div>
+      <div class="keys"><span class="key go">CHECK MY ANSWER</span><span class="key">HINT</span></div></div>
+    <div class="ink"><svg viewBox="0 0 400 230" preserveAspectRatio="none" fill="none" stroke="#1d2a44" stroke-width="2.2" stroke-linecap="round"><path d="M22 40c8-14 12 14 20 0s10 12 18 2M70 34v14M84 30c-10 2-8 18 2 16M100 44h22M132 32l8 14 8-14M160 40h30M200 30v16M212 30c10 0 10 16 0 16M22 92c10-10 18 10 28 0M60 84l10 16M70 84l-10 16M84 92h16M110 84c12 0 12 16 0 16M130 86l6 14 10-18M22 144h60M96 136c10-8 16 8 6 14s-2 12 10 8M130 140h40M184 134v20M196 134c12 2 12 18 0 20"/></svg></div>
+  </div>
+</div></div></div>
+
+<div class="col"><h2>Phone</h2><h3>Three jobs: a quick session, the camera, and the mic</h3>
+<p>The phone drops the tabs. It opens on START. A phone session is cards and short questions only, so it works on a bus. The camera sends straight to the Inbox. Library is there for looking things up, with no editing.</p></div>
+<div class="wide"><div class="phones">
+  <figure class="ph"><div class="in"><h5>STUDY</h5><div class="say s">8 minutes. Cards, then one moles question.</div>
+    <div class="step"><u>1</u><div>9 cards due</div><em>4m</em></div><div class="step"><u>2</u><div>Limiting reagent<small>1 short question</small></div><em>4m</em></div>
+    <div class="big" style="text-align:center;margin-top:6px">START</div>
+    <div class="dim" style="text-align:center">6 day streak</div>
+    <div class="tb"><span class="on">NOW</span><span>SNAP</span><span>TALK</span><span>LIBRARY</span></div></div><figcaption>Now</figcaption></figure>
+  <figure class="ph"><div class="in"><div class="prog"><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i></div><span class="chip" style="align-self:flex-start">Physics · Moments</span>
+    <div class="q" style="margin-top:30px;text-align:center">State the principle of moments.</div>
+    <div class="pn" style="color:var(--dim);font-size:10.5px">For a body in equilibrium, total clockwise moment about a pivot equals total anticlockwise moment about the same pivot.</div>
+    <div class="tb"><span>AGAIN</span><span>HARD</span><span class="on">GOOD</span></div></div><figcaption>Session: big thumb targets</figcaption></figure>
+  <figure class="ph"><div class="in"><h5>SNAP TO INBOX</h5><div class="shot"></div><div class="dim">Page 1 of 2 captured. Keep snapping or send.</div>
+    <div class="keys"><span class="key">+ PAGE</span><span class="key go">SEND TO INBOX</span></div>
+    <div class="pn" style="font-size:10.5px">Sent 16:42 · Physics · Moments<br><span class="dim">6 cards ready</span> <span class="key go" style="float:right">CONFIRM</span></div>
+    <div class="tb"><span>NOW</span><span class="on">SNAP</span><span>TALK</span><span>LIBRARY</span></div></div><figcaption>Camera straight to the Inbox</figcaption></figure>
+  <figure class="ph"><div class="in"><h5>DEBRIEF</h5><div class="say s">What did you learn today?</div><div class="rec"></div><div class="dim" style="text-align:center">Listening · 0:47</div>
+    <div class="us" style="margin-left:14px">…then physics we did moments, force times distance</div><div class="cy" style="font-size:15px;margin-right:10px">Distance from where, and measured how?</div>
+    <div class="tb"><span>NOW</span><span>SNAP</span><span class="on">TALK</span><span>LIBRARY</span></div></div><figcaption>Debrief on the way home</figcaption></figure>
+</div></div>
+
+<div class="col">
+  <h2>How Cyph decides</h2>
+  <p>Every topic gets a <b>strength from 0 to 100</b>. It is the one number the whole mode runs on.</p>
+  <ul>
+    <li>It goes up when you grade a card GOOD, answer a question correctly without hints, or explain the topic well in a debrief.</li>
+    <li>It goes down when you grade AGAIN, need hints, get a question wrong, or miss it in a debrief. It also fades slowly if you have not touched the topic.</li>
+  </ul>
+  <p>A session is built in this order until the time is used up (15 minutes on PC and iPad, 8 on phone):</p>
+  <ul>
+    <li><b>Cards due</b>, weakest topics first, capped at about a third of the time so cards never crowd out real questions.</li>
+    <li><b>One weak spot:</b> the lowest-strength topic that has material. One to three questions taken from your own worksheets and past papers, with the hint ladder.</li>
+    <li><b>One second try:</b> a question you got wrong a few days ago, asked again.</li>
+  </ul>
+  <p>If nothing is due it goes straight to the weak spot. If a weak topic has no material, Cyph asks for a debrief or a worksheet instead of inventing content.</p>
+
+  <h2>Where today's seven tabs go</h2>
+  <div class="tw"><table>
+    <tr><th>NOW</th><th>BECOMES</th></tr>
+    <tr><td>TODAY</td><td>Now: one sentence, the steps, START.</td></tr>
+    <tr><td>CARDS</td><td>Review happens inside the session. Draft approval moves to the Inbox confirm. The full list sits under each topic in Library.</td></tr>
+    <tr><td>PRACTICE</td><td>Questions are served by the session. Past papers are split by topic; a full timed paper can still be started from Library.</td></tr>
+    <tr><td>TUTOR</td><td>The STUCK? key on every screen. It already knows which question or note you are on.</td></tr>
+    <tr><td>NOTES</td><td>Library, under the topic. Import moves to the Inbox.</td></tr>
+    <tr><td>NOTEBOOKS</td><td>Pages belong to a topic. On iPad the session answer box is a page.</td></tr>
+    <tr><td>BOARDS</td><td>Kept, under the subject in Library.</td></tr>
+    <tr><td>Tests</td><td>Stay in Calendar. A test date raises the priority of its topics in sessions.</td></tr>
+  </table></div>
+
+  <h2>Build order</h2>
+  <ul>
+    <li><b>1. The engine.</b> Topic strength, the session builder, answer checking. Server only, with tests.</li>
+    <li><b>2. Now and the session runner</b> on desktop, then phone.</li>
+    <li><b>3. Inbox</b> with auto-filing and one-tap confirm, plus phone camera capture.</li>
+    <li><b>4. Debrief</b> with voice, follow-up questions and gap detection.</li>
+    <li><b>5. Library</b> regrouped by topic. Old tabs removed.</li>
+    <li><b>6. iPad</b> handwritten answers inside the session.</li>
+  </ul>
+  <p class="dim">Existing data (cards, notes, sources, notebooks, boards) is kept and moved under topics. Nothing you have made is deleted.</p>
+
+  <h2>Questions I still need answered</h2>
+  <div class="ask"><b>Who marks your answers?</b>Cyph checks typed and handwritten answers itself, or it shows the solution and you mark yourself right or wrong?</div>
+  <div class="ask"><b>Debrief: voice only, or voice and typing?</b>And should Cyph remind you after school? If yes, at what time?</div>
+  <div class="ask"><b>Tests on the Now screen?</b>You did not pick test dates as something to plan from. Should they leave Study completely and live only in Calendar, as drawn here?</div>
+  <div class="ask"><b>Topics: whose list?</b>Should Cyph build the topic list from what you add, or do you want to give it your syllabus for each subject first?</div>
+</div>
+<script>
+document.querySelectorAll('.tabs button').forEach(function(b){b.addEventListener('click',function(){
+  document.querySelectorAll('.tabs button').forEach(function(x){x.setAttribute('aria-selected',x===b?'true':'false');document.getElementById(x.dataset.s).hidden=x!==b;});
+});});
+</script>
