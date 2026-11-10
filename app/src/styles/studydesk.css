@@ -1,0 +1,68 @@
+/* Desktop Study, from the desktop screens of docs/mockups/study-v2.html */
+.pg-study .page.dk{display:block;padding:12px 22px 24px;overflow:auto}
+.pg-study .tabs .dk-sep{width:1px;background:#2c3820;margin:4px 6px}
+.pg-study .tabs button.tool{opacity:.7}
+.dk-card{border-radius:14px;background:var(--pn,#0b130d);box-shadow:0 0 0 1px #1d2815;padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0;color:var(--cr);text-align:left;border:0}
+.dk-card .lbl{font:600 11px 'Pixelify Sans';letter-spacing:.22em;color:var(--am);text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}
+.dk-card .lbl span{color:var(--dim);font:400 11.5px 'DM Mono';letter-spacing:.03em;text-transform:none}
+.dk-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start;max-width:1240px}
+.dk-main{display:flex;flex-direction:column;gap:14px;min-width:0}.dk-side{display:flex;flex-direction:column;gap:14px}
+.dk-now{display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;padding:22px 24px;box-shadow:0 0 0 2px var(--ne),0 0 24px rgba(93,255,122,.18)}
+.dk-now.am{box-shadow:0 0 0 2px var(--am),0 0 24px rgba(217,152,74,.16)}
+.dk-steps{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dk-say{font:italic 22px/1.2 'Instrument Serif';color:var(--cr);margin:2px 0 6px}
+.dk-go{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:190px}
+.dk-start{border:0;border-radius:12px;padding:20px 34px;font:700 18px 'Pixelify Sans';letter-spacing:.24em;background:var(--ne);color:#0d120a;cursor:pointer;width:100%;box-shadow:inset 0 -4px 0 rgba(0,0,0,.25),0 0 22px rgba(93,255,122,.4)}
+.dk-start.off{background:#1d2615;color:#b9c7a3;box-shadow:inset 0 -4px 0 #0008}
+.dk-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.dk-link{cursor:pointer;font:inherit;transition:.12s}.dk-link:hover{box-shadow:0 0 0 2px #2c3820}
+.dk-fake{background:#05080a;border-radius:8px;padding:10px 12px;font:12.5px 'DM Mono';color:#55634a;box-shadow:inset 0 0 0 1px #1d2815}
+.dk-card .st{display:grid;grid-template-columns:20px 1fr auto;gap:9px;align-items:start;padding:6px 0}
+.dk-card .st u{text-decoration:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font:700 10px 'Pixelify Sans';background:#1d2615;color:#9aa889;margin-top:1px}
+.dk-card .st div{font:13px/1.35 'DM Mono';color:var(--cr)}.dk-card .st small{display:block;font-size:11.5px;color:var(--dim)}.dk-card .st em{font-style:normal;font-size:11.5px;color:var(--dim)}
+.dk-card .tr{grid-template-columns:1fr 70px 52px;cursor:pointer;border-radius:8px;padding:8px 6px;font:13px 'DM Mono'}
+.dk-card button.tr:hover,.dk-card .tr.on{background:#10190c}
+.dk-card .tr small{font-size:11px}
+.dk-card .sp-sub.dim{color:var(--dim)}
+.dk-card .ck{font-size:13px}
+/* session */
+.dk-sess{display:flex;flex-direction:column;gap:12px;max-width:1240px}
+.dk-top{display:flex;align-items:center;gap:12px}
+.dk-top .seg{flex:1;display:flex;gap:4px}.dk-top .seg i{flex:1;height:5px;border-radius:3px;background:#1d2815}
+.dk-top .seg i.d{background:var(--ne);box-shadow:0 0 8px var(--ne)}.dk-top .seg i.c{background:linear-gradient(90deg,var(--ne) 45%,#1d2815 0)}
+.dk-top>span{font:12px 'DM Mono';color:var(--dim)}
+.btn.am{background:var(--am);color:#1a1405}
+.dk-split{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:14px;align-items:start}
+.dk-q{padding:24px 26px;min-height:470px}.dk-q .sp-pill{margin-bottom:6px}
+.dk-qtext{font:400 32px/1.18 'Instrument Serif';color:var(--cr);margin:6px 0 10px}
+.dk-work{flex:1;min-height:240px;font:14px/1.6 'DM Mono'!important;resize:none}
+.dk-qfoot{display:flex;align-items:center;gap:10px}.dk-qfoot span{font:11.5px 'DM Mono';color:var(--dim);margin-left:auto}
+.dk-mark.ok{box-shadow:0 0 0 2px var(--ne)}.dk-mark.no{box-shadow:0 0 0 2px var(--co)}
+.dk-acts{display:flex;gap:8px;margin-top:6px}
+.dk-stepwrap{min-height:520px;max-width:760px;margin:0 auto;width:100%;padding:0}
+.dk-stepwrap .sr-body{padding:22px 26px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.dk-stepwrap .sr-foot{padding:12px 20px 20px}.dk-stepwrap .sr-foot .mbtn{max-width:240px;margin-left:auto}
+.dk-stepwrap .sp-q{font-size:30px}.dk-stepwrap .sp-front{font-size:32px}.dk-stepwrap .sp-back{font-size:36px}
+.dk-done{max-width:620px;margin:0 auto}.dk-done .sr{position:static;padding:0;background:none;min-height:420px}
+.dk-done .sr-top{padding:0 0 8px}
+/* debrief and inbox */
+.dk-deb{grid-template-columns:minmax(0,1fr) 340px}
+.dk-chat{min-height:560px}.dk-chat .sp-chat{flex:1}.dk-chat .sp-chat .cy{font-size:24px}
+.dk-input{display:flex;gap:8px;align-items:flex-end}.dk-input textarea{min-height:64px;flex:1;font:14px 'DM Mono'!important}
+.dk-chips{display:flex;flex-wrap:wrap;gap:6px}
+.dk-inb{grid-template-columns:minmax(0,1fr) 340px}
+.dk-list{min-height:560px}
+.dk-item{display:grid;grid-template-columns:56px 1fr auto auto;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;background:#0e150b;box-shadow:inset 0 0 0 1px #1d2815}
+.dk-item.dim{opacity:.55}
+.dk-item .ic{width:56px;height:48px;border-radius:8px;background:#05080a;display:grid;place-items:center;font:700 10px 'Pixelify Sans';color:var(--dim)}
+.dk-item .t b{font:500 14px 'DM Mono';color:var(--cr);display:block}.dk-item .t small{font:12px/1.4 'DM Mono';color:var(--dim)}
+.dk-item select.f{width:auto;font:700 10px 'Pixelify Sans';letter-spacing:.1em;padding:8px 10px}
+.dk-drop{margin-top:auto;border:2px dashed #2c3820;border-radius:12px;padding:22px;text-align:center;font:italic 20px 'Instrument Serif';color:#6b7a5e;cursor:pointer}
+.dk-drop.over{border-color:var(--ne);color:var(--ne)}
+/* library */
+.dk-lib{grid-template-columns:280px minmax(0,1fr) 340px}
+.dk-lib .dk-subs{min-height:560px}
+.dk-topic{min-height:560px}.dk-tbody{display:flex;flex-direction:column;gap:10px;padding-top:6px;overflow:auto}
+.dk-row{display:flex;justify-content:space-between;gap:12px;padding:9px 4px;border-top:1px solid #141d0e;font:13px/1.4 'DM Mono';color:var(--cr)}.dk-row small{color:var(--dim);white-space:nowrap}
+@media(max-width:1100px){.dk-grid,.dk-deb,.dk-inb,.dk-lib,.dk-split{grid-template-columns:1fr}.dk-now{grid-template-columns:1fr}}
+.dk-topic .dk-qtext{font-style:italic;font-size:36px}

@@ -13,13 +13,13 @@ import { errText, Failed } from "./StudyParts";
    topic each take the whole screen with their buttons pinned at the bottom. Serif is Cyph, pixel capitals are things you press, mono is facts.
    Green is only ever the next thing to press. */
 
-const WORD: Record<Strength, string> = { new: "new", weak: "weak", okay: "okay", solid: "solid" };
+export const WORD: Record<Strength, string> = { new: "new", weak: "weak", okay: "okay", solid: "solid" };
 const FILL: Record<Strength, number> = { new: 0, weak: 22, okay: 58, solid: 100 };
 const SILLY = ["Do not tell the other robots.", "I will pretend that never happened.", "Writing it on my forehead: check twice.", "Fine. You win this round."];
 const silly = () => SILLY[Math.floor(Math.random() * SILLY.length)];
 
-const Pill = ({ tone = "", children }: { tone?: string; children: React.ReactNode }) => <span className={"sp-pill " + tone}>{children}</span>;
-const Bar = ({ s }: { s: Strength }) => <div className={"sp-bar s-" + s}><i style={{ width: FILL[s] + "%" }} /></div>;
+export const Pill = ({ tone = "", children }: { tone?: string; children: React.ReactNode }) => <span className={"sp-pill " + tone}>{children}</span>;
+export const Bar = ({ s }: { s: Strength }) => <div className={"sp-bar s-" + s}><i style={{ width: FILL[s] + "%" }} /></div>;
 const Says = ({ children }: { children: React.ReactNode }) => (
   <div className="sp-says"><div className="b">{children}</div><div className="cyface"><CyphCanvas scale={2} /></div></div>
 );
@@ -33,7 +33,7 @@ function Screen({ title, right, children, foot }: { title: string; right?: React
     </div>
   );
 }
-const Btn = ({ on, xl, co, className = "", children, ...p }: { on?: boolean; xl?: boolean; co?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+export const Btn = ({ on, xl, co, className = "", children, ...p }: { on?: boolean; xl?: boolean; co?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button {...p} className={"mbtn" + (on ? " on" : "") + (xl ? " xl" : "") + (co ? " red" : "") + (className ? " " + className : "")}>{children}</button>
 );
 
@@ -146,7 +146,7 @@ function Session({ view, onView, onExit, onMore }: { view: SessionView; onView: 
   );
 }
 
-function StepView({ sid, step, busy, next, reg }: { sid: string; step: SessionStep; busy: boolean; next: () => void; reg: (f: (() => void) | null) => void }) {
+export function StepView({ sid, step, busy, next, reg }: { sid: string; step: SessionStep; busy: boolean; next: () => void; reg: (f: (() => void) | null) => void }) {
   const [res, setRes] = useState<StepResult | null>(step.result);
   const send = async (b: Parameters<typeof api.studyStep>[1]) => { try { const r = await api.studyStep(sid, b); setRes(r); return r; } catch (e) { toast(errText(e)); return null; } };
   if (step.type === "card" && step.card) return <CardStep card={step.card} send={send} next={next} busy={busy} reg={reg} res={res} />;
@@ -383,7 +383,7 @@ function Point({ p }: { p: MarkPoint }) {
   );
 }
 
-function Done({ view, onExit, onMore }: { view: SessionView; onExit: () => void; onMore: () => void }) {
+export function Done({ view, onExit, onMore }: { view: SessionView; onExit: () => void; onMore: () => void }) {
   const s = view.summary;
   if (view.state === "ended" || !s) return <Screen title="CYPH" foot={<Btn on xl onClick={onExit}>BACK</Btn>}><div className="sp-big">No problem. Nothing lost.</div></Screen>;
   return (

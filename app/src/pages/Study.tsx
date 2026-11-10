@@ -1,20 +1,19 @@
 import { useState } from "react";
 import { api } from "../lib/api";
-import { studyAttempts, studyToday, studyTopics } from "../lib/resources";
+import { studyAttempts, studyNow, studyToday, studyTopics } from "../lib/resources";
 import { useResource } from "../lib/store";
 import { toast } from "../lib/toast";
 import type { StudySource } from "../lib/types";
 import { Shell } from "../ui/Shell";
-import { Boards } from "../ui/StudyBoard";
-import { Notebooks } from "../ui/StudyInk";
 import { CardList, errText, TestForm, ImportBox, NoteEditor, NoteList, NewNote, PaperBox, PracticeBox, ReviewDeck, SearchBox, SourceList, SourceView, TutorBox } from "../ui/StudyParts";
 import "katex/dist/katex.min.css";
 import "../styles/study.css";
 import "../styles/studynow.css";
-import { HUB_TABS, StudyHub, isHub, type HubTab } from "../ui/StudyNow";
+import "../styles/studydesk.css";
+import { Desk, DESK_TABS, useDeskHead, type DeskView } from "../ui/StudyDesk";
 
-type Tab = HubTab | "notes" | "tutor" | "cards" | "papers" | "pen" | "boards";
-const TABS: [Tab, string][] = [...HUB_TABS, ["notes", "NOTES"], ["tutor", "TUTOR"], ["cards", "CARDS"], ["papers", "PRACTICE"], ["pen", "NOTEBOOKS"], ["boards", "BOARDS"]];
+type Tab = DeskView | "notes" | "tutor" | "cards" | "papers" | "pen" | "boards";
+const TOOLS: [Tab, string][] = [["notes", "NOTES"], ["tutor", "TUTOR"], ["cards", "CARDS"], ["papers", "PRACTICE"]];
 const daysTo = (d: string) => Math.round((new Date(d + "T00:00:00").getTime() - new Date(new Date().toDateString()).getTime()) / 86400000);
 
 export function Study() {
@@ -40,8 +39,6 @@ export function Study() {
 
   const centre = (() => {
     switch (tab) {
-      case "now": case "debrief": case "inbox": case "library":
-        return null;
       case "notes":
         return (
           <div className="center">
@@ -78,26 +75,26 @@ export function Study() {
             )}
           </div>
         );
-      case "pen":
-        return <Notebooks subject={subj} />;
-      case "boards":
-        return <Boards subject={subj} />;
+      default:
+        return null;
     }
   })();
 
   const weak = (subj ? topics.data?.weak : data?.weak) ?? [];
-  const hub = isHub(tab);
+  const hub = !TOOLS.some(([k]) => k === tab);
+  const nowD = useResource(studyNow("desk")).data;
+  const head = useDeskHead(tab as DeskView, nowD?.minutes, nowD?.state);
   return (
     <Shell page="study" className="pg-study">
       <div className="head">
-        <h1 className="t"><em>STUDY</em>{hub ? "What now?" : cur?.name ?? "All subjects"}</h1>
+        <h1 className="t"><em>{hub ? head.eyebrow : "STUDY"}</em>{hub ? head.title : cur?.name ?? "All subjects"}</h1>
         <div className="sp" />
-        <div className="tabs">{TABS.map(([k, n]) => <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{n}</button>)}</div>
+        <div className="tabs">{DESK_TABS.map(([k, n]) => <button key={k} className={tab === k || (k === "now" && (tab === "debrief" || tab === "session")) ? "on" : ""} onClick={() => setTab(k)}>{n}</button>)}<span className="dk-sep" />{TOOLS.map(([k, n]) => <button key={k} className={"tool" + (tab === k ? " on" : "")} onClick={() => setTab(k)}>{n}</button>)}</div>
       </div>
       {hub ? (
-        <div className="page one"><div className="cp scroll"><StudyHub tab={tab} setTab={setTab} device="desk" subjects={subjects} /></div></div>
+        <div className="page dk"><Desk view={tab as DeskView} setView={setTab} subjects={subjects} /></div>
       ) : (
-      <div className={"page" + (tab === "pen" || tab === "boards" ? " wide" : "")}>
+      <div className="page">
         <div className="cp">
           <div className="lbl">SUBJECTS</div>
           <div className="subj" role="button" tabIndex={0} onClick={() => setSubj(undefined)} style={subj === undefined ? { boxShadow: "inset 0 0 0 2px var(--ne)" } : undefined}><div className="ic" style={{ background: "var(--cr)" }}>∗</div><h5>All</h5><span className="n">{st?.due ? st.due : ""}</span></div>
