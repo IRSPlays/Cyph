@@ -10,6 +10,7 @@ import "katex/dist/katex.min.css";
 import "../styles/study.css";
 import "../styles/studynow.css";
 import "../styles/studydesk.css";
+import "../styles/ipad.css";
 import { Desk, DESK_TABS, useDeskHead, type DeskView } from "../ui/StudyDesk";
 
 type Tab = DeskView | "notes" | "tutor" | "cards" | "papers" | "pen" | "boards";

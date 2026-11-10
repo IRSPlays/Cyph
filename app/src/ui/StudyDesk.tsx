@@ -5,6 +5,8 @@ import { studyInbox, studyLibrary, studyNow, studyTopic } from "../lib/resources
 import { useResource } from "../lib/store";
 import { toast } from "../lib/toast";
 import type { DebriefOut, InboxItem, LibSubject, MarkPoint, Pic, SessionView, StepResult } from "../lib/types";
+import { isIPad } from "../lib/mobile";
+import { PencilPad, type PadHandle } from "./PencilPad";
 import { Rich } from "./Rich";
 import { Boards } from "./StudyBoard";
 import { Notebooks } from "./StudyInk";
@@ -113,9 +115,54 @@ function DeskSession({ view, onView, onExit, onMore }: { view: SessionView; onVi
         {stuck && <button className="btn sm am" onClick={stuck}>STUCK?</button>}
         <button className="btn sm" onClick={() => void act(() => api.studyEnd(view.id))}>END</button>
       </div>
-      {st && (st.type === "question" && st.q?.mode === "full"
+      {st && isIPad && st.type === "question" && st.q?.mode === "paragraph"
+        ? <IpadParagraph key={view.id + ":" + view.pos} sid={view.id} step={st} next={next} busy={busy} />
+        : st && (st.type === "question" && st.q?.mode === "full"
         ? <DeskQuestion key={view.id + ":" + view.pos} sid={view.id} step={st} next={next} busy={busy} reg={(f, s) => { flag.current = f; setStuck(() => s); }} />
         : <div className="dk-card dk-stepwrap"><StepView key={view.id + ":" + view.pos} sid={view.id} step={st} busy={busy} next={next} reg={(f) => { flag.current = f; setStuck(null); }} /></div>)}
+    </div>
+  );
+}
+
+/** A question's diagram, fetched once as a data URL. */
+function useFigure(id: string | null): string | null {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    setUrl(null);
+    if (id) void api.studyFile(id).then((f) => live && setUrl(`data:${f.mime};base64,${f.data}`)).catch(() => {});
+    return () => { live = false; };
+  }, [id]);
+  return url;
+}
+
+/** The weekly paragraph on an iPad: the question as printed, the Pencil pad, and the checklist to tick yourself. */
+function IpadParagraph({ sid, step, next, busy }: { sid: string; step: NonNullable<SessionView["step"]>; next: () => void; busy: boolean }) {
+  const q = step.q!;
+  const list = q.checklist ?? [];
+  const [ticks, setTicks] = useState<boolean[]>([]);
+  const [res, setRes] = useState<StepResult | null>(step.result);
+  const [sending, setSending] = useState(false);
+  const fig = useFigure(q.figure);
+  const done = async () => {
+    setSending(true);
+    try { setRes(await api.studyStep(sid, { ticks: list.map((_, i) => !!ticks[i]), answer: "" })); } catch (e) { toast(errText(e)); } finally { setSending(false); }
+  };
+  return (
+    <div className="ip-split three">
+      <div className="dk-card ip-left">
+        <span className="sp-pill co">{q.subject} · weekly paragraph</span>
+        <h2 className="dk-qtext"><Rich text={q.text} /></h2>
+        {fig && <div className="ip-fig"><img src={fig} alt="source" /></div>}
+        <p className="sp-sub">{q.source ? `from ${q.source}${q.ref ? ", " + q.ref : ""}` : "Only real sources from your own papers. Cyph never makes one up."}</p>
+      </div>
+      <PencilPad disabled={!!res} />
+      <div className="dk-card ip-right">
+        <div className="lbl">Check it yourself</div>
+        {list.map((c, i) => <label key={i} className="ip-tick"><input type="checkbox" disabled={!!res} checked={!!ticks[i]} onChange={(e) => setTicks((t) => { const n = [...t]; n[i] = e.target.checked; return n; })} /><span><Rich text={c} inline /></span></label>)}
+        <p className="sp-sub">{res ? `${res.ticked} of ${res.of} ticked. ` : ""}Cyph does not give this a mark. When your teacher marks real work, tell Cyph the score in chat. That is the number he trusts.</p>
+        <div className="ip-go">{res ? <button className="btn go" disabled={busy} onClick={next}>NEXT</button> : <button className="btn go" disabled={sending} onClick={() => void done()}>DONE</button>}</div>
+      </div>
     </div>
   );
 }
@@ -132,11 +179,22 @@ function DeskQuestion({ sid, step, next, busy, reg }: { sid: string; step: NonNu
   const [flagged, setFlagged] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const file = useRef<HTMLInputElement>(null);
+  const pad = useRef<PadHandle>(null);
+  const [inked, setInked] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const fig = useFigure(q.figure);
+  const pen = isIPad && !typing;
   const hint = async () => { try { setHints((await api.studyHint(sid)).hints); } catch (e) { toast(errText(e)); } };
-  useEffect(() => { reg(() => setAsking(true), () => void hint()); return () => reg(null, null); });
+  const hintRef = useRef(hint);
+  hintRef.current = hint;
+  useEffect(() => { reg(() => setAsking(true), () => void hintRef.current()); return () => reg(null, null); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const mark = async () => {
     setSending(true);
-    try { setRes(await api.studyStep(sid, { answer: text, images: pics.map(({ mime, data }) => ({ mime, data })) })); } catch (e) { toast(errText(e)); } finally { setSending(false); }
+    try {
+      const ink = pen ? pad.current?.png() : null;
+      const images = [...pics.map(({ mime, data }) => ({ mime, data })), ...(ink ? [{ mime: "image/jpeg", data: ink }] : [])];
+      setRes(await api.studyStep(sid, { answer: text, images }));
+    } catch (e) { toast(errText(e)); } finally { setSending(false); }
   };
   const addPics = async (fs: FileList | null) => {
     try { const got: Pic[] = []; for (const f of Array.from(fs ?? [])) got.push(await toPic(f)); setPics((p) => [...p, ...got].slice(0, MAX_PICS)); } catch (e) { toast(String((e as Error).message)); }
@@ -150,19 +208,7 @@ function DeskQuestion({ sid, step, next, busy, reg }: { sid: string; step: NonNu
   const flag = async (reason: string) => { try { setFlagged((await api.studyFlagQuestion(q.id, reason)).rule || "Binned."); } catch (e) { toast(errText(e)); } };
   const perfect = !!res && res.max !== undefined && res.score === res.max;
   const source = q.origin === "cyph" ? "made by Cyph, not from your notes" : [q.source && `from ${q.source}`, q.ref].filter(Boolean).join(", ");
-  return (
-    <div className="dk-split">
-      <div className="dk-card dk-q">
-        <span className="sp-pill co">{q.subject} · {q.topic}{q.marks > 1 ? ` · ${q.marks} marks` : ""}</span>
-        <h2 className="dk-qtext"><Rich text={q.text} /></h2>
-        {q.figure && <p className="sp-sub">The diagram is on your worksheet page.</p>}
-        <textarea className="f dk-work" placeholder="Show your working, one line per step" value={text} onChange={(e) => setText(e.target.value)} disabled={!!res} />
-        <div className="dk-qfoot">
-          {!res && <><button className="btn sm" onClick={() => file.current?.click()}>ATTACH PHOTO{pics.length ? ` (${pics.length})` : ""}</button><button className="btn sm go" disabled={sending || (!text.trim() && !pics.length)} onClick={() => void mark()}>{sending ? "MARKING…" : "MARK IT"}</button></>}
-          <span>{source}</span>
-          <input ref={file} type="file" accept="image/*" multiple hidden onChange={(e) => void addPics(e.target.files)} />
-        </div>
-      </div>
+  const markPanel = (
       <div className={"dk-card dk-mark" + (res ? (perfect ? " ok" : " no") : "")}>
         {flagged !== null ? <><div className="lbl">Cyph changed</div><p className="dk-say">Fair. That one was mine, and it was bad.</p><p className="sp-sub">{flagged}</p><button className="btn go" onClick={next}>NEXT QUESTION</button></>
           : asking ? <><div className="lbl">What was wrong with that one?</div>
@@ -181,6 +227,42 @@ function DeskQuestion({ sid, step, next, busy, reg }: { sid: string; step: NonNu
             {hints.map((h, i) => <div key={i} className="sp-hint"><div className="lbl" style={{ fontSize: 9.5 }}>{i + 1}</div><p><Rich text={h} inline /></p></div>)}
           </>}
       </div>
+  );
+  if (isIPad) return (
+    <div className="ip-split">
+      <div className="dk-card ip-left">
+        <span className="sp-pill co">{q.subject} · {q.topic}{q.marks > 1 ? ` · ${q.marks} marks` : ""}</span>
+        <h2 className="dk-qtext"><Rich text={q.text} /></h2>
+        {fig && <div className="ip-fig"><img src={fig} alt="diagram for this question" /></div>}
+        <p className="sp-sub">{source}</p>
+        {!res && <div className="ip-go">
+          <button className="btn go" disabled={sending || (pen ? !inked && !pics.length : !text.trim() && !pics.length)} onClick={() => void mark()}>{sending ? "MARKING…" : "CHECK MY ANSWER"}</button>
+          <button className="btn" onClick={() => setTyping((t) => !t)}>{typing ? "WRITE WITH PENCIL" : "TYPE INSTEAD"}</button>
+          <button className="btn sm" onClick={() => file.current?.click()}>ATTACH PHOTO{pics.length ? ` (${pics.length})` : ""}</button>
+          <input ref={file} type="file" accept="image/*" multiple hidden onChange={(e) => void addPics(e.target.files)} />
+        </div>}
+      </div>
+      {res || flagged !== null || asking
+        ? markPanel
+        : typing
+          ? <div className="dk-card ip-right"><textarea className="f dk-work" style={{ flex: 1 }} placeholder="Show your working, one line per step" value={text} onChange={(e) => setText(e.target.value)} />{hints.length > 0 && markPanel}</div>
+          : <div className="ip-right"><PencilPad ref={pad} onInk={setInked} />{hints.length > 0 && markPanel}</div>}
+    </div>
+  );
+  return (
+    <div className="dk-split">
+      <div className="dk-card dk-q">
+        <span className="sp-pill co">{q.subject} · {q.topic}{q.marks > 1 ? ` · ${q.marks} marks` : ""}</span>
+        <h2 className="dk-qtext"><Rich text={q.text} /></h2>
+        {q.figure && <p className="sp-sub">The diagram is on your worksheet page.</p>}
+        <textarea className="f dk-work" placeholder="Show your working, one line per step" value={text} onChange={(e) => setText(e.target.value)} disabled={!!res} />
+        <div className="dk-qfoot">
+          {!res && <><button className="btn sm" onClick={() => file.current?.click()}>ATTACH PHOTO{pics.length ? ` (${pics.length})` : ""}</button><button className="btn sm go" disabled={sending || (!text.trim() && !pics.length)} onClick={() => void mark()}>{sending ? "MARKING…" : "MARK IT"}</button></>}
+          <span>{source}</span>
+          <input ref={file} type="file" accept="image/*" multiple hidden onChange={(e) => void addPics(e.target.files)} />
+        </div>
+      </div>
+      {markPanel}
     </div>
   );
 }

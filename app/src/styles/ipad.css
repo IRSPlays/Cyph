@@ -1,0 +1,25 @@
+/* iPad: the desktop layout, with touch-sized targets and the Pencil pad. */
+.pp{display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+.pp-bar{display:flex;gap:8px}
+.pp-sheet{flex:1;min-height:320px;background:#f3eedc;border-radius:12px;overflow:hidden;position:relative}
+.pp-sheet.lined{background-image:repeating-linear-gradient(transparent 0 31px,rgba(27,37,64,.12) 31px 32px)}
+.pp-sheet canvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.ip-fig{background:#f3eedc;border-radius:10px;padding:10px;margin:12px 0}
+.ip-fig img{width:100%;display:block;border-radius:4px}
+.ip-split{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:16px;flex:1;min-height:0}
+.ip-split.three{grid-template-columns:minmax(240px,300px) 1fr minmax(240px,300px)}
+.ip-left,.ip-right{display:flex;flex-direction:column;gap:10px;overflow:auto}
+.ip-right{min-height:0}
+.ip-go{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.ip-go .btn{min-height:52px}
+.ip-tick{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;font-size:15px;min-height:44px}
+.ip-tick input{width:22px;height:22px;flex:none}
+html.ipad .btn,html.ipad .sp-opt{min-height:44px}
+html.ipad .btn.sm{min-height:40px;padding-left:16px;padding-right:16px}
+html.ipad *{-webkit-tap-highlight-color:transparent}
+html.ipad body{-webkit-user-select:none;user-select:none}
+html.ipad textarea,html.ipad input{-webkit-user-select:text;user-select:text}
+/* the buddy shrinks so he never sits on the Pencil pad or a button */
+html.ipad .buddy{transform:scale(.42);transform-origin:right bottom;right:8px}
+html.ipad .buddy canvas{pointer-events:none}
+html.ipad .dk-sess,html.ipad .ip-split{padding-bottom:4px}

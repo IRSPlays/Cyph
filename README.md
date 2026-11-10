@@ -365,6 +365,12 @@ with the code, and add it to the Home Screen. Safari needs to trust the server's
 Away from home, put the PC and iPad on Tailscale. Pencil input uses pointer events with palm rejection; strokes are queued
 offline and sent when the connection returns.
 
+An iPad gets the PC layout with bigger tap targets (it is detected as an iPad even when Safari reports a Mac; add `?ipad` to force it
+when testing). A written question shows the diagram beside a Pencil pad: **CHECK MY ANSWER** sends a picture of your page for marking,
+**TYPE INSTEAD** swaps to a keyboard. The weekly paragraph for English and SS is the question, the pad, and a checklist you tick
+yourself. If the page is reached through a tunnel such as playit, the certificate step above only applies when the address you open
+is served with the server's own certificate.
+
 ## Roadmap
 
 Study on real Gemini models and real hardware (Apple Pencil, Safari certificate trust), phone voice and QR pairing, push via FCM,
