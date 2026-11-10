@@ -20,7 +20,8 @@ import type { StudySource } from "../lib/types";
 import "katex/dist/katex.min.css";
 import "../styles/study.css";
 import "../styles/studynow.css";
-import { HUB_TABS, StudyHub, isHub, type HubTab } from "./StudyNow";
+import { PhoneStudy } from "./StudyPhone";
+import "../styles/studyphone.css";
 import { hasNative, native, notifyNow, pushAlarms, pushSnapshot } from "../lib/native";
 import { planRange } from "../lib/resources";
 import "../styles/mobile.css";
@@ -209,8 +210,8 @@ function Chat() {
 }
 
 /** The Study page is not built on the desktop either; this says so instead of faking a quiz. */
-type StudyTab = HubTab | "tutor" | "notes" | "practice" | "add" | "cards" | "pen" | "boards";
-const STABS: [StudyTab, string][] = [...HUB_TABS, ["tutor", "TUTOR"], ["notes", "NOTES"], ["practice", "PRACTICE"], ["add", "ADD"], ["cards", "CARDS"], ["pen", "PEN"], ["boards", "BOARDS"]];
+type StudyTab = "tutor" | "notes" | "practice" | "add" | "cards" | "pen" | "boards";
+const STABS: [StudyTab, string][] = [["tutor", "TUTOR"], ["notes", "NOTES"], ["practice", "PRACTICE"], ["add", "ADD"], ["cards", "CARDS"], ["pen", "PEN"], ["boards", "BOARDS"]];
 
 function MNotes({ subj, subjects }: { subj?: string; subjects: { id: string; name: string }[] }) {
   const [id, setId] = useState<string | undefined>(undefined);
@@ -228,25 +229,27 @@ function MNotes({ subj, subjects }: { subj?: string; subjects: { id: string; nam
 
 function Study() {
   const today = useResource(studyToday());
-  const [tab, setTab] = useState<StudyTab>("now");
+  const [tab, setTab] = useState<StudyTab>("notes");
   const [subj, setSubj] = useState<string | undefined>(undefined);
   const [source, setSource] = useState<StudySource | undefined>(undefined);
   const subjects = today.data?.subjects ?? [];
   const cur = subjects.find((s) => s.id === subj);
   const st = today.data?.stats;
   const [cardsTab, setCardsTab] = useState<"draft" | "all">("draft");
+  const [tools, setTools] = useState(false);
+  if (!tools) return <div className="pg-study mstudy mbody"><PhoneStudy subjects={subjects} tools={() => setTools(true)} /></div>;
   return (
     <div className="mpage pg-study mstudy">
+      <button className="mbtn" style={{ flex: "none" }} onClick={() => setTools(false)}>‹ STUDY</button>
       <div className="tabs" style={{ overflowX: "auto", flex: "none" }}>
         {STABS.map(([k, n]) => <button key={k} className={tab === k ? "on" : ""} onClick={(e) => { setTab(k); e.currentTarget.scrollIntoView?.({ inline: "center", block: "nearest", behavior: "smooth" }); }}>{n}</button>)}
       </div>
-      {!isHub(tab) && tab !== "add" && (
+      {tab !== "add" && (
         <select className="f" value={subj ?? ""} onChange={(e) => setSubj(e.target.value || undefined)} aria-label="subject">
           <option value="">All subjects</option>
           {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       )}
-      {isHub(tab) && <StudyHub tab={tab} setTab={setTab} device="phone" subjects={subjects} />}
       {tab === "tutor" && <div style={{ height: "60vh", display: "flex" }}><TutorBox subject={subj} subjectName={cur?.name} /></div>}
       {tab === "notes" && <MNotes subj={subj} subjects={subjects} />}
       {tab === "practice" && (
