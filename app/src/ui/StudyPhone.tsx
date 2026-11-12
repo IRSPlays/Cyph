@@ -4,6 +4,7 @@ import { MAX_PICS, toPic } from "../lib/pics";
 import { studyInbox, studyLibrary, studyNow, studyTopic } from "../lib/resources";
 import { useResource } from "../lib/store";
 import { toast } from "../lib/toast";
+import { errorLine } from "../lib/types";
 import type { DebriefOut, InboxItem, MarkPoint, Pic, SessionStep, SessionView, StepResult, Strength } from "../lib/types";
 import { CyphCanvas } from "./CyphCanvas";
 import { Rich } from "./Rich";
@@ -13,6 +14,7 @@ import { errText, Failed } from "./StudyParts";
    topic each take the whole screen with their buttons pinned at the bottom. Serif is Cyph, pixel capitals are things you press, mono is facts.
    Green is only ever the next thing to press. */
 
+const MATH_KEYS = ["−", "/", "√", "π", "^", "×", "°", "%", "(", ")"];
 export const WORD: Record<Strength, string> = { new: "new", weak: "weak", okay: "okay", solid: "solid" };
 const FILL: Record<Strength, number> = { new: 0, weak: 22, okay: 58, solid: 100 };
 const SILLY = ["Do not tell the other robots.", "I will pretend that never happened.", "Writing it on my forehead: check twice.", "Fine. You win this round."];
@@ -229,6 +231,7 @@ function QuestionStep({ sid, step, res, setRes, send, next, busy, reg }: { sid: 
   const [sending, setSending] = useState(false);
   const [given, setGiven] = useState<{ headline: string; changed: boolean } | null>(null);
   const [again, setAgain] = useState(false);
+  const valRef = useRef<HTMLInputElement>(null);
   const file = useRef<HTMLInputElement>(null);
   useEffect(() => { reg(() => setFlagging(true)); return () => reg(null); }, [reg]);
   const go = async (b: Parameters<typeof api.studyStep>[1]) => { setSending(true); try { await send(b); } finally { setSending(false); } };
@@ -303,6 +306,12 @@ function QuestionStep({ sid, step, res, setRes, send, next, busy, reg }: { sid: 
     );
   }
 
+  const putKey = (k: string) => {                         // a number pad has no minus, slash or square root, so these keys type them
+    const el = valRef.current;
+    const a = el?.selectionStart ?? val.length, b = el?.selectionEnd ?? val.length;
+    setVal(val.slice(0, a) + k + val.slice(b));
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(a + k.length, a + k.length); });
+  };
   let body: React.ReactNode;
   let foot: React.ReactNode;
   if (q.mode === "quick") {
@@ -311,7 +320,8 @@ function QuestionStep({ sid, step, res, setRes, send, next, busy, reg }: { sid: 
       <div className="sp-q"><Rich text={q.ask ?? q.text} /></div>
       <div className="sp-src">{source}</div>
       <div className="sp-opts">{(q.options ?? []).map((o, i) => <button key={i} className={"sp-opt" + (opt === i ? " pick" : "")} onClick={() => setOpt(i)}><Rich text={o} inline /></button>)}</div>
-      {need && <><div className="sp-q sm">{q.final_label}?</div><label className="sp-val"><input inputMode="decimal" value={val} onChange={(e) => setVal(e.target.value)} placeholder="0.00" />{q.unit && <i>{q.unit}</i>}</label></>}
+      {need && <><div className="sp-q sm">{q.final_label}?</div><label className="sp-val"><input ref={valRef} inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false} value={val} onChange={(e) => setVal(e.target.value)} placeholder="your answer" />{q.unit && <i>{q.unit}</i>}</label>
+        <div className="sp-keys">{MATH_KEYS.map((k) => <button key={k} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => putKey(k)}>{k}</button>)}</div></>}
     </>;
     foot = <><Btn onClick={openHints}>STUCK?</Btn><Btn on disabled={sending || opt === null || (need && !val.trim())} onClick={() => void go({ option: opt ?? -1, value: val })}>CHECK</Btn></>;
   } else if (q.mode === "plan") {
@@ -524,6 +534,7 @@ function Topic({ id, back, onStart }: { id: string; back: () => void; onStart: (
     <Screen title={d.subject.toUpperCase()} right={<span className={"s-" + d.label}>{WORD[d.label]}</span>} foot={<><Btn onClick={back}>‹ BACK</Btn><Btn on onClick={() => void start()}>PRACTISE THIS</Btn></>}>
       <div className="sp-big">{d.name}</div>
       {(d.record || d.slip) && <p className={"sp-sub " + (d.label === "weak" ? "co" : "")}>{d.record}{d.slip ? ` Usual slip: ${d.slip}` : ""}</p>}
+      {errorLine(d.errors) && <p className="sp-sub">Where marks went: {errorLine(d.errors)}.</p>}
       {d.why && <p className="sp-why">{d.why}</p>}
       {d.rules.length > 0 && <div className="mcard"><div className="lbl">What I learned about you here</div>{d.rules.map((r, i) => <p key={i} className="sp-sub">{r}</p>)}</div>}
       {row("notes", "Notes", d.notes[0]?.title)}

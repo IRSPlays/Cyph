@@ -48,3 +48,16 @@ describe("money is not maths", () => {
     expect(renderRich("Solve $2x+1=5$")).toContain("katex");
   });
 });
+
+describe("maths that used to be mistaken", () => {
+  it("renders sums that start with a number", () => {
+    for (const src of ["$2 + 3x = 7$", "$2 \\times 5 = 10$", "$3 x^2$", "$1,000 \\text{m}$"]) expect(renderRich(src)).toContain("katex");
+  });
+  it("still leaves money alone", () => {
+    expect(renderRich("It costs $5 and $10 more.")).not.toContain("katex");
+  });
+  it("keeps a working line that starts with a minus out of a bullet list", () => {
+    expect(renderRich("- 3x = 6")).not.toContain("<li>");
+    expect(renderRich("- a bullet")).toContain("<li>");
+  });
+});

@@ -325,7 +325,7 @@ export interface StudyNow {
 export interface MarkPoint { point: string; got: boolean | null; quote: string; why: string; checked?: boolean; marks?: number }
 export interface StepResult {
   grade?: number; correct?: boolean; answer?: number; explain?: string; attempt?: string; mode?: string; score?: number; max?: number;
-  points?: MarkPoint[]; headline?: string; unsure?: boolean; slip?: string; had?: boolean; ticked?: number; of?: number; done?: boolean;
+  points?: MarkPoint[]; headline?: string; unsure?: boolean; slip?: string; tag?: string; had?: boolean; ticked?: number; of?: number; done?: boolean;
 }
 export interface SessionQ {
   id: string; text: string; marks: number; origin: "source" | "cyph"; ref: string; source: string; key: string; figure: string | null;
@@ -352,9 +352,13 @@ export interface InboxItem { id: string; title: string; kind: string; status: st
 export interface LibTopic { id: string; subject_id: string; name: string; subject: string; color: string; cards: number; questions: number; notes: number; score: number | null; label: Strength; why?: string | null }
 export interface LibSubject { id: string; name: string; color: string; score: number | null; label: Strength; due: number; topics: LibTopic[] }
 export interface TopicDetail extends Omit<LibTopic, "notes"> {
-  slip: string; record: string; rules: string[];
+  slip: string; record: string; rules: string[]; errors?: Record<string, number>;
   notes: { id: string; title: string; updated: string }[];
   card_list: { id: string; front: string; back: string; state: string; due: string }[];
   question_list: { id: string; text: string; origin: string; ref: string; marks: number }[];
 }
 export interface DisputeOut { changed: boolean; score: number; max: number; points: MarkPoint[]; headline: string }
+
+/** Where marks were lost, in his words: "careless 3, units 2". */
+export const errorLine = (e?: Record<string, number>): string =>
+  Object.entries(e ?? {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${({ concept: "not understood", careless: "careless", units: "units", accuracy: "rounding", command: "command word", method: "method" } as Record<string, string>)[k] ?? k} ${n}`).join(", ");

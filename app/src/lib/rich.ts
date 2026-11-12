@@ -25,7 +25,7 @@ function inline(s: string): string {
 /** Pulls maths out first (so `*` and `_` inside it are safe), formats the rest, then puts the rendered maths back. */
 function line(s: string, hold: string[]): string {
   const withHolds = s.replace(/\$\$([^$]+)\$\$|\$([^$\n]+)\$/g, (_m, d, i) => {
-    if (i !== undefined && (/^\s|\s$/.test(i) || /^\d[\d,.]*\s/.test(i))) return _m;      // "$5 and $10" is money, not maths
+    if (i !== undefined && (/^\s|\s$/.test(i) || /^\d[\d,.]*\s+[A-Za-z]{2,}/.test(i))) return _m;      // "$5 and $10" is money, not maths ($2 + 3x = 7$ is maths)
     hold.push(d !== undefined ? tex(d.trim(), true) : tex(i.trim(), false));
     return `\u0000${hold.length - 1}\u0000`;
   });
@@ -66,7 +66,7 @@ export function renderRich(text: string): string {
       flushPara();
       closeList();
       out.push(m[1].length === 1 ? `<h2>${line(m[2], hold)}</h2>` : `<h3>${line(m[2], hold)}</h3>`);
-    } else if ((m = l.match(/^\s*[-*•]\s+(.*)$/))) {
+    } else if ((m = l.match(/^\s*[-*•]\s+(.*)$/)) && (list === "ul" || !/^([\d$(\\]|[a-z]\s*[=^+*/])/i.test(m[1]))) {   // "- 3x = 6" is a working line, not a bullet
       flushPara();
       if (list !== "ul") (closeList(), out.push("<ul>"), (list = "ul"));
       out.push(`<li>${line(m[1], hold)}</li>`);

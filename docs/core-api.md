@@ -33,8 +33,8 @@ Uploads are base64 in JSON.
 | GET `/study/now?device=phone\|desk` | what to do now: state (empty, ready, open, done, idle), headline, steps, weak topics, test, debrief, inbox, homework |
 | POST `/study/session` | `{device, kind?, topic?}` starts the session Cyph picked (kinds: mini, topic, more, comeback, prep); GET `/study/session/{id}` |
 | POST `/study/session/{id}/answer` | `{grade}` card, `{option, value?}` quick, `{answer, images?}` full, `{had}` plan, `{ticks}` paragraph; returns per-point marks |
-| POST `/study/session/{id}/next`, `/end`, `/hint` | move on, stop (counts if he did something), next hint (up to 4) |
-| POST `/study/attempts/{id}/dispute` | "I think I'm right": re-mark, never lowers |
+| POST `/study/session/{id}/next`, `/end`, `/hint` | move on, stop (counts if he did something), next hint, always in order (up to 4; the full solution only after an answer was submitted, else 409) |
+| POST `/study/attempts/{id}/dispute` | "I think I'm right": one re-mark per attempt, never lowers. A tapped answer is not given free: a second solve checks the answer key |
 | POST `/study/questions/{id}/flag`, `/study/cards/{id}/flag` | `{reason: not_in_notes\|wrong\|confusing}` bins it and records a rule |
 | POST `/study/debrief` | `{text, finish?}` the after-school debrief |
 | GET / POST `/study/inbox`, POST `/study/sources/{id}/move` | auto-kept uploads (DELETE `/study/sources/{id}` undoes), wrong subject |

@@ -21,6 +21,19 @@ from ..clock import TZ
 
 SUBJECTS = [("Math", "#d9984a"), ("Chemistry", "#2f9d8f"), ("Physics", "#5dff7a"), ("Amath", "#f08a73"),
             ("English", "#b79df0"), ("SS", "#e0c36a"), ("Geog", "#7fb4e8")]
+# Topic names for the two maths subjects, so a fresh install has something to practise before any worksheet is photographed.
+# Names only (no exam year or paper codes); the other subjects get their topics from the material he adds, or from POST /study/syllabus.
+SEED_TOPICS = {
+    "math": ["Numbers and the four operations", "Ratio and proportion", "Percentage", "Rate and speed", "Indices and standard form",
+             "Algebraic manipulation and formulae", "Linear and simultaneous equations", "Quadratic equations and functions", "Inequalities",
+             "Graphs of functions", "Set language and notation", "Angles, triangles and polygons", "Congruence and similarity",
+             "Properties of circles", "Pythagoras and trigonometry", "Bearings", "Mensuration", "Coordinate geometry", "Vectors in two dimensions",
+             "Statistics", "Probability"],
+    "amath": ["Quadratic functions and equations", "Equations and inequalities", "Surds", "Polynomials and partial fractions", "Binomial expansion",
+              "Exponential and logarithmic functions", "Trigonometric functions and identities", "Trigonometric equations", "Coordinate geometry",
+              "Linear law", "Differentiation and its applications", "Integration and its applications", "Kinematics", "Permutations and combinations",
+              "Proofs in plane geometry", "Simultaneous equations"],
+}
 GRADES = {0: "again", 1: "hard", 2: "good"}
 CARD_STATES = ("draft", "approved", "suspended")
 PRACTICE_KINDS = ("worked", "structured", "sbq", "essay", "paper")
@@ -87,9 +100,20 @@ def chunk_text(text: str, size: int = 700) -> list[str]:
     return out
 
 
+_TEX = ("frac|dfrac|tfrac|sqrt|times|theta|text|right|left|beta|rho|nu|neq|ne|le|leq|ge|geq|lambda|log|ln|cdot|circ|pi|sigma|sin|cos|tan|"
+        "int|sum|lim|infty|pm|div|vec|overrightarrow|angle|triangle|binom|alpha|gamma|delta|omega|mu|phi|Delta|ce|rightarrow|to|approx|equiv|"
+        "bar|hat|overline|underline|mathrm|mathbf|quad|ldots|dots|perp|parallel|therefore|because|cap|cup|in|subset|forall|exists")
+
+
+def _protect_tex(t: str) -> str:
+    """A model that writes LaTeX inside a JSON string often forgets to double the backslash: \\frac would read as a form feed.
+    Double every backslash that starts a known LaTeX command and is not already doubled."""
+    return re.sub(r"(?<!\\)\\(?=(?:" + _TEX + r")(?![A-Za-z]))", r"\\\\", t)
+
+
 def parse_json(text: str):
     """The first JSON value in a model answer, with or without a code fence; None if there is none."""
-    t = (text or "").strip()
+    t = _protect_tex((text or "").strip())
     m = re.search(r"```(?:json)?\s*(.*?)```", t, re.S)
     if m:
         t = m.group(1).strip()
@@ -101,6 +125,13 @@ def parse_json(text: str):
             except ValueError:
                 continue
     return None
+
+
+def _topic_key(name: str) -> str:
+    w = [re.sub(r"ies$", "y", x) if x.endswith("ies") else x[:-1] if x.endswith("s") and not x.endswith("ss") and len(x) > 3 else x
+         for x in re.findall(r"[a-z0-9]+", str(name).lower())]
+    w = [x for x in w if x not in ("and", "of", "the", "equation", "function", "in", "to", "a")]
+    return " ".join(sorted(w))
 
 
 def _int(v, default: int) -> int:
@@ -188,12 +219,24 @@ class StudyStore:
                 self.db.execute("ALTER TABLE tests ADD COLUMN blocks TEXT DEFAULT '[]'")      # revision blocks made with the test
             for table, col, kind in (("attempts", "question_id", "TEXT"), ("attempts", "hints", "INTEGER DEFAULT 0"),
                                      ("attempts", "disputed", "INTEGER DEFAULT 0"), ("attempts", "detail", "TEXT DEFAULT ''"),
-                                     ("topics", "why", "TEXT"), ("cards", "source_id", "TEXT")):
+                                     ("topics", "why", "TEXT"), ("cards", "source_id", "TEXT"),
+                                     ("questions", "keyspec", "TEXT DEFAULT ''"), ("attempts", "redo", "INTEGER DEFAULT 0"),
+                                     ("attempts", "tag", "TEXT DEFAULT ''")):
                 if not any(r[1] == col for r in self.db.execute(f"PRAGMA table_info({table})")):
                     self.db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {kind}")
             # an import cut short by a restart would read "processing" forever
             self.db.execute("UPDATE sources SET status='failed', error='interrupted, try again' WHERE status='processing'")
             self.db.commit()
+        self.seed()
+
+    def seed(self):
+        """Maths topics once, for a subject with none yet (so deleting one he does not want is not undone)."""
+        for sub in self.q("SELECT id, name FROM subjects"):
+            names = SEED_TOPICS.get(sub["name"].strip().lower().replace("-", "").replace(" ", ""))
+            if names and not self.one("SELECT 1 FROM topics WHERE subject_id=?", (sub["id"],)) and not self.one("SELECT 1 FROM kv WHERE k=?", ("seeded:" + sub["id"],)):
+                for n in names:
+                    self.topic(sub["id"], n)
+                self.run("INSERT INTO kv(k, v) VALUES(?,?)", ("seeded:" + sub["id"], "1"))
 
     def close(self):
         with self.lock:
@@ -284,6 +327,10 @@ class StudyStore:
         got = self.one("SELECT id FROM topics WHERE subject_id=? AND lower(name)=lower(?)", (subject_id, name))
         if got:
             return got["id"]
+        key = _topic_key(name)                          # "Quadratics" and "Quadratic equations" are one topic, not two
+        for r in self.q("SELECT id, name FROM topics WHERE subject_id=?", (subject_id,)):
+            if _topic_key(r["name"]) == key:
+                return r["id"]
         tid = new_id("t")
         self.run("INSERT INTO topics(id,subject_id,name,created) VALUES(?,?,?,?)", (tid, subject_id, name, now_iso()))
         return tid
@@ -457,6 +504,11 @@ class StudyStore:
         if c["state"] != "approved":
             raise StudyError("only approved cards can be reviewed", 409)
         nxt = schedule(c, int(grade), on or today())
+        ahead = [t["date"] for t in self.tests(c["subject_id"]) if t["date"] > (on or today()).isoformat()]
+        if ahead:                                        # never push a card beyond the next test of its subject: see it once more before
+            last = date.fromisoformat(min(ahead)) - timedelta(days=1)
+            due = min(date.fromisoformat(nxt["due"]), max(last, (on or today()) + timedelta(days=1)))
+            nxt["due"], nxt["interval"] = due.isoformat(), max(1, (due - (on or today())).days) if grade else 0
         self.run("UPDATE cards SET interval=?, ease=?, reps=?, lapses=?, due=? WHERE id=?",
                  (nxt["interval"], nxt["ease"], nxt["reps"], nxt["lapses"], nxt["due"], cid))
         self.run("INSERT INTO reviews(card_id, grade, at, interval) VALUES(?,?,?,?)", (cid, int(grade), now_iso(), nxt["interval"]))
@@ -751,15 +803,25 @@ class GeminiStudyAI:
 
     def generate(self, system: str, prompt: str, parts=()) -> str:
         from google.genai import types
+        import time
         contents = [types.Part.from_bytes(data=p["data"], mime_type=p["mime"]) for p in parts] + [prompt]
-        try:
-            res = self._cl().models.generate_content(model=self.model, contents=contents,
-                                                     config=types.GenerateContentConfig(system_instruction=system, max_output_tokens=8192))
-        except StudyError:
-            raise
-        except Exception as e:
-            raise StudyError(f"Gemini could not answer ({type(e).__name__})", 502)
-        return (res.text or "").strip()
+        last = None
+        for attempt in range(3):                       # a rate limit or a hiccup is retried, so a typed answer is not lost to it
+            try:
+                res = self._cl().models.generate_content(model=self.model, contents=contents,
+                                                         config=types.GenerateContentConfig(system_instruction=system, max_output_tokens=8192,
+                                                                                            http_options=types.HttpOptions(timeout=90_000)))
+                return (res.text or "").strip()
+            except StudyError:
+                raise
+            except Exception as e:
+                last = e
+                msg = str(e)
+                retryable = any(c in msg for c in ("429", "500", "502", "503", "504", "UNAVAILABLE", "RESOURCE_EXHAUSTED", "timed out", "Timeout"))
+                if not retryable or attempt == 2:
+                    break
+                time.sleep(2 * (attempt + 1))
+        raise StudyError(f"Gemini could not answer ({type(last).__name__}). Try again in a minute.", 502)
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         out = []
@@ -778,9 +840,52 @@ SYSTEM = ("You are Cyph's study engine for a Singapore secondary school student 
           "Be accurate and syllabus-aware. Use plain text; write maths as LaTeX between $...$ and chemistry with \\ce{...}. "
           "Reply with exactly the format asked for and nothing else.")
 
+MATH_COMMON = (" Singapore O-Level maths conventions: give a non-exact answer to 3 significant figures, an angle in degrees to 1 decimal place and money to "
+               "2 decimal places, unless the question says otherwise; keep exact values (surds, fractions, multiples of pi) when asked; always give units. "
+               "Mark scheme types: M = method, A = accuracy (only earned if the M before it is earned), B = independent mark. Follow-through (ft) is allowed: "
+               "a correct method on a wrong earlier value still earns its M marks and an ft A mark. Geometry answers need the reason in words (for example "
+               "angles in the same segment). Bearings are three figures. Never accept a final answer without working when the question says show or find.")
+EMATH = " This is O-Level Elementary Mathematics (E-Math)."
+AMATH = (" This is O-Level Additional Mathematics (A-Math). Exact forms are expected (surds, ln, e, pi). Give angles in radians when the question uses pi, "
+         "otherwise degrees. For a 'show that' or 'prove' question the final result is GIVEN, so mark only the working that gets to it.")
+SCIENCE = (" Science marking: units are required, numerical answers to 2 or 3 significant figures, command words matter (state = one fact; describe = what "
+           "happens; explain = cause and effect with the science idea; calculate = formula, substitution, answer with unit). Chemical equations must balance "
+           "with state symbols when asked.")
+HUMANITIES = (" Humanities marking: structure each answer as point, evidence, explanation, link back to the question. In source-based questions use the "
+              "source itself, its provenance (who, when, why), cross-reference with other sources, and a final judgement. In geography, place-specific case study "
+              "facts earn marks; vague general statements do not. Never invent a source, a quotation or a case study.")
+ENGLISH = " English marking: judge task fulfilment, organisation, language accuracy and style; give the level and one concrete next step. Never invent quotations."
+
+
+def subject_rules(name: str) -> str:
+    n = str(name or "").strip().lower().replace("-", "").replace(" ", "")
+    if n in ("amath", "additionalmathematics", "addmaths", "amaths"):
+        return MATH_COMMON + AMATH
+    if "math" in n:
+        return MATH_COMMON + EMATH
+    if n in ("chemistry", "physics", "biology", "science", "chem", "phy", "bio"):
+        return SCIENCE
+    if n in ("ss", "socialstudies", "geog", "geography", "history", "hist"):
+        return HUMANITIES
+    if n.startswith("english") or n in ("eng", "el", "literature"):
+        return ENGLISH
+    return ""
+
+
+def sysfor(name: str = "") -> str:
+    """The system prompt for one subject: the general one plus that subject's marking conventions."""
+    return SYSTEM + (f" Subject: {name}." if name else "") + subject_rules(name)
+
+
 QUESTION_SHAPE = """{"ref": its number as printed ("Q4", "2(b)") or "", "text": the question, "marks": total marks, "topic": its syllabus topic,
    "answer": the final answer, "key": "printed" if the answer comes from an answer key or worked solution in the material, else "cyph",
-   "scheme": [{"point": one thing that earns marks, "marks": 1, "final": true only on the point that is the final answer}],
+   "scheme": [{"point": one thing that earns marks, "marks": 1, "type": "M" method, "A" accuracy or "B" independent (maths and sciences; else ""),
+                "final": true only on the point that is the final answer}],
+   "answers": {"kind": "number" (one value), "set" (several values, e.g. both roots), "interval" (an inequality), "expression" (algebra) or "text",
+               "values": [every correct final value as a plain number: sqrt(12) is 3.4641, pi/6 is 0.5236; [] if it is not a number],
+               "text": the final answer as written, like "x < -1 or x > 3" or "3x(x-2)", "sf": significant figures asked (3 if the question says nothing and
+               the answer is not exact) or null, "dp": decimal places asked or null, "exact": true if an exact form is wanted},
+   "show": true if it is a show that / prove / verify question,
    "numeric": the final answer as a plain number or null, "unit": its unit or "", "figure": true if it cannot be answered without a
    diagram, graph, map or picture, "page": the page it is on (1 for a photo),
    "quick": {"ask": the same question cut down so it can be answered by tapping, "options": 3 or 4 short options, "correct": index of the
@@ -860,7 +965,7 @@ class StudyService:
             prompt = IMPORT_PROMPT + ("\n\nMaterial:\n" + data.decode("utf-8", "replace")[:30000] if not parts else "")
             names = [x["name"] for x in st.subjects()]
             known = st.one("SELECT name FROM subjects WHERE id=?", (src["subject_id"],))
-            raw = self.ai.generate(SYSTEM + (f" Subject: {known['name']}." if known else " His subjects: " + ", ".join(names) + "."), prompt, parts)
+            raw = self.ai.generate(sysfor(known["name"]) if known else SYSTEM + " His subjects: " + ", ".join(names) + ".", prompt, parts)
             got = parse_json(raw)
             if not isinstance(got, dict) or not str(got.get("clean_notes") or "").strip():
                 raise StudyError("I could not read that material")
@@ -974,7 +1079,7 @@ class StudyService:
         return out
 
     # -- tutoring: the hint ladder
-    def tutor(self, question, subject_ref=None, step=0, history="", images=()):
+    def tutor(self, question, subject_ref=None, step=0, history="", images=(), key=""):
         step = max(0, min(int(step), len(HINT_STEPS) - 1))
         question = str(question or "").strip()
         if not question and not images:
@@ -989,8 +1094,9 @@ class StudyService:
                  "first_step": "Show only the first step of the working and then stop, asking him to do the next one.",
                  "solution": "Give the full worked solution, step by step, and name the topic."}[HINT_STEPS[step]]
         prompt = (f"Question from the student: {question}\n" + (f"Earlier hints:\n{history}\n" if history else "") +
-                  (f"His own notes (cite as [n] when used):\n{ctx}\n" if ctx else "") + f"\nStage: {stage}\nKeep it under 120 words unless it is the solution.")
-        reply = self.ai.generate(SYSTEM + (f" Subject: {subj['name']}." if subj else ""), prompt, list(images))
+                  (f"His own notes (cite as [n] when used):\n{ctx}\n" if ctx else "") + (f"\nThe verified answer is: {key}. Use it to stay correct, and NEVER state it before the solution stage.\n" if key else "") +
+                  f"\nStage: {stage}\nKeep it under 120 words unless it is the solution.")
+        reply = self.ai.generate(sysfor(subj["name"] if subj else ""), prompt, list(images))
         return {"step": step, "stage": HINT_STEPS[step], "text": reply, "last": step == len(HINT_STEPS) - 1,
                 "cites": [{"n": i + 1, "note_id": c["note_id"], "title": c["title"]} for i, c in enumerate(cites)]}
 

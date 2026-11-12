@@ -4,6 +4,7 @@ import { MAX_PICS, toPic } from "../lib/pics";
 import { studyInbox, studyLibrary, studyNow, studyTopic } from "../lib/resources";
 import { useResource } from "../lib/store";
 import { toast } from "../lib/toast";
+import { errorLine } from "../lib/types";
 import type { DebriefOut, InboxItem, LibSubject, MarkPoint, Pic, SessionView, StepResult } from "../lib/types";
 import { isIPad } from "../lib/mobile";
 import { PencilPad, type PadHandle } from "./PencilPad";
@@ -406,6 +407,7 @@ function TopicPane({ id, subject, start }: { id: string; subject: string; start:
       <div className="dk-card">
         <div className="lbl">How you are doing<span className={"s-" + d.label}>{WORD[d.label]}</span></div>
         {(d.record || d.slip) && <p className={"sp-sub " + (d.label === "weak" ? "co" : "")}>{d.record}{d.slip ? ` Usual slip: ${d.slip}` : ""}</p>}
+      {errorLine(d.errors) && <p className="sp-sub">Where marks went: {errorLine(d.errors)}.</p>}
         <p className="sp-sub">{d.card_list.filter((c) => c.state === "approved" && c.due <= new Date().toISOString().slice(0, 10)).length} cards due</p>
         <p className="sp-sub">{d.question_list.length} questions</p>
         {d.why && <p className="sp-why">{d.why}</p>}

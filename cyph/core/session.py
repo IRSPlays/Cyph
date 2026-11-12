@@ -12,7 +12,8 @@ import json
 import re
 from datetime import date, timedelta
 
-from .study import SYSTEM, StudyError, _int, new_id, now_iso, parse_json, today
+from . import answers as ans
+from .study import SYSTEM, StudyError, _int, new_id, now_iso, parse_json, sysfor, today
 
 WRITING = {"english", "ss", "social studies"}          # skills, not facts: planned and self-checked, never AI-marked
 DEVICES = {"phone": {"minutes": 8, "cards": 10, "questions": 1}, "desk": {"minutes": 15, "cards": 14, "questions": 2}}
@@ -56,7 +57,8 @@ def scheme_of(raw, marks=1) -> list[dict]:
         raw = got if isinstance(got, list) else [x.strip() for x in re.split(r"[;\n]+", raw) if x.strip()]
     for p in raw or []:
         if isinstance(p, dict) and str(p.get("point") or "").strip():
-            pts.append({"point": str(p["point"]).strip()[:300], "marks": max(1, min(10, _int(p.get("marks"), 1))), "final": bool(p.get("final"))})
+            pts.append({"point": str(p["point"]).strip()[:300], "marks": max(1, min(10, _int(p.get("marks"), 1))), "final": bool(p.get("final")),
+                        "type": str(p.get("type") or "").strip().upper()[:1] if str(p.get("type") or "").strip().upper()[:1] in ("M", "A", "B") else ""})
         elif isinstance(p, str) and p.strip():
             pts.append({"point": p.strip()[:300], "marks": 1, "final": False})
     return pts[:12]
@@ -110,13 +112,15 @@ def save_questions(st, src: dict, raw: list, topic, meta: dict | None = None, da
                 fig = pages[pg]
         qid = new_id("q")
         quick = quick_of(q.get("quick"))
-        st.run("INSERT INTO questions(id,subject_id,topic_id,source_id,origin,ref,text,marks,scheme,answer,numeric,unit,key,quick,figure,state,created) "
-               "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        spec = ans.key_from(q.get("answers"), answer=str(q.get("answer") or ""), numeric=q.get("numeric"), unit=str(q.get("unit") or ""))
+        spec["show"] = bool(q.get("show")) or bool(re.search(r"\b(show that|prove that|verify that|show that)\b", str(q.get("text") or ""), re.I))
+        st.run("INSERT INTO questions(id,subject_id,topic_id,source_id,origin,ref,text,marks,scheme,answer,numeric,unit,key,quick,figure,state,created,keyspec) "
+               "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                (qid, src["subject_id"], st.topic(src["subject_id"], q.get("topic") or topic or "General"), src.get("id"), origin,
                 str(q.get("ref") or "")[:20], str(q["text"]).strip()[:4000], marks, json.dumps(scheme), str(q.get("answer") or "")[:2000],
-                _num(q.get("numeric")) if q.get("numeric") is not None else None, str(q.get("unit") or "")[:20],
+                spec["values"][0] if spec["values"] else (_num(q.get("numeric")) if q.get("numeric") is not None else None), str(q.get("unit") or "")[:20],
                 "printed" if origin == "source" and q.get("key") == "printed" else "cyph", json.dumps(quick) if quick else "", fig,
-                "active", now_iso()))
+                "active", now_iso(), json.dumps(spec)))
         out.append(qid)
     return out
 
@@ -154,16 +158,33 @@ class Engine:
         return self._subj(subject_id)["name"].strip().lower() in WRITING
 
     # ---- strength: one number per topic, shown as a word --------------------------------------------
+    KIND_WEIGHT = {"teacher": 4.0, "full": 1.0, "plan": 0.5, "paragraph": 0.5, "quick": 0.5, "debrief": 0.4, "lesson": 0.3}
+    HALF_LIFE = 30.0                                       # days: an old result counts for half as much a month later
+
+    @staticmethod
+    def _age(iso) -> float:
+        try:
+            return max(0.0, (today() - date.fromisoformat(str(iso)[:10])).days)
+        except ValueError:
+            return 0.0
+
     def strength(self, tid) -> dict:
-        att = self.st.q("SELECT score, max, hints, kind FROM attempts WHERE topic_id=? AND max>0 ORDER BY at DESC LIMIT 8", (tid,))
-        rv = self.st.q("SELECT r.grade FROM reviews r JOIN cards c ON c.id=r.card_id WHERE c.topic_id=? ORDER BY r.id DESC LIMIT 20", (tid,))
-        wt = lambda a: 4.0 if a["kind"] == "teacher" else 1.0      # noqa: E731  a real teacher's mark outweighs Cyph's
-        qs = sum(wt(a) * min(1.0, a["score"] / a["max"]) * (0.85 if a["hints"] else 1.0) for a in att) / sum(wt(a) for a in att) if att else None
-        cs = sum(1 for r in rv if r["grade"] >= 1) / len(rv) if rv else None
+        """One number per topic. A teacher's mark outweighs Cyph's; written work outweighs tapping (which can be guessed); recent results
+        outweigh old ones; and a topic nobody has touched for weeks slides back down, so 'solid' is never forever."""
+        att = self.st.q("SELECT score, max, hints, kind, at FROM attempts WHERE topic_id=? AND max>0 ORDER BY at DESC LIMIT 12", (tid,))
+        rv = self.st.q("SELECT r.grade, r.at FROM reviews r JOIN cards c ON c.id=r.card_id WHERE c.topic_id=? ORDER BY r.id DESC LIMIT 20", (tid,))
+        wt = lambda a: self.KIND_WEIGHT.get(a["kind"], 1.0) * 0.5 ** (self._age(a["at"]) / self.HALF_LIFE)      # noqa: E731
+        den = sum(wt(a) for a in att)
+        qs = sum(wt(a) * min(1.0, a["score"] / a["max"]) * (0.85 if a["hints"] else 1.0) for a in att) / den if att and den else None
+        cw = lambda r: 0.5 ** (self._age(r["at"]) / self.HALF_LIFE)                                              # noqa: E731
+        cden = sum(cw(r) for r in rv)
+        cs = sum(cw(r) for r in rv if r["grade"] >= 1) / cden if rv and cden else None
         have = [(w, v) for w, v in ((0.65, qs), (0.35, cs)) if v is not None]
         if not have:
             return {"score": None, "label": "new"}
         s = sum(w * v for w, v in have) / sum(w for w, _ in have)
+        last = min([self._age(a["at"]) for a in att] + [self._age(r["at"]) for r in rv] or [0])
+        s *= 1 - min(0.25, max(0.0, last - 14) / 120)      # untouched for over two weeks: slowly less sure
         return {"score": round(s * 100), "label": "weak" if s < 0.45 else "okay" if s < 0.72 else "solid"}
 
     def topics(self, subject_id=None) -> list[dict]:
@@ -179,7 +200,7 @@ class Engine:
     def weakest(self, n=3, subject_id=None) -> list[dict]:
         """Topics to work on, worst first. A test coming up pushes its topics to the front."""
         boost = self._test_topics()
-        rows = [t for t in self.topics(subject_id) if t["label"] != "solid" and (t["cards"] or t["questions"] or t["notes"])]
+        rows = [t for t in self.topics(subject_id) if t["label"] != "solid" and (t["cards"] or t["questions"] or t["notes"] or self._is_math(t["subject_id"]))]
         def rank(t):
             s = 50 if t["score"] is None else t["score"]
             return s - (60 if t["id"] in boost else 0)
@@ -226,13 +247,33 @@ class Engine:
         return rows[:limit]
 
     def _has_material(self, t) -> bool:
-        return bool(t["questions"] or t["notes"])
+        return bool(t["questions"] or t["notes"] or self._is_math(t["subject_id"]))      # maths questions come from the syllabus topic itself
+
+    def _quiet_days(self, subject_id) -> int:
+        """Days since he last did anything in this subject (a big number if never)."""
+        a = self.st.one("SELECT MAX(at) m FROM attempts WHERE subject_id=?", (subject_id,))["m"]
+        b = self.st.one("SELECT MAX(r.at) m FROM reviews r JOIN cards c ON c.id=r.card_id WHERE c.subject_id=?", (subject_id,))["m"]
+        got = max([x[:10] for x in (a, b) if x] or [""])
+        return (today() - date.fromisoformat(got)).days if got else 999
 
     def _pick_topic(self, skip=(), subject_id=None):
-        for t in self.weakest(12, subject_id):
-            if t["id"] not in skip and self._has_material(t):
-                return t
-        return None
+        """The weakest topic, except that no subject goes quiet: one nobody has touched for 3 days (2 with a test within two weeks) gets
+        the next session, whatever else is weak. Otherwise one subject with lots of material would take every session."""
+        rows = [t for t in self.weakest(40, subject_id) if t["id"] not in skip and self._has_material(t)]
+        if not rows:
+            return None
+        if subject_id is None:
+            soon = {t["subject_id"] for t in self._tests(14)}
+            late = {}
+            for t in rows:
+                sid = t["subject_id"]
+                if sid not in late:
+                    late[sid] = self._quiet_days(sid)
+            due = [(late[sid] - (1 if sid in soon else 0), sid) for sid in late if late[sid] >= (2 if sid in soon else 3)]
+            if due:
+                sid = max(due)[1]
+                return next(t for t in rows if t["subject_id"] == sid)
+        return rows[0]
 
     def _retry(self, skip_topic=None):
         """One question he got wrong a couple of days ago (or argued about) and has not got right since."""
@@ -254,7 +295,7 @@ class Engine:
         """What START would run right now. Pure reading: nothing is created or asked of the model."""
         dev = DEVICES["phone" if device == "phone" else "desk"]
         has = self.st.one("SELECT (SELECT COUNT(*) FROM cards WHERE state='approved') c, (SELECT COUNT(*) FROM questions WHERE state='active') q, (SELECT COUNT(*) FROM notes) n")
-        if not (has["c"] or has["q"] or has["n"]):
+        if not (has["c"] or has["q"] or has["n"]) and not any(self._is_math(x["id"]) and self.st.one("SELECT 1 FROM topics WHERE subject_id=?", (x["id"],)) for x in self.st.subjects()):
             return {"kind": "empty", "minutes": 0, "steps": [], "headline": "My brain is empty. Feed me one page and I will have a session ready before you put the phone down."}
         steps, out = [], {"kind": "normal" if kind in ("", "more") else kind, "cards": [], "topic": None, "retry": None, "homework": None, "paragraph": None, "subject": None}
         if kind == "mini":
@@ -410,23 +451,50 @@ class Engine:
         rows = self.st.q("SELECT title, body FROM notes WHERE topic_id=? ORDER BY updated DESC LIMIT 3", (topic["id"],))
         return rows or self.st.q("SELECT title, body FROM notes WHERE subject_id=? ORDER BY updated DESC LIMIT 1", (topic["subject_id"],))
 
+    def _is_math(self, subject_id) -> bool:
+        return "math" in self._subj(subject_id)["name"].strip().lower()
+
     def _write_questions(self, topic, n) -> list[str]:
-        """Cyph writes questions only from his notes, and never for a topic he said to keep to worksheets."""
+        """Cyph writes questions from his notes (never for a topic he said to keep to worksheets). Maths needs no notes: its topics are
+        skills, so questions come from the syllabus topic itself."""
         notes = self._notes_for(topic)
-        if not notes or self._rule(topic["id"], "not_in_notes"):
+        math = self._is_math(topic["subject_id"])
+        if (not notes and not math) or self._rule(topic["id"], "not_in_notes"):
             return []
         from .study import QUESTION_SHAPE
         plain = "; ".join(r["text"] for r in self.st.q("SELECT text FROM rules WHERE topic_id=?", (topic["id"],)))
-        prompt = (f"Write {n} exam questions on the topic \"{topic['name']}\" using ONLY the facts in his notes below. Do not use anything that is "
-                  f"not in the notes, and never invent a source or a quotation. Reply with a JSON array, each item shaped as\n{QUESTION_SHAPE}\n"
-                  'Set "key" to "cyph" and "ref" to "".' + (f"\nHe told you: {plain}" if plain else "") +
-                  "\n\nHis notes:\n" + "\n---\n".join(f"{x['title']}\n{x['body'][:3500]}" for x in notes))
-        got = parse_json(self.ai.generate(SYSTEM + f" Subject: {self._subj(topic['subject_id'])['name']}.", prompt))
+        base = (f"Write {n} exam questions on the topic \"{topic['name']}\" " +
+                ("at O-Level standard, like the real paper: a mix of short and multi-part, with marks and a mark scheme. Vary the type. "
+                 "Do not use a diagram. Make the arithmetic work out cleanly and double-check every answer. " if math and not notes else
+                 "using ONLY the facts in his notes below. Do not use anything that is not in the notes, and never invent a source or a quotation. ") +
+                f"Reply with a JSON array, each item shaped as\n{QUESTION_SHAPE}\n" 'Set "key" to "cyph" and "ref" to "".')
+        prompt = (base + (f"\nHe told you: {plain}" if plain else "") +
+                  (("\n\nHis notes:\n" + "\n---\n".join(f"{x['title']}\n{x['body'][:3500]}" for x in notes)) if notes else ""))
+        got = parse_json(self.ai.generate(sysfor(self._subj(topic["subject_id"])["name"]), prompt))
         if isinstance(got, dict):
             got = got.get("questions") or [got]
         if not isinstance(got, list):
             return []
-        return save_questions(self.st, {"id": None, "subject_id": topic["subject_id"], "title": ""}, got[:n], topic["name"], origin="cyph")
+        ids = save_questions(self.st, {"id": None, "subject_id": topic["subject_id"], "title": ""}, got[:n], topic["name"], origin="cyph")
+        return [i for i in ids if self._verified(i)]
+
+    def _verified(self, qid) -> bool:
+        """A question Cyph wrote is only used if a second, independent solve agrees with its answer key. Disagreement bins it."""
+        q = self.st.one("SELECT * FROM questions WHERE id=?", (qid,))
+        spec = _j(q["keyspec"], {})
+        if not spec.get("kind") or spec["kind"] == "text" or spec.get("show"):
+            return True
+        try:
+            got = parse_json(self.ai.generate(sysfor(self._subj(q["subject_id"])["name"]),
+                                              f"Solve this fully and carefully, then reply JSON {{\"final\": your final answer exactly as you would write it}}.\n\n{q['text']}"))
+        except StudyError:
+            return True                                    # cannot verify right now: keep it; the answer is still checked when marked
+        mine = str(got.get("final")) if isinstance(got, dict) and got.get("final") is not None else ""
+        ok, _ = ans.check(mine, spec)
+        if ok is False:
+            self.st.run("UPDATE questions SET state='binned' WHERE id=?", (qid,))
+            return False
+        return True
 
     def _questions_for(self, topic, n, device, avoid=()) -> list[dict]:
         week = (today() - timedelta(days=7)).isoformat()
@@ -479,7 +547,7 @@ class Engine:
                   ' "why": ONE plain sentence linking this topic to something he is building, ONLY if the link is real and direct; otherwise ""}\n'
                   + (f"What he is building (from his memory file):\n{projects}\n" if projects else 'He has no projects on file, so "why" is "".\n') +
                   "\nHis notes:\n" + "\n---\n".join(f"{x['title']}\n{x['body'][:3500]}" for x in notes))
-        raw = parse_json(self.ai.generate(SYSTEM + f" Subject: {self._subj(topic['subject_id'])['name']}.", prompt))
+        raw = parse_json(self.ai.generate(sysfor(self._subj(topic['subject_id'])['name']), prompt))
         turn = quick_of((raw or {}).get("turn") if isinstance(raw, dict) else None)
         ex = (raw or {}).get("example") if isinstance(raw, dict) else None
         if not turn or not isinstance(ex, dict) or not str(ex.get("problem") or "").strip():
@@ -550,10 +618,14 @@ class Engine:
 
     def _spread_backlog(self, cap):
         """After time away the pile is spread over the coming days instead of shown. He never sees a backlog."""
+        day = today().isoformat()
+        if self.kv("spread:" + day):
+            return
         due = self.st.due(None, 5000)
         if len(due) <= cap * 3:
             return
-        due.sort(key=lambda c: -c["ease"])
+        self.kv("spread:" + day, "1")
+        due.sort(key=lambda c: (c["ease"], c["due"]))                    # hardest first: the easy ones are what can wait
         for i, c in enumerate(due[cap * 2:]):
             self.st.run("UPDATE cards SET due=? WHERE id=?", ((today() + timedelta(days=1 + i // cap)).isoformat(), c["id"]))
 
@@ -630,7 +702,7 @@ class Engine:
     def _checklist(self, q) -> list[str]:
         """What a strong answer to a writing question has. Made once and kept on the question."""
         try:
-            got = parse_json(self.ai.generate(SYSTEM + f" Subject: {self._subj(q['subject_id'])['name']}.",
+            got = parse_json(self.ai.generate(sysfor(self._subj(q['subject_id'])['name']),
                                               "List the 3 to 5 things a top-band answer to this question must do, as short checklist lines he can tick "
                                               "himself. Reply with a JSON array of strings.\nQuestion: " + q["text"]))
         except StudyError:
@@ -704,7 +776,7 @@ class Engine:
         if s["state"] != "open" or s["pos"] >= len(s["steps"]):
             raise StudyError("that session is over", 409)
         step = s["steps"][s["pos"]]
-        if step.get("result") and step["type"] != "question":
+        if step.get("result"):                           # answered once: the first answer stands, so a wrong answer cannot be fished for the right one
             return step["result"]
         fn = {"card": self._a_card, "lesson": self._a_lesson, "question": self._a_question, "paragraph": self._a_paragraph,
               "homework": self._a_homework}[step["type"]]
@@ -765,12 +837,15 @@ class Engine:
         ok = opt == quick["correct"]
         pts.append({"point": quick["options"][quick["correct"]], "got": ok, "quote": quick["options"][opt] if 0 <= opt < len(quick["options"]) else "",
                     "why": "" if ok else quick["explain"]})
-        if q["numeric"] is not None:
-            mine = _num(body.get("value"))
-            good = close(mine, q["numeric"])
-            want = f"{q['numeric']:g}" + (f" {q['unit']}" if q["unit"] else "")
-            pts.append({"point": quick["final_label"] or "Final answer", "got": good, "quote": str(body.get("value") or "").strip()[:40],
-                        "why": "" if good else f"It should be {want}. " + (quick["explain"] if ok else ""), "checked": True})
+        spec = self._spec(q)
+        if spec.get("kind") in ("number", "set") and spec.get("values"):
+            typed = str(body.get("value") or "").strip()
+            verdict, why = ans.check(typed, spec)
+            good = verdict is True
+            if verdict is None:
+                why = "I could not read that as a number."
+            pts.append({"point": quick["final_label"] or "Final answer", "got": good, "quote": typed[:40],
+                        "why": "" if good else why + " " + (quick["explain"] if ok else ""), "checked": True})
         score = sum(1 for p in pts if p["got"])
         head = "Yes. Clean." if score == len(pts) else "So close. Half of it is right." if score else "Not this time. Here is the slip."
         att = self.st.add_attempt(q["subject_id"], t["name"], "quick", q["text"], json.dumps({"option": opt, "value": body.get("value")}), score, len(pts),
@@ -779,63 +854,127 @@ class Engine:
                 "answer": quick["correct"], "unsure": False}
 
     MARK = ("Mark this like a fair O-Level examiner, one scheme point at a time. For each point say whether his answer earns it: true, false, or "
-            "null when you cannot read his writing or genuinely cannot tell (never guess). Quote the line of HIS answer that earned or lost "
-            "the point, word for word (at most 90 characters, \"\" if there is none). Accept any valid method, not only the scheme's.\n"
+            "null ONLY when you cannot read his writing (never guess; null earns nothing until it is settled). Quote the line of HIS answer that earned or "
+            "lost the point, word for word (at most 90 characters, \"\" if there is none). Accept any valid method, not only the scheme's. "
+            "Where a point has a type: M is method, A is accuracy (needs its M), B is independent; allow follow-through when he applies a correct method "
+            "to a wrong earlier value, and say so in why.\n"
             'Reply JSON: {"points": [{"i": index, "got": true/false/null, "quote": "...", "why": one short sentence, needed when got is not true}], '
-            '"final": his final numeric answer as a plain number or null, "headline": one short warm sentence in a playful voice on how it went, '
-            '"slip": his main mistake in under 12 words, or ""}')
+            '"final": his final answer exactly as he wrote it (a string) or null, "headline": one short warm sentence in a playful voice on how it went, '
+            '"slip": his main mistake in under 12 words, or "", "tag": the kind of mistake: "concept", "careless", "units", "accuracy" (rounding or '
+            'significant figures), "command" (did not do what the command word asked), "method" or "none"}')
+
+    def _spec(self, q) -> dict:
+        spec = _j(q["keyspec"], {})
+        if not spec.get("kind") and q["numeric"] is not None:
+            spec = ans.key_from({}, answer=q["answer"], numeric=q["numeric"], unit=q["unit"])
+        return spec
+
+    def _figure_parts(self, q) -> list[dict]:
+        """The question's diagram as an image part, so marking and hints can SEE it."""
+        if not q["figure"]:
+            return []
+        try:
+            got = self.st.get_file(q["figure"])
+            return [{"mime": got[0]["mime"] or "image/png", "data": got[1]}] if got else []
+        except Exception:
+            return []
+
+    @staticmethod
+    def _bool(v):
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str) and v.strip().lower() in ("true", "false"):
+            return v.strip().lower() == "true"
+        return None
 
     def _mark_full(self, q, t, answer, images, hints, recheck=False):
         if not answer and not images:
             raise StudyError("write an answer first")
-        scheme = _j(q["scheme"], []) or [{"point": "Correct final answer: " + (q["answer"] or "see the worked solution"), "marks": q["marks"] or 1, "final": True}]
-        prompt = (f"Question ({q['marks']} marks): {q['text']}\nScheme points: {json.dumps([{'i': i, 'point': p['point'], 'marks': p['marks']} for i, p in enumerate(scheme)])}\n"
-                  + (f"Known final answer: {q['answer']}\n" if q["answer"] else "") + f"His answer: {answer or '(in the attached picture)'}\n\n" + self.MARK
+        spec = self._spec(q)
+        show = bool(spec.get("show"))
+        scheme = _j(q["scheme"], []) or [{"point": "Correct final answer: " + (q["answer"] or "see the worked solution"), "marks": q["marks"] or 1, "final": True, "type": ""}]
+        if not show and (spec.get("kind") or q["answer"]) and not any(p.get("final") for p in scheme):
+            scheme = scheme[:-1] + [{**scheme[-1], "final": True}]          # the last point is the answer, so it is still checked in code
+        view = [{"i": i, "point": p["point"], "marks": p["marks"], **({"type": p["type"]} if p.get("type") else {})} for i, p in enumerate(scheme)]
+        prompt = (f"Question ({q['marks']} marks): {q['text']}\nScheme points: {json.dumps(view)}\n"
+                  + (f"Known final answer: {q['answer']}\n" if q["answer"] else "")
+                  + ("This is a show-that question: the result is given, so mark only whether his working really gets there.\n" if show else "")
+                  + f"His answer: {answer or '(in the attached picture)'}\n\n" + self.MARK
                   + ("\nHe says your first marking was wrong. Look again from scratch and be fair: if his working is valid, give the marks." if recheck else ""))
-        got = parse_json(self.ai.generate(SYSTEM + f" Subject: {self._subj(q['subject_id'])['name']}.", prompt, images))
+        got = parse_json(self.ai.generate(sysfor(self._subj(q["subject_id"])["name"]), prompt, self._figure_parts(q) + list(images)))
         if not isinstance(got, dict) or not isinstance(got.get("points"), list):
             raise StudyError("I could not mark that, try again", 502)
         by = {(_int(p.get("i"), -1)): p for p in got["points"] if isinstance(p, dict)}
         pts = []
         for i, p in enumerate(scheme):
             g = by.get(i, {})
-            v = g.get("got")
-            pts.append({"point": p["point"], "marks": p["marks"], "got": v if isinstance(v, bool) else None,
+            pts.append({"point": p["point"], "marks": p["marks"], "got": self._bool(g.get("got")), "type": p.get("type", ""),
                         "quote": str(g.get("quote") or "")[:120], "why": str(g.get("why") or "")[:240], "final": p.get("final", False)})
-        if q["numeric"] is not None:                     # the final number is checked here, not taken on trust
-            mine = _num(got.get("final")) if got.get("final") is not None else None
-            if mine is None and answer:
-                nums = re.findall(r"-?\d+(?:\.\d+)?", answer.replace(",", ""))
-                mine = float(nums[-1]) if nums else None
-            fin = next((p for p in pts if p["final"]), None)
-            if fin is not None and mine is not None:
-                good = close(mine, q["numeric"])
-                fin["got"], fin["checked"] = good, True
-                if not good:
-                    fin["why"] = f"The final answer should be {q['numeric']:g}" + (f" {q['unit']}" if q["unit"] else "") + f", you have {mine:g}."
+        if all(p["got"] is None for p in pts) and len(pts) > 1 and not got.get("final"):
+            raise StudyError("I could not mark that, try again", 502)          # a reply with nothing usable in it is not a mark
+        tag = str(got.get("tag") or "").strip().lower()
+        tag = tag if tag in ("concept", "careless", "units", "accuracy", "command", "method") else ""
+        fin = next((p for p in pts if p["final"]), None)
+        if fin is not None and not show and spec.get("kind"):                 # the final answer is checked here, not taken on trust
+            read = str(got.get("final") or "").strip()
+            lines = [x for x in (answer or "").splitlines() if x.strip()]
+            verdict, why = ans.check(read, spec) if read else (None, "")
+            if verdict is None and lines:
+                verdict, why = ans.check(lines[-1], spec)
+            if verdict is not None:
+                fin["got"], fin["checked"] = verdict, True
+                if not verdict:
+                    fin["why"] = why
+                    tag = "units" if why.startswith("The unit") else "accuracy" if "significant" in why else tag
+                elif not fin["quote"] and read:
+                    fin["quote"] = read[:90]
+        ms = [p for p in pts if p["type"] == "M"]
+        if ms:                                                                # an accuracy mark needs its method mark
+            ok_m = True
+            for p in pts:
+                if p["type"] == "M" and p["got"] is not True:
+                    ok_m = False
+                if p["type"] == "A" and p["got"] is True and not ok_m:
+                    p["got"], p["why"] = False, "No method shown for this, so no accuracy mark."
         unsure = [p for p in pts if p["got"] is None]
-        score = sum(p["marks"] for p in pts if p["got"] is not False)       # an unreadable line gets the benefit of the doubt
+        score = sum(p["marks"] for p in pts if p["got"] is True)             # only what is earned counts: a line he cannot read, or one I missed, waits
         mx = sum(p["marks"] for p in pts)
-        att = self.st.add_attempt(q["subject_id"], t["name"], "full", q["text"], answer or "(picture)", score, mx, str(got.get("slip") or "")[:200],
-                                  q["scheme"], q["id"], hints, json.dumps(pts))
-        if unsure:                                       # and the question comes back, so the doubt is settled later
+        slip = str(got.get("slip") or "")[:200]
+        att = self.st.add_attempt(q["subject_id"], t["name"], "full", q["text"], answer or "(picture)", score, mx, slip, q["scheme"], q["id"], hints, json.dumps(pts))
+        self.st.run("UPDATE attempts SET tag=? WHERE id=?", (tag, att["id"]))
+        if unsure:                                                            # and the question comes back, so the doubt is settled later
             self.st.run("UPDATE attempts SET disputed=1 WHERE id=?", (att["id"],))
-        return {"attempt": att["id"], "mode": "full", "score": score, "max": mx, "points": pts, "unsure": bool(unsure),
-                "headline": str(got.get("headline") or ("Full marks." if score == mx else "Nearly."))[:160], "slip": str(got.get("slip") or "")[:200]}
+        head = str(got.get("headline") or ("Full marks." if score == mx else "Nearly."))[:160]
+        if unsure:
+            head = "One line I could not read. It is not counted yet: type it, or tap I THINK I'M RIGHT."
+        return {"attempt": att["id"], "mode": "full", "score": score, "max": mx, "points": pts, "unsure": bool(unsure), "tag": tag, "headline": head, "slip": slip}
 
     def dispute(self, aid) -> dict:
-        """"I think I'm right": mark it again at once. If it is still not certain he gets the marks, and it comes back later."""
+        """"I think I'm right": one fresh marking per attempt, and it can only raise the mark. A tapped answer is not given for free: the answer key itself is checked."""
         a = self.st.one("SELECT * FROM attempts WHERE id=?", (aid,))
         if not a or not a["question_id"]:
             raise StudyError("nothing to look at again", 404)
         q = self.st.one("SELECT * FROM questions WHERE id=?", (a["question_id"],))
         if not q:
             raise StudyError("that question is gone", 404)
+        if a["redo"]:
+            return {"changed": False, "score": a["score"], "max": a["max"], "points": _j(a["detail"], []),
+                    "headline": "I already looked twice. If I am still wrong, tell me in chat and give your teacher's answer.", "again": True}
+        self.st.run("UPDATE attempts SET redo=1 WHERE id=?", (aid,))
         was = a["score"]
-        if a["kind"] != "full":                          # a tapped answer is checked by code: the key itself is in doubt, so give it
-            self.st.run("UPDATE attempts SET score=max, disputed=1 WHERE id=?", (aid,))
-            return {"changed": True, "score": a["max"], "max": a["max"], "points": [], "headline": "Fair. I will take your word and check my answer key. Mark given.",
-                    "again": True}
+        if a["kind"] != "full":                          # a tapped answer: the key is what is in doubt, so a second solve decides
+            try:
+                got = parse_json(self.ai.generate(sysfor(self._subj(q["subject_id"])["name"]),
+                                                  f"Is this answer key right? Question: {q['text']}\nKey: {q['answer'] or q['quick']}\n"
+                                                  'Solve it yourself first. Reply JSON {"key_ok": true or false, "why": one short sentence}.'))
+            except StudyError:
+                got = None
+            if isinstance(got, dict) and got.get("key_ok") is False:
+                self.st.run("UPDATE attempts SET score=max, disputed=1 WHERE id=?", (aid,))
+                self.st.run("UPDATE questions SET state='binned' WHERE id=?", (q["id"],))
+                return {"changed": True, "score": a["max"], "max": a["max"], "points": [], "headline": "You were right: my answer key was wrong. Mark given, and that question is binned.", "again": True}
+            return {"changed": False, "score": was, "max": a["max"], "points": _j(a["detail"], []),
+                    "headline": "I solved it again and my key holds. If you still disagree, ask me in chat.", "again": True}
         t = self._topic(q["topic_id"]) or {"name": "General"}
         res = self._mark_full(q, t, a["answer"], [], a["hints"], recheck=True)
         self.st.run("DELETE FROM attempts WHERE id=?", (res["attempt"],))
@@ -846,22 +985,24 @@ class Engine:
         return {"changed": changed, "score": max(was, score), "max": res["max"], "points": res["points"], "headline": head, "again": True}
 
     def hint(self, sid, n=None) -> dict:
-        """The next rung of the hint ladder for the question on screen. Free: it only makes the question return sooner."""
+        """The next rung of the hint ladder for the question on screen. Always in order; the full solution only after he has had a go."""
         s = self._session(sid)
         step = s["steps"][s["pos"]] if s["pos"] < len(s["steps"]) else None
         if not step or step["type"] != "question":
             raise StudyError("hints are for questions", 409)
         q = self.st.one("SELECT * FROM questions WHERE id=?", (step["question"],))
         have = step.setdefault("hints", [])
-        i = len(have) if n is None else max(0, min(int(n), 3))
-        if i < len(have):
-            return {"hints": have, "last": len(have) >= 4}
-        if i >= 4:
+        if len(have) >= 4:
             return {"hints": have, "last": True}
+        i = len(have)
+        if i == 3 and not step.get("result"):
+            raise StudyError("Have a go first. I show the full solution after you have tried.", 409)
+        spec = self._spec(q)
+        key = spec.get("text") or q["answer"] or ""
         if i == 3 and q["answer"] and _j(q["scheme"], []):
             text = "\n".join(p["point"] for p in _j(q["scheme"], [])) + f"\n\nAnswer: {q['answer']}"
         else:
-            text = self.svc.tutor(q["text"], q["subject_id"], i, "\n".join(have))["text"]
+            text = self.svc.tutor(q["text"], q["subject_id"], i, "\n".join(have), self._figure_parts(q), key)["text"]
         have.append(text)
         self._save(s)
         return {"hints": have, "last": len(have) >= 4}
@@ -1003,7 +1144,10 @@ class Engine:
         wrong = [a for a in att if a["score"] < a["max"]]
         slip = next((a["feedback"] for a in wrong if a["feedback"] and a["kind"] in ("full", "quick")), "")
         recent = att[:4]
-        return {**t, "why": t.get("why") or "", "slip": slip,
+        tags: dict[str, int] = {}
+        for a in self.st.q("SELECT tag FROM attempts WHERE topic_id=? AND tag!='' AND score<max ORDER BY at DESC LIMIT 20", (tid,)):
+            tags[a["tag"]] = tags.get(a["tag"], 0) + 1
+        return {**t, "why": t.get("why") or "", "slip": slip, "errors": tags,
                 "record": f"Wrong {sum(1 for a in recent if a['score'] < a['max'])} of the last {len(recent)}." if recent else "",
                 "notes": self.st.q("SELECT id, title, updated FROM notes WHERE topic_id=? ORDER BY updated DESC", (tid,)),
                 "card_list": self.st.q("SELECT id, front, back, state, due FROM cards WHERE topic_id=? AND state!='suspended' ORDER BY due LIMIT 60", (tid,)),

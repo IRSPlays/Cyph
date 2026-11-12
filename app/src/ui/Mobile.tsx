@@ -1,3 +1,4 @@
+import { Rich } from "./Rich";
 import { useEffect, useRef, useState } from "react";
 import { useArm } from "../lib/armStore";
 import { parseMood } from "../lib/chat";
@@ -167,7 +168,7 @@ function Chat() {
         </div>
       );
     } else if (m.role === "cyph") {
-      row = <div className="m">{parseMood(m.text).body}</div>;
+      row = <div className="m">{(() => { const b = parseMood(m.text).body; return b.includes("$") ? <Rich text={b} inline /> : b; })()}</div>;
     } else {
       row = <div className={"m t" + (m.ok === false || m.role === "system" ? " bad" : "")}>⚙ {m.text}{m.role === "event" ? (m.ok === false ? " failed" : " ok") : ""}</div>;
     }

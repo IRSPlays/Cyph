@@ -87,3 +87,7 @@
 .sp-row small{display:block;color:var(--dim);font-size:11px;margin-top:2px}.sp-row span{font:700 9.5px 'Pixelify Sans';letter-spacing:.14em;color:#9aa889}
 .sp-snap{flex:none;width:100%;background:#13190f;padding:14px 8px}
 .sp-links .mbtn{padding:12px 4px}
+.sp-keys{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sp-keys button{flex:1 0 auto;min-width:34px;min-height:40px;background:#0d140d;color:var(--tx);border:1px solid #1d2815;border-radius:8px;font:15px 'DM Mono'}
+.sp-keys button:active{background:#142014;border-color:var(--ne)}
+.rich .katex-display{overflow-x:auto;overflow-y:hidden;max-width:100%}

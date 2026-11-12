@@ -15,6 +15,7 @@ import { toast } from "../lib/toast";
 import type { Pic, PlanEvent } from "../lib/types";
 import { CyphCanvas } from "../ui/CyphCanvas";
 import { MicButton } from "../ui/MicButton";
+import { Rich } from "../ui/Rich";
 import { Shell } from "../ui/Shell";
 import "../styles/home.css";
 
@@ -152,7 +153,7 @@ export function Home() {
           <div className="msg c latest">
             <div className="bub">
               <div className="hd"><i /><i /><i />CYPH ─ {(tag ?? "rest").toUpperCase()}<b>{stamp}{via}</b></div>
-              <div className="bd">{body}{m.streaming && <span className="caret" />}</div>
+              <div className="bd">{body.includes("$") ? <Rich text={body} inline /> : body}{m.streaming && <span className="caret" />}</div>
             </div>
           </div>
         );
@@ -162,7 +163,7 @@ export function Home() {
             <div className="tm">{stamp}</div>
             <div>
               <span className="mt">{tag ?? ""}</span>
-              <div className="tx">{body}</div>
+              <div className="tx">{body.includes("$") ? <Rich text={body} inline /> : body}</div>
             </div>
             <div className="acts">
               <button onClick={() => void say("❤️ (that last one)")}>♥ REACT</button>

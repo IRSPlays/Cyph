@@ -342,8 +342,8 @@ Study is built around one question: **what do I do now?** Four screens, the same
   Phone questions are tap-to-answer or one number; PC and iPad take written working or a photo. English and SS get answer plans and
   self-ticked checklists (Cyph does not mark writing). A session started on one device can be continued on the other.
 - **Questions** come from your own worksheets first (real question, marks and answer key extracted at import, the diagram cropped from the
-  PDF page). Cyph-made questions are labelled and weighted less. Marking is per point; the final number is checked in code, not by the
-  model, and Cyph says "not sure" when it is. **I think I'm right** re-marks at once and can only raise the mark. **Bad question** bins
+  PDF page). Cyph-made questions are labelled and weighted less. Marking is per point (M, A and B marks for maths, with an A needing its M); the final answer is checked in code (`cyph/core/answers.py`: fractions, surds, pi, percentages, ratios, several roots, inequality ranges, algebra equivalence, units, and the asked significant figures or decimal places), not by the
+  model, and Cyph says "not sure" when it is. **I think I'm right** re-marks once per answer and can only raise the mark; an answer is marked once, so a wrong one cannot be fished for the right one. Questions Cyph writes are solved a second time and binned if the two disagree. Math and Amath start with a topic list and need no notes to practise; each subject has its own marking rules (Singapore conventions for maths, command words for sciences, source skills for SS and Geog). No subject goes quiet for more than 3 days. **Bad question** bins
   it and teaches Cyph a rule for that topic.
 - **DEBRIEF**: when you get home, say one thing you learned (typed is enough). Cyph checks it against your notes and makes cards from the gaps.
 - **INBOX**: throw in a PDF, photo or text. It is kept straight away, filed by subject and topic, with UNDO and "wrong subject".
